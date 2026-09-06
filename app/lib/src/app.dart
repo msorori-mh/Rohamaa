@@ -7,6 +7,7 @@ import 'features/auth/login_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/needs/create_need_screen.dart';
 import 'features/donations/create_donation_screen.dart';
+import 'features/profile/onboarding_screen.dart';
 
 class SanadApp extends StatelessWidget {
   const SanadApp({super.key});
@@ -26,6 +27,7 @@ class SanadApp extends StatelessWidget {
       routes: [
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
         GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+        GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
         GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
       ],
