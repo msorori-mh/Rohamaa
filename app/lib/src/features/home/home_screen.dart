@@ -11,7 +11,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سند'),
+        title: const Text('رحماء'),
         actions: [
           IconButton(tooltip: 'بيانات التوصيل', onPressed: () => context.push('/onboarding'), icon: const Icon(Icons.location_on_outlined)),
           IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
@@ -23,15 +23,15 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text('ماذا تريد اليوم؟', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('هويتك لا تُكشف للطرف الآخر. سند يتولى المطابقة والتوصيل.'),
+            const Text('هويتك لا تُكشف للطرف الآخر. رحماء يتولى المطابقة والتوصيل.'),
             const SizedBox(height: 28),
             _ActionCard(icon: Icons.volunteer_activism_outlined, title: 'لدي شيء', subtitle: 'أضف شيئًا لم تعد تحتاجه ليستفيد منه شخص آخر.', onTap: () => context.push('/donate')),
             const SizedBox(height: 14),
             _ActionCard(icon: Icons.front_hand_outlined, title: 'أحتاج شيئًا', subtitle: 'سجّل احتياجك وسنبحث عن تطابق مناسب دون تصفح تبرعات الآخرين.', onTap: () => context.push('/need')),
             const SizedBox(height: 14),
-            _ActionCard(icon: Icons.mark_email_unread_outlined, title: 'عروض المطابقة', subtitle: 'راجع أي شيء وجده سند مطابقًا لاحتياجك واقبله أو ارفضه.', onTap: () => context.push('/offers')),
+            _ActionCard(icon: Icons.mark_email_unread_outlined, title: 'عروض المطابقة', subtitle: 'راجع أي شيء وجده رحماء مطابقًا لاحتياجك واقبله أو ارفضه.', onTap: () => context.push('/offers')),
             const SizedBox(height: 14),
-            _ActionCard(icon: Icons.local_shipping_outlined, title: 'عملياتي', subtitle: 'تابع الاستلام والتسليم واعرض PIN عند وصول مندوب سند.', onTap: () => context.push('/handoffs')),
+            _ActionCard(icon: Icons.local_shipping_outlined, title: 'عملياتي', subtitle: 'تابع الاستلام والتسليم واعرض PIN عند وصول مندوب رحماء.', onTap: () => context.push('/handoffs')),
             const SizedBox(height: 18),
             FutureBuilder<String>(
               future: AdminRepository(Supabase.instance.client).myRole(),
@@ -47,7 +47,7 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 28),
-            const Text('سند — مأرب • النسخة التجريبية', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+            const Text('رحماء — مأرب • النسخة التجريبية', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
