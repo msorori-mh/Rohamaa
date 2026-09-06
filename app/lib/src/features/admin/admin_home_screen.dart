@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/admin_repository.dart';
+import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
 import 'admin_dashboard_screen.dart' show ContributionReviewScreen, MatchingQueueScreen;
@@ -30,7 +31,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('لوحة تشغيل سند'),
-        actions: [IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(tooltip: 'تغيير كلمة المرور', onPressed: () => _open(const ChangePasswordScreen(role: 'admin', requiredChange: false)), icon: const Icon(Icons.password_outlined)),
+          IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
+        ],
       ),
       body: FutureBuilder<AdminStats>(
         future: _future,
