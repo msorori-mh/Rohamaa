@@ -8,6 +8,7 @@ import 'features/admin/admin_dashboard_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/courier/courier_tasks_screen.dart';
 import 'features/donations/create_donation_screen.dart';
+import 'features/handoffs/my_handoffs_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/needs/create_need_screen.dart';
 import 'features/profile/onboarding_screen.dart';
@@ -33,6 +34,7 @@ class SanadApp extends StatelessWidget {
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
         GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
+        GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminDashboardScreen())),
       ],
