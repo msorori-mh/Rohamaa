@@ -33,6 +33,15 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     super.dispose();
   }
 
+  String? _passwordValidator(String? value) {
+    final v = value ?? '';
+    if (v.length < 8) return 'استخدم 8 أحرف على الأقل';
+    if (!RegExp(r'[a-z]').hasMatch(v) || !RegExp(r'[A-Z]').hasMatch(v) || !RegExp(r'[0-9]').hasMatch(v) || !RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
+      return 'أضف حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا';
+    }
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _areaId == null) return;
     setState(() => _busy = true);
@@ -81,8 +90,8 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                 TextFormField(
                   controller: _password,
                   obscureText: _obscure,
-                  decoration: InputDecoration(labelText: 'كلمة المرور الابتدائية', helperText: '8 أحرف على الأقل. سيُجبر المستخدم على تغييرها.', suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
-                  validator: (v) => (v ?? '').length < 8 ? 'استخدم 8 أحرف على الأقل' : null,
+                  decoration: InputDecoration(labelText: 'كلمة المرور الابتدائية', helperText: '8 أحرف+ وتحتوي حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا. سيغيرها المستخدم عند أول دخول.', suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+                  validator: _passwordValidator,
                 ),
                 const SizedBox(height: 14),
                 FutureBuilder<List<Map<String, dynamic>>>(
