@@ -16,6 +16,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _description = TextEditingController();
   Position? _position;
   bool _busy = false;
+  String? _serviceAreaId;
+  late Future<List<Map<String, dynamic>>> _serviceAreasFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _serviceAreasFuture = _loadServiceAreas();
+  }
+
+  Future<List<Map<String, dynamic>>> _loadServiceAreas() async {
+    final rows = await Supabase.instance.client
+        .from('service_areas')
+        .select('id,code,name_ar,kind,parent_id')
+        .eq('active', true)
+        .order('kind')
+        .order('name_ar');
+    final areas = (rows as List).cast<Map<String, dynamic>>();
+    if (_serviceAreaId == null && areas.isNotEmpty) {
+      final marib = areas.where((a) => a['code'] == 'MARIB').toList();
+      _serviceAreaId = (marib.isNotEmpty ? marib.first : areas.first)['id'] as String;
+    }
+    return areas;
+  }
 
   @override
   void dispose() {
@@ -32,9 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لم يتم منح إذن الموقع. يمكنك المحاولة لاحقًا.')));
       return;
     }
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    );
+    final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
     if (mounted) setState(() => _position = position);
   }
 
@@ -42,6 +63,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_position == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدد الموقع الجغرافي أولًا.')));
+      return;
+    }
+    if (_serviceAreaId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('حدد المدينة أو نطاق الخدمة.')));
       return;
     }
     setState(() => _busy = true);
@@ -53,6 +78,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await client.from('addresses').insert({
         'user_id': userId,
         'label': 'الافتراضي',
+        'service_area_id': _serviceAreaId,
         'area': _area.text.trim(),
         'description': _description.text.trim(),
         'latitude': _position!.latitude,
@@ -82,9 +108,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const SizedBox(height: 20),
             TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف'), validator: (v) => v == null || v.trim().length < 7 ? 'أدخل رقم هاتف صحيحًا' : null),
             const SizedBox(height: 14),
-            TextFormField(controller: _area, decoration: const InputDecoration(labelText: 'المنطقة / الحي', hintText: 'مثال: الروضة'), validator: (v) => v == null || v.trim().isEmpty ? 'أدخل المنطقة' : null),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _serviceAreasFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) return const LinearProgressIndicator();
+                if (snapshot.hasError) return Text('تعذر تحميل نطاقات الخدمة: ${snapshot.error}');
+                final areas = snapshot.data ?? const [];
+                if (areas.isEmpty) return const Text('لا توجد مدينة مفعلة للخدمة حاليًا.');
+                return DropdownButtonFormField<String>(
+                  value: _serviceAreaId,
+                  decoration: const InputDecoration(labelText: 'المدينة / نطاق الخدمة'),
+                  items: areas.map((a) {
+                    final prefix = a['kind'] == 'city' ? 'مدينة' : 'منطقة';
+                    return DropdownMenuItem(value: a['id'] as String, child: Text('$prefix: ${a['name_ar']}'));
+                  }).toList(),
+                  onChanged: (v) => setState(() => _serviceAreaId = v),
+                  validator: (v) => v == null ? 'حدد نطاق الخدمة' : null,
+                );
+              },
+            ),
             const SizedBox(height: 14),
-            TextFormField(controller: _description, maxLines: 3, decoration: const InputDecoration(labelText: 'وصف العنوان', hintText: 'علامة مميزة تساعد المندوب فقط')),
+            TextFormField(controller: _area, decoration: const InputDecoration(labelText: 'الحي / المنطقة التفصيلية', hintText: 'مثال: الروضة'), validator: (v) => v == null || v.trim().isEmpty ? 'أدخل الحي أو المنطقة' : null),
+            const SizedBox(height: 14),
+            TextFormField(controller: _description, maxLines: 3, decoration: const InputDecoration(labelText: 'وصف العنوان', hintText: 'علامة مميزة تساعد الموصل فقط')),
             const SizedBox(height: 16),
             OutlinedButton.icon(onPressed: _captureLocation, icon: const Icon(Icons.my_location), label: Text(_position == null ? 'تحديد موقعي الحالي' : 'تم تحديد الموقع — اضغط للتحديث')),
             const SizedBox(height: 24),
