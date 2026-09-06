@@ -58,14 +58,25 @@ class SanadRepository {
   }
 
   Future<String?> defaultAddressId() async {
-    final rows = await _client.from('addresses').select('id').eq('user_id', userId).order('is_default', ascending: false).limit(1);
+    final rows = await _client
+        .from('addresses')
+        .select('id,service_area_id')
+        .eq('user_id', userId)
+        .not('service_area_id', 'is', null)
+        .order('is_default', ascending: false)
+        .limit(1);
     if ((rows as List).isEmpty) return null;
     return rows.first['id'] as String;
   }
 
   Future<bool> hasOperationalProfile() async {
     final profile = await _client.from('profiles').select('phone').eq('id', userId).single();
-    final addresses = await _client.from('addresses').select('id').eq('user_id', userId).limit(1);
+    final addresses = await _client
+        .from('addresses')
+        .select('id,service_area_id')
+        .eq('user_id', userId)
+        .not('service_area_id', 'is', null)
+        .limit(1);
     final phone = (profile['phone'] as String?)?.trim() ?? '';
     return phone.isNotEmpty && (addresses as List).isNotEmpty;
   }
