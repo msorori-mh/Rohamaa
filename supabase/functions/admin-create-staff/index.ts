@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
   const areaIds = Array.isArray(payload.area_ids) ? [...new Set(payload.area_ids.map(String))] : []
   if (!/^\S+@\S+\.\S+$/.test(email)) return json({ error: 'invalid_email' }, 400)
   if (password.length < 8) return json({ error: 'password_too_short' }, 400)
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) return json({ error: 'password_not_complex' }, 400)
   if (fullName.length < 2) return json({ error: 'full_name_required' }, 400)
   if (!['courier', 'supervisor'].includes(role)) return json({ error: 'invalid_role' }, 400)
   if (areaIds.length === 0) return json({ error: 'area_required' }, 400)
