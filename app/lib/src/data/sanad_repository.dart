@@ -17,37 +17,56 @@ class SanadRepository {
     return 'SND-MRB-$prefix-$suffix';
   }
 
-  Future<void> createDonation({
+  Future<String> createDonation({
     required String title,
     required String description,
     required String condition,
     String category = 'other',
+    String? addressId,
   }) async {
-    await _client.from('donations').insert({
+    final row = await _client.from('donations').insert({
       'public_code': _publicCode('DON'),
       'user_id': userId,
       'category': category,
       'item_type': title,
       'description': description.isEmpty ? null : description,
       'condition': condition,
+      'address_id': addressId,
       'status': 'submitted',
-    });
+    }).select('id').single();
+    return row['id'] as String;
   }
 
-  Future<void> createNeed({
+  Future<String> createNeed({
     required String title,
     required String reason,
     required bool acceptsUsed,
     String category = 'other',
+    String? addressId,
   }) async {
-    await _client.from('needs').insert({
+    final row = await _client.from('needs').insert({
       'public_code': _publicCode('NEED'),
       'user_id': userId,
       'category': category,
       'item_type': title,
       'reason': reason,
       'accepts_used': acceptsUsed,
+      'address_id': addressId,
       'status': 'submitted',
-    });
+    }).select('id').single();
+    return row['id'] as String;
+  }
+
+  Future<String?> defaultAddressId() async {
+    final rows = await _client.from('addresses').select('id').eq('user_id', userId).order('is_default', ascending: false).limit(1);
+    if ((rows as List).isEmpty) return null;
+    return rows.first['id'] as String;
+  }
+
+  Future<bool> hasOperationalProfile() async {
+    final profile = await _client.from('profiles').select('phone').eq('id', userId).single();
+    final addresses = await _client.from('addresses').select('id').eq('user_id', userId).limit(1);
+    final phone = (profile['phone'] as String?)?.trim() ?? '';
+    return phone.isNotEmpty && (addresses as List).isNotEmpty;
   }
 }
