@@ -72,6 +72,29 @@ class AdminRepository {
     await _client.rpc('admin_resolve_risk', params: {'p_risk_id': id, 'p_resolution': resolution});
   }
 
+  Future<List<Map<String, dynamic>>> users() async {
+    final rows = await _client
+        .from('profiles')
+        .select('id,full_name,phone,role,is_suspended,created_at')
+        .order('created_at', ascending: false);
+    return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> setUserRole(String userId, String role) async {
+    await _client.rpc('admin_set_user_role', params: {
+      'p_user_id': userId,
+      'p_role': role,
+    });
+  }
+
+  Future<void> setUserSuspension(String userId, bool suspended, String reason) async {
+    await _client.rpc('admin_set_user_suspension', params: {
+      'p_user_id': userId,
+      'p_suspended': suspended,
+      'p_reason': reason,
+    });
+  }
+
   Future<List<Map<String, dynamic>>> activeCouriers() async {
     final rows = await _client.from('couriers').select('user_id,active,profiles!inner(full_name)').eq('active', true);
     return (rows as List).cast<Map<String, dynamic>>();
