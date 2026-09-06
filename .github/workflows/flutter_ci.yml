@@ -8,7 +8,7 @@ on:
       - feat/mvp-foundation
 
 jobs:
-  analyze-and-build:
+  analyze-test-build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -20,7 +20,9 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
+      - run: flutter test
       - name: Build Android debug APK
         run: flutter build apk --debug
       - name: Upload debug APK
