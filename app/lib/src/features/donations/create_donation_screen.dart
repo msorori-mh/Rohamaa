@@ -87,16 +87,20 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
       final contribute = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل التبرع'),
-          content: const Text('هل ترغب بالمساهمة اختياريًا في تكلفة استلام وتوصيل هذا التبرع؟'),
+          title: const Text('تم تسجيل عطائك'),
+          content: const Text(
+            'تبرعك بالشيء هو الأهم وقد يصنع فرقًا حقيقيًا. وإذا استطعت، يمكنك أيضًا المساهمة في تكلفة استلامه وتوصيله؛ ومساهمتك تساعد رحماء على إيصال تبرعات أخرى لأشخاص لا يستطيعون تحمل تكلفة التوصيل. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للمندوب عند الاستلام.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ليس الآن')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('نعم، أساهم')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('أكتفي بالتبرع')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أساهم في التوصيل')),
           ],
         ),
       );
       if (!mounted) return;
-      if (contribute == true) await Navigator.push(context, MaterialPageRoute(builder: (_) => ContributionScreen(donationId: donationId)));
+      if (contribute == true) {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => ContributionScreen(donationId: donationId)));
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ التبرع: $e')));
