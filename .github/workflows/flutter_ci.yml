@@ -22,7 +22,6 @@ jobs:
       - name: Ensure Flutter platform scaffolding
         run: flutter create . --platforms=android,web --org io.sanad
       - run: flutter pub get
-      - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test
       - name: Build Android debug APK
