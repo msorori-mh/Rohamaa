@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/admin_repository.dart';
-import 'features/admin/admin_dashboard_screen.dart';
+import 'features/admin/admin_home_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/courier/courier_tasks_screen.dart';
 import 'features/donations/create_donation_screen.dart';
@@ -38,7 +38,7 @@ class SanadApp extends StatelessWidget {
         GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
         GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
-        GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminDashboardScreen())),
+        GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
       ],
     );
 
