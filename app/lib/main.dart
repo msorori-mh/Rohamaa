@@ -21,5 +21,5 @@ Future<void> main() async {
     publishableKey: supabasePublishableKey,
   );
 
-  runApp(const ProviderScope(child: SanadApp()));
+  runApp(const ProviderScope(child: RuhamaaApp()));
 }
