@@ -14,13 +14,6 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
   @override void initState(){super.initState();_reload();}
   void _reload(){_future=DeliveryRepository(Supabase.instance.client).myTasks();}
 
-  Future<Position?> _position() async {
-    var permission=await Geolocator.checkPermission();
-    if(permission==LocationPermission.denied) permission=await Geolocator.requestPermission();
-    if(permission==LocationPermission.denied||permission==LocationPermission.deniedForever) return null;
-    return Geolocator.getCurrentPosition(desiredAccuracy:LocationAccuracy.high);
-  }
-
   Future<void> _openTask(DeliveryTask task) async {
     await Navigator.push(context,MaterialPageRoute(builder:(_)=>CourierTaskScreen(task:task)));
     if(mounted)setState(_reload);
@@ -51,7 +44,12 @@ class _CourierTaskScreenState extends State<CourierTaskScreen>{
   bool _busy=false;
   @override void initState(){super.initState();_details=DeliveryRepository(Supabase.instance.client).details(widget.task.id);}
 
-  Future<Position?> _position() async{var p=await Geolocator.checkPermission();if(p==LocationPermission.denied)p=await Geolocator.requestPermission();if(p==LocationPermission.denied||p==LocationPermission.deniedForever)return null;return Geolocator.getCurrentPosition(desiredAccuracy:LocationAccuracy.high);}
+  Future<Position?> _position() async{
+    var p=await Geolocator.checkPermission();
+    if(p==LocationPermission.denied)p=await Geolocator.requestPermission();
+    if(p==LocationPermission.denied||p==LocationPermission.deniedForever)return null;
+    return Geolocator.getCurrentPosition(locationSettings:const LocationSettings(accuracy:LocationAccuracy.high));
+  }
 
   Future<void> _verify(CourierTaskDetails d) async{
     final pickup=d.status=='assigned'||d.status=='heading_to_pickup'||d.status=='rescheduled';
