@@ -1,0 +1,22 @@
+name: sanad
+version: 0.1.0+1
+publish_to: none
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  supabase_flutter: ^2.8.0
+  google_sign_in: ^6.2.2
+  go_router: ^14.6.2
+  flutter_riverpod: ^2.6.1
+  geolocator: ^13.0.2
+  image_picker: ^1.1.2
+  uuid: ^4.5.1
+
+flutter:
+  uses-material-design: true
