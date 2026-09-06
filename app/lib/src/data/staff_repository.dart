@@ -44,6 +44,20 @@ class StaffRepository {
         .toList();
   }
 
+  Future<String> createServiceArea({required String code, required String nameAr, required String kind, String? parentId}) async {
+    final result = await _client.rpc('admin_create_service_area', params: {
+      'p_code': code.trim(),
+      'p_name_ar': nameAr.trim(),
+      'p_kind': kind,
+      'p_parent_id': parentId,
+    });
+    return result as String;
+  }
+
+  Future<void> setServiceAreaActive(String areaId, bool active) async {
+    await _client.rpc('admin_set_service_area_active', params: {'p_area_id': areaId, 'p_active': active});
+  }
+
   Future<void> createStaff({
     required String email,
     required String temporaryPassword,
