@@ -12,56 +12,110 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
-  Future<void> _signIn() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+  Future<void> _googleSignIn() async {
+    setState(() { _loading = true; _error = null; });
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'io.sanad.app://login-callback',
       );
-    } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول. حاول مرة أخرى.');
+    } catch (_) {
+      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول بحساب Google. حاول مرة أخرى.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _staffLogin() async {
+    final email = TextEditingController();
+    final password = TextEditingController();
+    bool busy = false;
+    bool obscure = true;
+    String? dialogError;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !busy,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('دخول فريق سند'),
+          content: SizedBox(
+            width: 430,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('للإدارة، مشرفي المدن/المناطق، والموصلين.'),
+                const SizedBox(height: 16),
+                TextField(controller: email, enabled: !busy, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: password,
+                  enabled: !busy,
+                  obscureText: obscure,
+                  onSubmitted: (_) {},
+                  decoration: InputDecoration(labelText: 'كلمة المرور', suffixIcon: IconButton(onPressed: busy ? null : () => setDialogState(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+                ),
+                if (dialogError != null) ...[
+                  const SizedBox(height: 10),
+                  Text(dialogError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('إلغاء')),
+            FilledButton(
+              onPressed: busy ? null : () async {
+                if (email.text.trim().isEmpty || password.text.isEmpty) return;
+                setDialogState(() { busy = true; dialogError = null; });
+                try {
+                  await Supabase.instance.client.auth.signInWithPassword(email: email.text.trim(), password: password.text);
+                  if (context.mounted) Navigator.pop(context);
+                } on AuthException catch (e) {
+                  setDialogState(() { busy = false; dialogError = e.message; });
+                } catch (_) {
+                  setDialogState(() { busy = false; dialogError = 'تعذر تسجيل الدخول. تحقق من البيانات.'; });
+                }
+              },
+              child: Text(busy ? 'جارٍ الدخول...' : 'دخول'),
+            ),
+          ],
+        ),
+      ),
+    );
+    email.dispose(); password.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.handshake_outlined, size: 72),
-              const SizedBox(height: 20),
-              Text('سند', textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Text('ما لا تحتاجه قد يصنع فرقًا لشخص آخر.', textAlign: TextAlign.center),
-              const SizedBox(height: 36),
-              FilledButton.icon(
-                onPressed: _loading ? null : _signIn,
-                icon: const Icon(Icons.login),
-                label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google'),
-              ),
-              if (_error != null) ...[
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(24),
+              children: [
+                const Icon(Icons.handshake_outlined, size: 72),
+                const SizedBox(height: 20),
+                Text('سند', textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                const Text('ما لا تحتاجه قد يصنع فرقًا لشخص آخر.', textAlign: TextAlign.center),
+                const SizedBox(height: 36),
+                FilledButton.icon(onPressed: _loading ? null : _googleSignIn, icon: const Icon(Icons.login), label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google')),
                 const SizedBox(height: 12),
-                Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                OutlinedButton.icon(onPressed: _loading ? null : _staffLogin, icon: const Icon(Icons.badge_outlined), label: const Text('دخول فريق سند')),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ],
+                const SizedBox(height: 20),
+                const Text('لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                const SizedBox(height: 8),
+                const Text('عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب سند تعيين كلمة مرور خاصة بفريق التشغيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
               ],
-              const SizedBox(height: 20),
-              const Text(
-                'لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
+            ),
           ),
         ),
       ),
