@@ -96,7 +96,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
             const Text('سجّل احتياجك فقط. لا توجد قائمة تبرعات للتصفح حفاظًا على عدالة المطابقة والخصوصية.'),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
-              value: _category,
+              initialValue: _category,
               decoration: const InputDecoration(labelText: 'الفئة'),
               items: categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
               onChanged: (v) => setState(() => _category = v ?? 'other'),
