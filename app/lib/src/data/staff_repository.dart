@@ -29,6 +29,21 @@ class StaffRepository {
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
+  Future<List<Map<String, dynamic>>> reportAreas() async {
+    final status = await myStatus();
+    if (status.role == 'admin') return serviceAreas();
+    if (status.role != 'supervisor') return const [];
+    final userId = _client.auth.currentUser!.id;
+    final rows = await _client
+        .from('staff_area_assignments')
+        .select('service_areas!inner(id,code,name_ar,kind,parent_id)')
+        .eq('user_id', userId);
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map((row) => Map<String, dynamic>.from(row['service_areas'] as Map))
+        .toList();
+  }
+
   Future<void> createStaff({
     required String email,
     required String temporaryPassword,
