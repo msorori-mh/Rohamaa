@@ -32,7 +32,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لم يتم منح إذن الموقع. يمكنك المحاولة لاحقًا.')));
       return;
     }
-    final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    );
     if (mounted) setState(() => _position = position);
   }
 
