@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 
 class SupervisorHomeScreen extends StatelessWidget {
@@ -11,7 +12,10 @@ class SupervisorHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('إشراف سند'),
-        actions: [IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(tooltip: 'تغيير كلمة المرور', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen(role: 'supervisor', requiredChange: false))), icon: const Icon(Icons.password_outlined)),
+          IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
