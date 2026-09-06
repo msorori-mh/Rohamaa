@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/delivery_repository.dart';
+import '../auth/change_password_screen.dart';
 
 class CourierTasksScreen extends StatefulWidget {
   const CourierTasksScreen({super.key});
@@ -20,7 +21,13 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
   }
 
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('مهام التوصيل')),
+    appBar:AppBar(
+      title:const Text('مهام التوصيل'),
+      actions:[
+        IconButton(tooltip:'تغيير كلمة المرور',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ChangePasswordScreen(role:'courier',requiredChange:false))),icon:const Icon(Icons.password_outlined)),
+        IconButton(tooltip:'تسجيل الخروج',onPressed:()=>Supabase.instance.client.auth.signOut(),icon:const Icon(Icons.logout)),
+      ],
+    ),
     body:FutureBuilder<List<DeliveryTask>>(future:_future,builder:(context,snapshot){
       if(snapshot.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());
       if(snapshot.hasError)return Center(child:Text('تعذر تحميل المهام: ${snapshot.error}'));
