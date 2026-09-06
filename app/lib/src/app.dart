@@ -3,9 +3,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'data/admin_repository.dart';
+import 'data/staff_repository.dart';
 import 'features/admin/admin_home_screen.dart';
+import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/session_landing_screen.dart';
 import 'features/courier/courier_tasks_screen.dart';
 import 'features/donations/create_donation_screen.dart';
 import 'features/handoffs/my_handoffs_screen.dart';
@@ -13,6 +15,7 @@ import 'features/home/home_screen.dart';
 import 'features/needs/create_need_screen.dart';
 import 'features/offers/match_offers_screen.dart';
 import 'features/profile/onboarding_screen.dart';
+import 'features/supervisor/supervisor_home_screen.dart';
 
 class SanadApp extends StatelessWidget {
   const SanadApp({super.key});
@@ -31,13 +34,15 @@ class SanadApp extends StatelessWidget {
       },
       routes: [
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-        GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+        GoRoute(path: '/', builder: (_, __) => const SessionLandingScreen()),
+        GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
         GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
         GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
         GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
+        GoRoute(path: '/supervisor', builder: (_, __) => const _RoleGate(requiredRole: 'supervisor', child: SupervisorHomeScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
       ],
     );
@@ -47,11 +52,7 @@ class SanadApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF226B5E),
@@ -70,16 +71,15 @@ class _RoleGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: AdminRepository(Supabase.instance.client).myRole(),
+    return FutureBuilder<StaffStatus>(
+      future: StaffRepository(Supabase.instance.client).myStatus(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        if (snapshot.data != requiredRole) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('سند')),
-            body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')),
-          );
+        final status = snapshot.data;
+        if (status == null || status.role != requiredRole) {
+          return Scaffold(appBar: AppBar(title: const Text('سند')), body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')));
         }
+        if (status.forcePasswordChange) return ChangePasswordScreen(role: status.role);
         return child;
       },
     );
