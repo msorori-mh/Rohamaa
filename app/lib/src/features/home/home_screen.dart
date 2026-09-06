@@ -29,6 +29,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 14),
             _ActionCard(icon: Icons.front_hand_outlined, title: 'أحتاج شيئًا', subtitle: 'سجّل احتياجك وسنبحث عن تطابق مناسب دون تصفح تبرعات الآخرين.', onTap: () => context.push('/need')),
             const SizedBox(height: 14),
+            _ActionCard(icon: Icons.mark_email_unread_outlined, title: 'عروض المطابقة', subtitle: 'راجع أي شيء وجده سند مطابقًا لاحتياجك واقبله أو ارفضه.', onTap: () => context.push('/offers')),
+            const SizedBox(height: 14),
             _ActionCard(icon: Icons.local_shipping_outlined, title: 'عملياتي', subtitle: 'تابع الاستلام والتسليم واعرض PIN عند وصول مندوب سند.', onTap: () => context.push('/handoffs')),
             const SizedBox(height: 18),
             FutureBuilder<String>(
