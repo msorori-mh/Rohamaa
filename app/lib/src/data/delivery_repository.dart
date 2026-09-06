@@ -44,4 +44,15 @@ class DeliveryRepository {
     final result = await _client.rpc('verify_delivery_pin', params: {'p_delivery_id': deliveryId,'p_pin': pin,'p_kind': kind,'p_latitude': latitude,'p_longitude': longitude});
     return result == true;
   }
+
+  Future<void> reportFailure({required String deliveryId, required String party, required String reasonCode, String? note, double? latitude, double? longitude}) async {
+    await _client.rpc('courier_report_delivery_failure', params: {
+      'p_delivery_id': deliveryId,
+      'p_party': party,
+      'p_reason_code': reasonCode,
+      'p_note': note,
+      'p_latitude': latitude,
+      'p_longitude': longitude,
+    });
+  }
 }
