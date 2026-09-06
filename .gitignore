@@ -1,0 +1,24 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Supabase
+.supabase/
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Node / web admin
+node_modules/
+.next/
+dist/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
