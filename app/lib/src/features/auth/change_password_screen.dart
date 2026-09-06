@@ -79,12 +79,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               children: [
                 const Icon(Icons.lock_reset_outlined, size: 64),
                 const SizedBox(height: 18),
-                Text('حماية حساب فريق سند', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text('حماية حساب فريق رحماء', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(
                   widget.requiredChange
                       ? 'كلمة المرور الحالية مؤقتة أو أن هذه أول تهيئة لحساب الفريق. عيّن كلمة مرور خاصة بك قبل المتابعة.'
-                      : 'يمكنك تغيير كلمة مرور حساب فريق سند في أي وقت. استخدم كلمة قوية لا تستخدمها في خدمات أخرى.',
+                      : 'يمكنك تغيير كلمة مرور حساب فريق رحماء في أي وقت. استخدم كلمة قوية لا تستخدمها في خدمات أخرى.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),
