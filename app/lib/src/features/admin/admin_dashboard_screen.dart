@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/admin_repository.dart';
-import 'delivery_assignment_screen.dart';
+import 'accepted_matches_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -53,7 +53,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const SizedBox(height: 24),
                 const Text('التشغيل', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
-                _AdminAction(icon: Icons.hub_outlined, title: 'المطابقة', subtitle: 'راجع التبرعات واختر أفضل احتياج مطابق.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchingQueueScreen()))),
+                _AdminAction(icon: Icons.hub_outlined, title: 'المطابقة', subtitle: 'راجع التبرعات وأرسل عرض مطابقة خاصًا للمستفيد.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchingQueueScreen()))),
+                _AdminAction(icon: Icons.delivery_dining_outlined, title: 'مطابقات جاهزة للتوصيل', subtitle: 'المستفيد وافق؛ أسند المندوب والدراجة.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AcceptedMatchesScreen()))),
                 _AdminAction(icon: Icons.verified_outlined, title: 'التحقق من المساهمات', subtitle: 'اعتمد أو ارفض مرجع التحويل بعد المراجعة.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionReviewScreen()))),
                 _AdminAction(icon: Icons.warning_amber_outlined, title: 'مراجعة المخاطر', subtitle: 'افحص إشارات الاحتيال أو سوء الاستخدام.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RiskQueueScreen()))),
               ],
@@ -166,25 +167,16 @@ class _MatchCandidatesScreenState extends State<MatchCandidatesScreen> {
 
   Future<void> _approve(Map<String, dynamic> candidate) async {
     try {
-      final matchId = await AdminRepository(Supabase.instance.client).approveMatch(
+      await AdminRepository(Supabase.instance.client).approveMatch(
         widget.donation['id'] as String,
         candidate['need_id'] as String,
       );
       if (!mounted) return;
-      final assigned = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(builder: (_) => DeliveryAssignmentScreen(matchId: matchId)),
-      );
-      if (!mounted) return;
-      if (assigned == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم اعتماد المطابقة وإسناد التوصيل.')));
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم اعتماد المطابقة. يمكن إسناد التوصيل لاحقًا.')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال عرض المطابقة للمستفيد. لن يتم إنشاء التوصيل قبل موافقته.')));
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر اعتماد المطابقة: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال عرض المطابقة: $e')));
     }
   }
 
@@ -207,7 +199,7 @@ class _MatchCandidatesScreenState extends State<MatchCandidatesScreen> {
                   child: ListTile(
                     title: Text('${n['item_type']}'),
                     subtitle: Text('النقاط ${n['score']} • المسافة ${n['distance_km'] ?? '-'} كم • طلبات مماثلة سابقة ${n['prior_same_category']}'),
-                    trailing: FilledButton(onPressed: () => _approve(n), child: const Text('اعتماد')),
+                    trailing: FilledButton(onPressed: () => _approve(n), child: const Text('إرسال عرض')),
                   ),
                 );
               },
