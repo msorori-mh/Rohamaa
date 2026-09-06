@@ -5,8 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/staff_repository.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key, required this.role});
+  const ChangePasswordScreen({super.key, required this.role, this.requiredChange = true});
   final String role;
+  final bool requiredChange;
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
@@ -45,6 +46,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     try {
       await StaffRepository(Supabase.instance.client).changePassword(_password.text);
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تغيير كلمة المرور.')));
+      if (!widget.requiredChange && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+        return;
+      }
       final route = switch (widget.role) {
         'admin' => '/admin',
         'supervisor' => '/supervisor',
@@ -62,7 +68,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تعيين كلمة مرور جديدة')),
+      appBar: AppBar(title: Text(widget.requiredChange ? 'تعيين كلمة مرور جديدة' : 'تغيير كلمة المرور')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
@@ -75,7 +81,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 18),
                 Text('حماية حساب فريق سند', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                const Text('هذه أول مرة تستخدم فيها حساب الفريق أو أن كلمة المرور الحالية مؤقتة. عيّن كلمة مرور خاصة بك قبل المتابعة.', textAlign: TextAlign.center),
+                Text(
+                  widget.requiredChange
+                      ? 'كلمة المرور الحالية مؤقتة أو أن هذه أول تهيئة لحساب الفريق. عيّن كلمة مرور خاصة بك قبل المتابعة.'
+                      : 'يمكنك تغيير كلمة مرور حساب فريق سند في أي وقت. استخدم كلمة قوية لا تستخدمها في خدمات أخرى.',
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 28),
                 TextFormField(
                   controller: _password,
@@ -86,9 +97,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 14),
                 TextFormField(controller: _confirm, obscureText: _obscure, validator: (v) => (v ?? '').isEmpty ? 'أعد إدخال كلمة المرور' : null, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ والمتابعة')),
-                const SizedBox(height: 10),
-                TextButton(onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(), child: const Text('تسجيل الخروج')),
+                FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ')),
+                if (widget.requiredChange) ...[
+                  const SizedBox(height: 10),
+                  TextButton(onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(), child: const Text('تسجيل الخروج')),
+                ],
               ],
             ),
           ),
