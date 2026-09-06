@@ -65,10 +65,12 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل احتياجك'),
-          content: const Text('إذا رغبت، يمكنك المساهمة اختياريًا في تكلفة التوصيل عند توفر المطابقة. عدم الدفع لا يقلل أولوية طلبك.'),
+          content: const Text(
+            'طلبك مستمر سواء ساهمت أم لا، وعدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إذا كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة وعلى إيصال احتياجات أخرى لأشخاص لا يستطيعون تحمل التكلفة. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للمندوب عند التوصيل.',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('ليس الآن')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أساهم')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('بدون مساهمة')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أرغب بالمساهمة')),
           ],
         ),
       );
@@ -111,7 +113,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
             TextFormField(
               controller: _reason,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'لماذا تحتاجه؟', helperText: 'هذه المعلومة داخلية وتساعد سند على المطابقة، ولا تُعرض للمتبرع.'),
+              decoration: const InputDecoration(labelText: 'لماذا تحتاجه؟', helperText: 'هذه المعلومة داخلية وتساعد رحماء على المطابقة، ولا تُعرض للمتبرع.'),
               validator: (v) => v == null || v.trim().length < 8 ? 'أضف وصفًا مختصرًا للاحتياج' : null,
             ),
             const SizedBox(height: 8),
