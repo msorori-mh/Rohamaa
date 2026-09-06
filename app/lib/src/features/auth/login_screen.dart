@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
       barrierDismissible: !busy,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('دخول فريق سند'),
+          title: const Text('دخول فريق رحماء'),
           content: SizedBox(
             width: 430,
             child: Column(
@@ -99,13 +99,13 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Icon(Icons.handshake_outlined, size: 72),
                 const SizedBox(height: 20),
-                Text('سند', textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text('رحماء', textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
-                const Text('ما لا تحتاجه قد يصنع فرقًا لشخص آخر.', textAlign: TextAlign.center),
+                const Text('ما لديك قد يصنع فرقًا.', textAlign: TextAlign.center),
                 const SizedBox(height: 36),
                 FilledButton.icon(onPressed: _loading ? null : _googleSignIn, icon: const Icon(Icons.login), label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google')),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(onPressed: _loading ? null : _staffLogin, icon: const Icon(Icons.badge_outlined), label: const Text('دخول فريق سند')),
+                OutlinedButton.icon(onPressed: _loading ? null : _staffLogin, icon: const Icon(Icons.badge_outlined), label: const Text('دخول فريق رحماء')),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 const Text('لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
                 const SizedBox(height: 8),
-                const Text('عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب سند تعيين كلمة مرور خاصة بفريق التشغيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                const Text('عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب رحماء تعيين كلمة مرور خاصة بفريق التشغيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
               ],
             ),
           ),
