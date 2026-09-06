@@ -12,13 +12,11 @@ class ContributionRepository {
 
   Future<void> createContribution({
     required int amountYer,
-    required String paymentMethod,
-    String? paymentReference,
     String? donationId,
     String? needId,
     String? deliveryId,
   }) async {
-    final code = 'PAY-MRB-${DateTime.now().millisecondsSinceEpoch}';
+    final code = 'CTR-MRB-${DateTime.now().millisecondsSinceEpoch}';
     await _client.from('contributions').insert({
       'public_code': code,
       'user_id': _userId,
@@ -26,8 +24,8 @@ class ContributionRepository {
       'need_id': needId,
       'delivery_id': deliveryId,
       'amount_yer': amountYer,
-      'payment_method': paymentMethod,
-      'payment_reference': paymentReference?.trim().isEmpty == true ? null : paymentReference?.trim(),
+      'payment_method': 'cash_to_courier',
+      'payment_reference': null,
       'status': 'pending',
     });
   }
