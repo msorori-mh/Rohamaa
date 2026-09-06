@@ -27,7 +27,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('لوحة تشغيل سند')),
+      appBar: AppBar(title: const Text('لوحة تشغيل رحماء')),
       body: FutureBuilder<AdminStats>(
         future: _stats,
         builder: (context, snapshot) {
@@ -46,7 +46,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     _StatCard(label: 'تبرعات تنتظر المعالجة', value: s.donations, icon: Icons.inventory_2_outlined),
                     _StatCard(label: 'احتياجات مفتوحة', value: s.needs, icon: Icons.front_hand_outlined),
                     _StatCard(label: 'عمليات توصيل جارية', value: s.deliveries, icon: Icons.delivery_dining_outlined),
-                    _StatCard(label: 'مساهمات بانتظار التحقق', value: s.pendingContributions, icon: Icons.payments_outlined),
+                    _StatCard(label: 'مساهمات نقدية بانتظار التحقق', value: s.pendingContributions, icon: Icons.payments_outlined),
                     _StatCard(label: 'إشارات خطر مفتوحة', value: s.openRiskFlags, icon: Icons.shield_outlined),
                   ],
                 ),
@@ -55,7 +55,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const SizedBox(height: 10),
                 _AdminAction(icon: Icons.hub_outlined, title: 'المطابقة', subtitle: 'راجع التبرعات وأرسل عرض مطابقة خاصًا للمستفيد.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchingQueueScreen()))),
                 _AdminAction(icon: Icons.delivery_dining_outlined, title: 'مطابقات جاهزة للتوصيل', subtitle: 'المستفيد وافق؛ أسند المندوب والدراجة.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AcceptedMatchesScreen()))),
-                _AdminAction(icon: Icons.verified_outlined, title: 'التحقق من المساهمات', subtitle: 'اعتمد أو ارفض مرجع التحويل بعد المراجعة.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionReviewScreen()))),
+                _AdminAction(icon: Icons.verified_outlined, title: 'التحقق من المساهمات', subtitle: 'اعتمد المساهمة بعد تأكيد استلام المبلغ نقدًا من المندوب. لا توجد حوالات جديدة داخل التطبيق.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContributionReviewScreen()))),
                 _AdminAction(icon: Icons.warning_amber_outlined, title: 'مراجعة المخاطر', subtitle: 'افحص إشارات الاحتيال أو سوء الاستخدام.', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RiskQueueScreen()))),
               ],
             ),
@@ -220,6 +220,16 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
   late Future<List<Map<String, dynamic>>> _future;
   void _load() => _future = AdminRepository(Supabase.instance.client).pendingContributions();
 
+  String _details(Map<String, dynamic> contribution) {
+    final method = contribution['payment_method'];
+    final code = contribution['public_code'] ?? '';
+    if (method == 'cash_to_courier') {
+      return 'نقدًا للمندوب • $code\nاعتمدها فقط بعد تأكيد استلام المبلغ فعليًا.';
+    }
+    final reference = contribution['payment_reference'] ?? 'غير مسجل';
+    return 'سجل تحويل قديم • $code\nالمرجع: $reference';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -228,12 +238,13 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('مراجعة المساهمات')),
+        appBar: AppBar(title: const Text('مراجعة المساهمات النقدية')),
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: _future,
           builder: (context, s) {
             if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
             final rows = s.data ?? [];
+            if (rows.isEmpty) return const Center(child: Text('لا توجد مساهمات بانتظار التحقق'));
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: rows.length,
@@ -242,11 +253,11 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
                 return Card(
                   child: ListTile(
                     title: Text('${c['amount_yer']} ريال'),
-                    subtitle: Text('مرجع: ${c['payment_reference'] ?? 'غير مسجل'}'),
+                    subtitle: Text(_details(c)),
                     trailing: Wrap(
                       children: [
-                        IconButton(icon: const Icon(Icons.check), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, true); setState(_load);}),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, false); setState(_load);}),
+                        IconButton(tooltip: 'تم استلام المبلغ', icon: const Icon(Icons.check), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, true); setState(_load);}),
+                        IconButton(tooltip: 'لم يتم الاستلام', icon: const Icon(Icons.close), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, false); setState(_load);}),
                       ],
                     ),
                   ),
