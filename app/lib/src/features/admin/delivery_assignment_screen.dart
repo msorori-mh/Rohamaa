@@ -88,7 +88,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
               padding: const EdgeInsets.all(20),
               children: [
                 DropdownButtonFormField<String>(
-                  value: _courierId,
+                  initialValue: _courierId,
                   decoration: const InputDecoration(labelText: 'المندوب'),
                   items: _couriers.map((row) {
                     final profile = row['profiles'] as Map<String, dynamic>?;
@@ -99,7 +99,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _vehicleId,
+                  initialValue: _vehicleId,
                   decoration: const InputDecoration(labelText: 'الدراجة'),
                   items: _vehicles.map((row) => DropdownMenuItem(value: row['id'] as String, child: Text('${row['code']}'))).toList(),
                   onChanged: (value) => setState(() => _vehicleId = value),
