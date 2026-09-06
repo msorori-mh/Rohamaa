@@ -19,6 +19,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Map<String, dynamic>> _areas = const [];
   StaffReportSummary? _summary;
   List<Map<String, dynamic>> _daily = const [];
+  List<Map<String, dynamic>> _couriers = const [];
   bool _loading = true;
   String? _error;
 
@@ -52,14 +53,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final repo = ReportRepository(Supabase.instance.client);
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         repo.summary(from: _from, to: _to, areaId: _areaId),
         repo.daily(from: _from, to: _to, areaId: _areaId),
+        repo.couriers(from: _from, to: _to, areaId: _areaId),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = results[0] as StaffReportSummary;
-        _daily = results[1] as List<Map<String, dynamic>>;
+        _daily = (results[1] as List).cast<Map<String, dynamic>>();
+        _couriers = (results[2] as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
     } catch (e) {
@@ -92,7 +95,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedArea,
+                    initialValue: selectedArea,
                     decoration: const InputDecoration(labelText: 'المدينة / المنطقة'),
                     items: _areas.map((a) => DropdownMenuItem(value: a['id'] as String, child: Text('${a['name_ar']}'))).toList(),
                     onChanged: (v) => setDialogState(() => selectedArea = v ?? selectedArea),
@@ -127,14 +130,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  int _int(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+  double _double(dynamic value) => value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
   String _money(int value) {
-    final s = value.toString();
+    final negative = value < 0;
+    final s = value.abs().toString();
     final out = StringBuffer();
     for (var i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) out.write(',');
       out.write(s[i]);
     }
-    return '${out.toString()} ريال';
+    return '${negative ? '-' : ''}${out.toString()} ريال';
   }
 
   @override
@@ -158,7 +165,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 SizedBox(
                   width: 240,
                   child: DropdownButtonFormField<String?>(
-                    value: _areaId,
+                    initialValue: _areaId,
                     decoration: const InputDecoration(labelText: 'النطاق'),
                     items: [
                       if (_role == 'admin') const DropdownMenuItem<String?>(value: null, child: Text('كل المناطق')),
@@ -182,13 +189,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   _Metric('التوصيلات الناجحة', '${_summary!.delivered}', Icons.check_circle_outline),
                   _Metric('نجاح التوصيل', '${_summary!.deliverySuccessRate.toStringAsFixed(1)}%', Icons.local_shipping_outlined),
                   _Metric('متوسط زمن التوصيل', '${_summary!.avgDeliveryHours.toStringAsFixed(1)} ساعة', Icons.schedule_outlined),
+                  _Metric('تكلفة التوصيل المكتمل', _money(_summary!.costPerDeliveredYer), Icons.calculate_outlined),
                   _Metric('المساهمات المحققة', _money(_summary!.verifiedContributionsYer), Icons.volunteer_activism_outlined),
                   _Metric('المصروفات التشغيلية', _money(_summary!.operatingExpensesYer), Icons.receipt_long_outlined),
                   _Metric('تغطية التشغيل', '${_summary!.contributionCoverageRate.toStringAsFixed(1)}%', Icons.pie_chart_outline),
+                  _Metric(_summary!.operatingGapYer > 0 ? 'الفجوة التشغيلية' : 'الفائض التشغيلي', _money(_summary!.operatingGapYer > 0 ? _summary!.operatingGapYer : _summary!.operatingSurplusYer), Icons.account_balance_wallet_outlined),
                   _Metric('مساهمات معلقة', '${_summary!.pendingContributions}', Icons.pending_actions_outlined),
                   _Metric('الموصلون النشطون', '${_summary!.activeCouriers}', Icons.delivery_dining_outlined),
                   if (_summary!.openRiskFlags != null) _Metric('مخاطر مفتوحة', '${_summary!.openRiskFlags}', Icons.shield_outlined),
                 ],
+              ),
+              const SizedBox(height: 28),
+              Text('أداء الموصلين', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Card(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('الموصل')),
+                      DataColumn(label: Text('المهام')),
+                      DataColumn(label: Text('تم التسليم')),
+                      DataColumn(label: Text('تعثر/إعادة جدولة')),
+                      DataColumn(label: Text('النجاح')),
+                      DataColumn(label: Text('متوسط الساعات')),
+                    ],
+                    rows: _couriers.map((r) => DataRow(cells: [
+                      DataCell(Text('${r['courier_name']}')),
+                      DataCell(Text('${_int(r['assigned'])}')),
+                      DataCell(Text('${_int(r['delivered'])}')),
+                      DataCell(Text('${_int(r['unsuccessful'])}')),
+                      DataCell(Text('${_double(r['success_rate']).toStringAsFixed(1)}%')),
+                      DataCell(Text(_double(r['avg_delivery_hours']).toStringAsFixed(1))),
+                    ])).toList(),
+                  ),
+                ),
               ),
               const SizedBox(height: 28),
               Text('الحركة اليومية', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
@@ -203,7 +238,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       DataCell(Text('${r['donations']}')),
                       DataCell(Text('${r['needs']}')),
                       DataCell(Text('${r['delivered']}')),
-                      DataCell(Text(_money((r['verified_contributions_yer'] as num?)?.toInt() ?? 0))),
+                      DataCell(Text(_money(_int(r['verified_contributions_yer'])))),
                     ])).toList(),
                   ),
                 ),
