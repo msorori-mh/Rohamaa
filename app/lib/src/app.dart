@@ -17,8 +17,8 @@ import 'features/offers/match_offers_screen.dart';
 import 'features/profile/onboarding_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
 
-class SanadApp extends StatelessWidget {
-  const SanadApp({super.key});
+class RuhamaaApp extends StatelessWidget {
+  const RuhamaaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +48,7 @@ class SanadApp extends StatelessWidget {
     );
 
     return MaterialApp.router(
-      title: 'سند',
+      title: 'رحماء',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
@@ -77,7 +77,7 @@ class _RoleGate extends StatelessWidget {
         if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
         final status = snapshot.data;
         if (status == null || status.role != requiredRole) {
-          return Scaffold(appBar: AppBar(title: const Text('سند')), body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')));
+          return Scaffold(appBar: AppBar(title: const Text('رحماء')), body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')));
         }
         if (status.forcePasswordChange) return ChangePasswordScreen(role: status.role);
         return child;
