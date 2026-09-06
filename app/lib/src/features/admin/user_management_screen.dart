@@ -23,6 +23,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _future = AdminRepository(Supabase.instance.client).users();
   }
 
+  String _roleLabel(String role) => switch (role) {
+        'user' => 'مستخدم',
+        'courier' => 'مندوب',
+        'admin' => 'مدير',
+        _ => role,
+      };
+
   Future<void> _changeRole(Map<String, dynamic> user) async {
     final current = user['role'] as String? ?? 'user';
     final selected = await showDialog<String>(
@@ -31,11 +38,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         title: const Text('تغيير الدور'),
         children: [
           for (final role in const ['user', 'courier', 'admin'])
-            RadioListTile<String>(
-              value: role,
-              groupValue: current,
-              title: Text(switch (role) {'user' => 'مستخدم', 'courier' => 'مندوب', 'admin' => 'مدير', _ => role}),
-              onChanged: (value) => Navigator.pop(context, value),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, role),
+              child: Row(
+                children: [
+                  Icon(role == current ? Icons.check_circle : Icons.circle_outlined),
+                  const SizedBox(width: 12),
+                  Text(_roleLabel(role)),
+                ],
+              ),
             ),
         ],
       ),
@@ -108,7 +119,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 return Card(
                   child: ListTile(
                     title: Text((user['full_name'] as String?)?.trim().isNotEmpty == true ? user['full_name'] as String : 'مستخدم بدون اسم'),
-                    subtitle: Text('الدور: $role${suspended ? ' • مجمد' : ''}\n${user['phone'] ?? 'بدون رقم هاتف'}'),
+                    subtitle: Text('الدور: ${_roleLabel(role)}${suspended ? ' • مجمد' : ''}\n${user['phone'] ?? 'بدون رقم هاتف'}'),
                     isThreeLine: true,
                     trailing: PopupMenuButton<String>(
                       onSelected: (action) {
