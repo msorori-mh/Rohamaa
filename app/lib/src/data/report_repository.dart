@@ -29,6 +29,10 @@ class StaffReportSummary {
   final int activeCouriers;
   final int? openRiskFlags;
 
+  int get costPerDeliveredYer => delivered == 0 ? 0 : (operatingExpensesYer / delivered).round();
+  int get operatingGapYer => operatingExpensesYer > verifiedContributionsYer ? operatingExpensesYer - verifiedContributionsYer : 0;
+  int get operatingSurplusYer => verifiedContributionsYer > operatingExpensesYer ? verifiedContributionsYer - operatingExpensesYer : 0;
+
   static int _int(dynamic v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
   static double _double(dynamic v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
 
@@ -63,6 +67,15 @@ class ReportRepository {
 
   Future<List<Map<String, dynamic>>> daily({required DateTime from, required DateTime to, String? areaId}) async {
     final result = await _client.rpc('staff_report_daily', params: {
+      'p_from': _date(from),
+      'p_to': _date(to),
+      'p_area_id': areaId,
+    });
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> couriers({required DateTime from, required DateTime to, String? areaId}) async {
+    final result = await _client.rpc('staff_report_couriers', params: {
       'p_from': _date(from),
       'p_to': _date(to),
       'p_area_id': areaId,
