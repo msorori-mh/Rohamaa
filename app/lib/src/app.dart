@@ -11,12 +11,12 @@ import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/session_landing_screen.dart';
 import 'features/courier/courier_tasks_screen.dart';
-import 'features/donations/create_donation_screen.dart';
+import 'features/donations/create_donation_v2_screen.dart';
 import 'features/handoffs/my_handoffs_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/intro/intro_screen.dart';
 import 'features/legal/legal_screen.dart';
-import 'features/needs/create_need_screen.dart';
+import 'features/needs/create_need_v2_screen.dart';
 import 'features/needs/need_discovery_screen.dart';
 import 'features/offers/match_offers_screen.dart';
 import 'features/profile/account_screen.dart';
@@ -79,14 +79,21 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
           builder: (_, state) {
             final extra = state.extra;
             final data = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
-            return CreateDonationScreen(
+            final rawAttributes = data['attributes'];
+            final attributes = rawAttributes is Map
+                ? rawAttributes.map((key, value) => MapEntry('$key', '$value')).cast<String, String>()
+                : null;
+            return CreateDonationV2Screen(
               prefillCategory: data['category'] as String?,
+              prefillGroup: data['categoryGroup'] as String?,
+              prefillItemTypeKey: data['itemTypeKey'] as String?,
               prefillTitle: data['title'] as String?,
+              prefillAttributes: attributes,
               inspiredByDiscoveryCardId: data['discoveryCardId'] as String?,
             );
           },
         ),
-        GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
+        GoRoute(path: '/need', builder: (_, __) => const CreateNeedV2Screen()),
         GoRoute(path: '/verified-needs', builder: (_, __) => const NeedDiscoveryScreen()),
         GoRoute(path: '/offer-service', builder: (_, __) => const CreateServiceOfferScreen()),
         GoRoute(path: '/request-service', builder: (_, __) => const CreateServiceRequestScreen()),
