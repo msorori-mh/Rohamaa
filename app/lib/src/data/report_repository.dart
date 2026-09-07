@@ -52,6 +52,60 @@ class StaffReportSummary {
       );
 }
 
+class CommunityImpactSummary {
+  const CommunityImpactSummary({
+    required this.v2Donations,
+    required this.v2Needs,
+    required this.deliveredItems,
+    required this.reviewedNeedCards,
+    required this.inspiredDonations,
+    required this.reviewedNeedInspirationRate,
+    required this.serviceOffers,
+    required this.serviceRequests,
+    required this.completedServices,
+    required this.completedServiceHoursEstimate,
+    required this.completedPartnerServices,
+    required this.verifiedPartners,
+    required this.serviceIncidents,
+    required this.resolvedServiceIncidents,
+  });
+
+  final int v2Donations;
+  final int v2Needs;
+  final int deliveredItems;
+  final int reviewedNeedCards;
+  final int inspiredDonations;
+  final double reviewedNeedInspirationRate;
+  final int serviceOffers;
+  final int serviceRequests;
+  final int completedServices;
+  final double completedServiceHoursEstimate;
+  final int completedPartnerServices;
+  final int verifiedPartners;
+  final int serviceIncidents;
+  final int resolvedServiceIncidents;
+
+  static int _int(dynamic value) => value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+  static double _double(dynamic value) => value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+  factory CommunityImpactSummary.fromJson(Map<String, dynamic> json) => CommunityImpactSummary(
+        v2Donations: _int(json['v2_donations']),
+        v2Needs: _int(json['v2_needs']),
+        deliveredItems: _int(json['delivered_items']),
+        reviewedNeedCards: _int(json['reviewed_need_cards']),
+        inspiredDonations: _int(json['inspired_donations']),
+        reviewedNeedInspirationRate: _double(json['reviewed_need_inspiration_rate']),
+        serviceOffers: _int(json['service_offers']),
+        serviceRequests: _int(json['service_requests']),
+        completedServices: _int(json['completed_services']),
+        completedServiceHoursEstimate: _double(json['completed_service_hours_estimate']),
+        completedPartnerServices: _int(json['completed_partner_services']),
+        verifiedPartners: _int(json['verified_partners']),
+        serviceIncidents: _int(json['service_incidents']),
+        resolvedServiceIncidents: _int(json['resolved_service_incidents']),
+      );
+}
+
 class ReportRepository {
   ReportRepository(this._client);
   final SupabaseClient _client;
@@ -63,6 +117,15 @@ class ReportRepository {
       'p_area_id': areaId,
     });
     return StaffReportSummary.fromJson(Map<String, dynamic>.from(result as Map));
+  }
+
+  Future<CommunityImpactSummary> communityImpact({required DateTime from, required DateTime to, String? areaId}) async {
+    final result = await _client.rpc('staff_report_community_impact', params: {
+      'p_from': _date(from),
+      'p_to': _date(to),
+      'p_area_id': areaId,
+    });
+    return CommunityImpactSummary.fromJson(Map<String, dynamic>.from(result as Map));
   }
 
   Future<List<Map<String, dynamic>>> daily({required DateTime from, required DateTime to, String? areaId}) async {
