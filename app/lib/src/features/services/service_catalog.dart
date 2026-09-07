@@ -65,9 +65,16 @@ const ruhamaaServiceCategories = <ServiceCategoryOption>[
   ),
   ServiceCategoryOption(
     key: 'beauty_wedding',
-    label: 'تجهيز مناسبات',
+    label: 'تجهيز ومستلزمات مناسبات',
     icon: Icons.face_retouching_natural_rounded,
-    types: ['تجهيز عروس', 'كوافير أو عناية', 'حلاقة أو تجهيز شخصي'],
+    types: [
+      'تجهيز عروس',
+      'كوافير أو عناية',
+      'حلاقة أو تجهيز شخصي',
+      'إعارة فستان زفاف مجانًا',
+      'إعارة فستان مناسبة مجانًا',
+      'إعارة بدلة عريس مجانًا',
+    ],
   ),
   ServiceCategoryOption(
     key: 'event_setup',
