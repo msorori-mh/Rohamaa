@@ -6,6 +6,7 @@ import '../../data/admin_repository.dart';
 import '../../data/handoff_repository.dart';
 import '../../data/match_offer_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../services/service_home_section.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -55,7 +56,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         const Text(
-                          'كل خطوة هنا تتم بخصوصية، ورحماء يتولى المطابقة والتوصيل.',
+                          'يمكنك أن تعطي شيئًا، تسجّل احتياجًا، أو تقدّم جزءًا من وقتك ومهارتك بخصوصية.',
                           style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
                         ),
                       ],
@@ -84,6 +85,8 @@ class HomeScreen extends StatelessWidget {
               foreground: RuhamaaColors.warmGold,
               onTap: () => context.push('/need'),
             ),
+            const SizedBox(height: 24),
+            const ServiceHomeSection(),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -121,7 +124,7 @@ class HomeScreen extends StatelessWidget {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'هويتك لا تُكشف للطرف الآخر، وموقعك الدقيق يستخدم فقط للتشغيل والتوصيل.',
+                      'هويتك لا تُكشف للطرف الآخر إلا بالقدر الضروري عند تنفيذ خدمة تتطلب حضورًا مباشرًا، وموقعك الدقيق يستخدم للتشغيل فقط.',
                       style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                     ),
                   ),
