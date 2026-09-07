@@ -1,0 +1,76 @@
+name: Flutter CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/mvp-foundation
+
+concurrency:
+  group: flutter-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate Supabase migration versions
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          declare -A seen
+          while IFS= read -r file; do
+            name="${file##*/}"
+            version="${name%%_*}"
+            if [[ ! "$version" =~ ^[0-9]{4,}$ ]]; then
+              echo "::error file=$file::Migration filename must start with a numeric version followed by _."
+              exit 1
+            fi
+            if [[ -n "${seen[$version]:-}" ]]; then
+              echo "::error file=$file::Duplicate migration version $version also used by ${seen[$version]}."
+              exit 1
+            fi
+            seen[$version]="$file"
+          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+          echo "Validated ${#seen[@]} unique migration versions."
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Android debug APK
+        timeout-minutes: 20
+        run: flutter build apk --debug --no-pub
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruhamaa-debug-apk
+          path: app/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
