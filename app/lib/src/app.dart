@@ -14,14 +14,18 @@ import 'features/courier/courier_tasks_screen.dart';
 import 'features/donations/create_donation_screen.dart';
 import 'features/handoffs/my_handoffs_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/intro/intro_screen.dart';
 import 'features/legal/legal_screen.dart';
 import 'features/needs/create_need_screen.dart';
 import 'features/offers/match_offers_screen.dart';
 import 'features/profile/onboarding_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
+import 'theme/ruhamaa_theme.dart';
 
 class RuhamaaApp extends StatefulWidget {
-  const RuhamaaApp({super.key});
+  const RuhamaaApp({super.key, this.showIntro = false});
+
+  final bool showIntro;
 
   @override
   State<RuhamaaApp> createState() => _RuhamaaAppState();
@@ -36,17 +40,19 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
     super.initState();
     _authRefreshNotifier = _AuthRefreshNotifier();
     _router = GoRouter(
-      initialLocation: '/',
+      initialLocation: widget.showIntro ? '/intro' : '/',
       refreshListenable: _authRefreshNotifier,
       redirect: (context, state) {
         final loggedIn = Supabase.instance.client.auth.currentSession != null;
         final isLogin = state.matchedLocation == '/login';
+        final isIntro = state.matchedLocation == '/intro';
         final isPublicLegal = state.matchedLocation == '/legal';
-        if (!loggedIn && !isLogin && !isPublicLegal) return '/login';
+        if (!loggedIn && !isLogin && !isIntro && !isPublicLegal) return '/login';
         if (loggedIn && isLogin) return '/';
         return null;
       },
       routes: [
+        GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
         GoRoute(path: '/legal', builder: (_, __) => const LegalScreen()),
         GoRoute(path: '/', builder: (_, __) => const SessionLandingScreen()),
@@ -82,12 +88,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF226B5E),
-        scaffoldBackgroundColor: const Color(0xFFF8FAF9),
-        inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
-      ),
+      theme: RuhamaaTheme.light(),
       routerConfig: _router,
     );
   }
