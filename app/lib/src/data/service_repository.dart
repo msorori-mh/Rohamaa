@@ -1,6 +1,44 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+class ServiceMatchOffer {
+  const ServiceMatchOffer({
+    required this.matchId,
+    required this.mySide,
+    required this.serviceTitle,
+    required this.serviceType,
+    required this.category,
+    required this.status,
+    required this.myResponse,
+    required this.otherResponse,
+    required this.scheduledAt,
+  });
+
+  final String matchId;
+  final String mySide;
+  final String serviceTitle;
+  final String serviceType;
+  final String category;
+  final String status;
+  final String myResponse;
+  final String otherResponse;
+  final DateTime? scheduledAt;
+
+  factory ServiceMatchOffer.fromJson(Map<String, dynamic> json) => ServiceMatchOffer(
+        matchId: json['match_id'] as String,
+        mySide: json['my_side'] as String,
+        serviceTitle: json['service_title'] as String,
+        serviceType: json['service_type'] as String,
+        category: json['category'] as String,
+        status: json['status'] as String,
+        myResponse: json['my_response'] as String,
+        otherResponse: json['other_response'] as String,
+        scheduledAt: json['scheduled_at'] == null
+            ? null
+            : DateTime.tryParse('${json['scheduled_at']}'),
+      );
+}
+
 class ServiceRepository {
   ServiceRepository(this._client);
 
@@ -103,5 +141,21 @@ class ServiceRepository {
         .eq('user_id', userId)
         .order('created_at', ascending: false);
     return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<ServiceMatchOffer>> pendingServiceMatches() async {
+    final rows = await _client.rpc('user_pending_service_matches');
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(ServiceMatchOffer.fromJson)
+        .toList();
+  }
+
+  Future<String> respondServiceMatch(String matchId, {required bool accept}) async {
+    final result = await _client.rpc('user_respond_service_match', params: {
+      'p_match_id': matchId,
+      'p_accept': accept,
+    });
+    return result as String;
   }
 }
