@@ -12,6 +12,13 @@
 .pub/
 build/
 
+# Android release signing secrets
+app/android/key.properties
+app/android/*.jks
+app/android/*.keystore
+app/android/app/*.jks
+app/android/app/*.keystore
+
 # Node / web admin
 node_modules/
 .next/
