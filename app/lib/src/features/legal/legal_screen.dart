@@ -35,7 +35,7 @@ class _LegalScreenState extends State<LegalScreen> {
       builder: (context) => AlertDialog(
         title: const Text('طلب حذف الحساب'),
         content: const Text(
-          'سيتم تسجيل طلب حذف حسابك وبياناتك الشخصية. إذا كانت لديك عملية استلام أو توصيل جارية، تُستكمل أو تُغلق تشغيليًا أولًا ثم يُنفذ الحذف. لا يؤثر تقديم الطلب على أي حق لك في الخصوصية.',
+          'سيتم تسجيل طلب حذف حسابك وبياناتك الشخصية. إذا كانت لديك عملية استلام أو توصيل أو خدمة جارية، تُستكمل أو تُغلق تشغيليًا أولًا ثم يُنفذ الحذف. قد تُحفظ سجلات محدودة عند الضرورة لمعالجة بلاغ سلامة أو منع إساءة الاستخدام، وفق سياسة الخصوصية.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
@@ -70,7 +70,7 @@ class _LegalScreenState extends State<LegalScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'رحماء يحافظ على خصوصية المتبرع والمستفيد، ويستخدم البيانات الشخصية فقط لتسجيل الحساب والمطابقة والتشغيل والتوصيل والسلامة.',
+            'رحماء يقلل كشف البيانات إلى الحد اللازم للمطابقة والتشغيل. في عمليات الأشياء لا يعرف المتبرع والمستفيد هوية بعضهما، وفي الخدمات الحضورية لا تُشارك معلومات التنفيذ الضرورية إلا بعد الموافقة والتنسيق.',
           ),
           const SizedBox(height: 18),
           Card(
@@ -79,7 +79,7 @@ class _LegalScreenState extends State<LegalScreen> {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('سياسة الخصوصية'),
-                  subtitle: const Text('ما نجمعه، لماذا نستخدمه، وكيف نحميه ونحذفه.'),
+                  subtitle: const Text('الحساب، الموقع، الصور، الاحتياجات، الخدمات، الشركاء، البلاغات والحذف.'),
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () => _open(_privacy),
                 ),
@@ -87,7 +87,7 @@ class _LegalScreenState extends State<LegalScreen> {
                 ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('شروط الاستخدام'),
-                  subtitle: const Text('قواعد الاستخدام والمطابقة والتوصيل والمساهمات التشغيلية.'),
+                  subtitle: const Text('قواعد الأشياء والمطابقة والتوصيل والوقت والمهارات وشركاء رحماء.'),
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () => _open(_terms),
                 ),
