@@ -5,7 +5,8 @@
     <application
         android:label="رحماء"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/ruhamaa_launcher"
+        android:roundIcon="@drawable/ruhamaa_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
