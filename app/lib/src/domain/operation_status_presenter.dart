@@ -15,6 +15,7 @@ abstract final class OperationStatusPresenter {
         'service_offer' => 'وقت أو مهارة مقدمة',
         'service_request' => 'طلب خدمة',
         'service_match' => 'عملية خدمة',
+        'item_processing' => 'تجهيز العطاء',
         _ => 'عملية رحماء',
       };
 
@@ -40,6 +41,14 @@ abstract final class OperationStatusPresenter {
       'need:fulfilled' => const OperationStatusCopy(label: 'تم تلبية الاحتياج', nextStep: 'نتمنى أن يكون الأثر نافعًا.'),
       'need:cancelled' || 'need:expired' => const OperationStatusCopy(label: 'أُغلق الاحتياج', nextStep: 'يمكنك تسجيل احتياج جديد عند الحاجة.', attention: true),
       'item_match:offered' => const OperationStatusCopy(label: 'ينتظر قرارك', nextStep: 'راجع العرض واقبله أو ارفضه بوضوح.', attention: true),
+      'item_processing:inspection_pending' => const OperationStatusCopy(label: 'وصل إلى مركز رحماء', nextStep: 'بانتظار الفحص والتصنيف.'),
+      'item_processing:cleaning_queued' => const OperationStatusCopy(label: 'بانتظار التنظيف', nextStep: 'سيُجهز العطاء قبل إعادة توزيعه.'),
+      'item_processing:cleaning' => const OperationStatusCopy(label: 'قيد التنظيف والتجهيز', nextStep: 'سيعود للمطابقة بعد اكتمال التجهيز.'),
+      'item_processing:repair_queued' => const OperationStatusCopy(label: 'بانتظار الإصلاح', nextStep: 'يجري ترتيب إصلاحه للاستفادة منه.'),
+      'item_processing:repairing' => const OperationStatusCopy(label: 'قيد الإصلاح', nextStep: 'سيُفحص مجددًا قبل إتاحته.'),
+      'item_processing:ready_for_distribution' => const OperationStatusCopy(label: 'جاهز لإعادة التوزيع', nextStep: 'يبحث الفريق عن احتياج مناسب.'),
+      'item_processing:recycling' => const OperationStatusCopy(label: 'محوّل لإعادة التدوير', nextStep: 'تعذر استخدامه بأمان وسيُستفاد من مواده.'),
+      'item_processing:recycled' => const OperationStatusCopy(label: 'تمت إعادة التدوير', nextStep: 'اكتملت الاستفادة البيئية من المواد.'),
       'delivery:assigned' => const OperationStatusCopy(label: 'يجري ترتيب الاستلام', nextStep: 'سيظهر الرمز عندما يحين وقت التسليم.'),
       'delivery:heading_to_pickup' => const OperationStatusCopy(label: 'الموصل في طريقه للاستلام', nextStep: 'جهّز العطاء ولا تسلّم الرمز إلا عند الوصول.'),
       'delivery:picked_up' => const OperationStatusCopy(label: 'تم الاستلام', nextStep: 'العطاء في عهدة موصل رحماء.'),

@@ -50,6 +50,7 @@ class _OperationsListState extends State<_OperationsList> {
     'service_offer' => Icons.handyman_outlined,
     'service_request' => Icons.support_agent_outlined,
     'service_match' => Icons.handshake_outlined,
+    'item_processing' => Icons.warehouse_outlined,
     _ => Icons.receipt_long_outlined,
   };
 
