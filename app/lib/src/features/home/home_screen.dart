@@ -8,19 +8,6 @@ import '../../theme/ruhamaa_theme.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  void _openNav(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        return;
-      case 1:
-        context.push('/offers');
-      case 2:
-        context.push('/handoffs');
-      case 3:
-        context.push('/account');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,7 +93,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.mark_email_unread_outlined,
                     title: 'المطابقات',
                     subtitle: 'فرص مناسبة لك',
-                    onTap: () => context.push('/offers'),
+                    onTap: () => context.go('/offers'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -115,7 +102,7 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.local_shipping_outlined,
                     title: 'عملياتي',
                     subtitle: 'تابع الاستلام والتسليم',
-                    onTap: () => context.push('/handoffs'),
+                    onTap: () => context.go('/handoffs'),
                   ),
                 ),
               ],
@@ -175,16 +162,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) => _openNav(context, index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          NavigationDestination(icon: Icon(Icons.people_alt_outlined), label: 'المطابقات'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'عملياتي'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'حسابي'),
-        ],
-      ),
     );
   }
 }
@@ -221,7 +198,10 @@ class _PrimaryActionCard extends StatelessWidget {
               Container(
                 width: 64,
                 height: 64,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.82), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, size: 34, color: foreground),
               ),
               const SizedBox(width: 16),
@@ -237,7 +217,10 @@ class _PrimaryActionCard extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 5),
-                    Text(subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
+                    ),
                   ],
                 ),
               ),
@@ -251,7 +234,12 @@ class _PrimaryActionCard extends StatelessWidget {
 }
 
 class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String title;
@@ -278,7 +266,11 @@ class _QuickActionCard extends StatelessWidget {
               const SizedBox(height: 9),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 3),
-              Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12)),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -288,7 +280,12 @@ class _QuickActionCard extends StatelessWidget {
 }
 
 class _OperationsCard extends StatelessWidget {
-  const _OperationsCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _OperationsCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String title;
