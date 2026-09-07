@@ -18,6 +18,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _role = 'user';
   List<Map<String, dynamic>> _areas = const [];
   StaffReportSummary? _summary;
+  CommunityImpactSummary? _impact;
   List<Map<String, dynamic>> _daily = const [];
   List<Map<String, dynamic>> _couriers = const [];
   bool _loading = true;
@@ -55,14 +56,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final repo = ReportRepository(Supabase.instance.client);
       final results = await Future.wait<dynamic>([
         repo.summary(from: _from, to: _to, areaId: _areaId),
+        repo.communityImpact(from: _from, to: _to, areaId: _areaId),
         repo.daily(from: _from, to: _to, areaId: _areaId),
         repo.couriers(from: _from, to: _to, areaId: _areaId),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = results[0] as StaffReportSummary;
-        _daily = (results[1] as List).cast<Map<String, dynamic>>();
-        _couriers = (results[2] as List).cast<Map<String, dynamic>>();
+        _impact = results[1] as CommunityImpactSummary;
+        _daily = (results[2] as List).cast<Map<String, dynamic>>();
+        _couriers = (results[3] as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
     } catch (e) {
@@ -71,7 +74,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _pickRange() async {
-    final range = await showDateRangePicker(context: context, firstDate: DateTime(2026), lastDate: DateTime.now().add(const Duration(days: 1)), initialDateRange: DateTimeRange(start: _from, end: _to));
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2026),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDateRange: DateTimeRange(start: _from, end: _to),
+    );
     if (range == null) return;
     setState(() { _from = range.start; _to = range.end; });
     await _reload();
@@ -122,7 +130,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (category.text.trim().isEmpty || amountValue == null || amountValue <= 0) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل التصنيف والمبلغ بشكل صحيح')));
       } else {
-        await ReportRepository(Supabase.instance.client).addExpense(areaId: selectedArea, date: DateTime.now(), category: category.text.trim(), amountYer: amountValue, description: description.text.trim());
+        await ReportRepository(Supabase.instance.client).addExpense(
+          areaId: selectedArea,
+          date: DateTime.now(),
+          category: category.text.trim(),
+          amountYer: amountValue,
+          description: description.text.trim(),
+        );
         await _reload();
       }
     }
@@ -177,9 +191,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            if (_loading) const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-            else if (_error != null) Center(child: Text('تعذر تحميل التقرير: $_error'))
-            else if (_summary != null) ...[
+            if (_loading)
+              const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+            else if (_error != null)
+              Center(child: Text('تعذر تحميل التقرير: $_error'))
+            else if (_summary != null && _impact != null) ...[
+              Text('الأثر المجتمعي', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _Metric('أشياء وصلت بنجاح', '${_impact!.deliveredItems}', Icons.inventory_2_outlined),
+                  _Metric('عطاءات بتصنيف V2', '${_impact!.v2Donations}', Icons.category_outlined),
+                  _Metric('احتياجات بتصنيف V2', '${_impact!.v2Needs}', Icons.fact_check_outlined),
+                  _Metric('بطاقات احتياج راجعها رحماء', '${_impact!.reviewedNeedCards}', Icons.visibility_outlined),
+                  _Metric('تبرعات ألهمتها البطاقات', '${_impact!.inspiredDonations}', Icons.lightbulb_outline_rounded),
+                  _Metric('معدل إلهام البطاقات', '${_impact!.reviewedNeedInspirationRate.toStringAsFixed(1)}%', Icons.insights_outlined),
+                  _Metric('عروض وقت ومهارة', '${_impact!.serviceOffers}', Icons.handyman_outlined),
+                  _Metric('طلبات خدمات', '${_impact!.serviceRequests}', Icons.support_agent_outlined),
+                  _Metric('خدمات مكتملة', '${_impact!.completedServices}', Icons.task_alt_outlined),
+                  _Metric('ساعات خدمة مكتملة (تقديري)', _impact!.completedServiceHoursEstimate.toStringAsFixed(1), Icons.schedule_outlined),
+                  _Metric('خدمات نفذها شركاء', '${_impact!.completedPartnerServices}', Icons.storefront_outlined),
+                  _Metric('شركاء اعتمدوا خلال الفترة', '${_impact!.verifiedPartners}', Icons.verified_outlined),
+                  _Metric('بلاغات خدمات', '${_impact!.serviceIncidents}', Icons.report_problem_outlined),
+                  _Metric('بلاغات أُغلقت', '${_impact!.resolvedServiceIncidents}', Icons.fact_check_outlined),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Text('التشغيل والتوصيل', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
@@ -256,13 +297,23 @@ class _Metric extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 210,
         child: Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon), const SizedBox(height: 12), Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 4), Text(label)]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon),
+                const SizedBox(height: 12),
+                Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(label),
+              ],
+            ),
           ),
         ),
       );
