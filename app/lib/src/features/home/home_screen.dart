@@ -14,6 +14,7 @@ class HomeScreen extends StatelessWidget {
         title: const Text('رحماء'),
         actions: [
           IconButton(tooltip: 'بيانات التوصيل', onPressed: () => context.push('/onboarding'), icon: const Icon(Icons.location_on_outlined)),
+          IconButton(tooltip: 'الخصوصية والحساب', onPressed: () => context.push('/legal'), icon: const Icon(Icons.privacy_tip_outlined)),
           IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
         ],
       ),
