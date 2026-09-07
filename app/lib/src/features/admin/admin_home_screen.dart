@@ -8,6 +8,7 @@ import 'accepted_matches_screen.dart';
 import 'admin_dashboard_screen.dart' show ContributionReviewScreen, MatchingQueueScreen;
 import 'create_staff_screen.dart';
 import 'need_discovery_admin_screen.dart';
+import 'partner_management_screen.dart';
 import 'risk_management_screen.dart';
 import 'service_areas_screen.dart';
 import 'service_matching_screen.dart';
@@ -57,14 +58,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   _Metric(label: 'مخاطر مفتوحة', value: stats.openRiskFlags),
                 ]),
                 const SizedBox(height: 24),
-                _Action(icon: Icons.analytics_outlined, title: 'التقارير الأساسية', subtitle: 'الأثر، نجاح التوصيل، المساهمات، المصروفات ونسبة تغطية التشغيل.', onTap: () => _open(const ReportsScreen())),
+                _Action(icon: Icons.analytics_outlined, title: 'التقارير الأساسية', subtitle: 'الأثر، نجاح التوصيل، الخدمات، المساهمات والمصروفات.', onTap: () => _open(const ReportsScreen())),
                 _Action(icon: Icons.map_outlined, title: 'المدن والمناطق', subtitle: 'إدارة نطاقات الخدمة التي تُستخدم للتوصيل وإسناد المشرفين.', onTap: () => _open(const ServiceAreasScreen())),
                 _Action(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب فريق رحماء', subtitle: 'إنشاء موصل أو مشرف مدينة/منطقة ببريد وكلمة مرور ابتدائية.', onTap: () => _open(const CreateStaffScreen())),
-                _Action(icon: Icons.fact_check_outlined, title: 'احتياجات راجعها رحماء', subtitle: 'راجع الطلبات واحدًا واحدًا واكتب بطاقة محايدة تحفّز العطاء دون الادعاء بتحقق مالي أو كشف هوية.', onTap: () => _open(const NeedDiscoveryAdminScreen())),
-                _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء', subtitle: 'أرسل عروض مطابقة خاصة بين الأشياء والاحتياجات.', onTap: () => _open(const MatchingQueueScreen())),
-                _Action(icon: Icons.handyman_outlined, title: 'الوقت والمهارات', subtitle: 'راجع عروض الساعات والخدمات، واعتمد مقدميها، وطابقها بطلبات الخدمات.', onTap: () => _open(const ServiceMatchingScreen())),
+                _Action(icon: Icons.fact_check_outlined, title: 'احتياجات راجعها رحماء', subtitle: 'راجع الطلبات واكتب بطاقة محايدة تحفّز العطاء دون كشف الهوية.', onTap: () => _open(const NeedDiscoveryAdminScreen())),
+                _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء V2', subtitle: 'مطابقة دقيقة حسب الفئة والنوع والمقاس/العمر/الصف عند توفرها.', onTap: () => _open(const MatchingQueueScreen())),
+                _Action(icon: Icons.handyman_outlined, title: 'الوقت والمهارات', subtitle: 'راجع عروض الأفراد وطابقها بطلبات الخدمات.', onTap: () => _open(const ServiceMatchingScreen())),
+                _Action(icon: Icons.storefront_outlined, title: 'شركاء رحماء', subtitle: 'تحقق من المحلات والورش والصالونات قبل السماح بعروض خدمات باسمها.', onTap: () => _open(const PartnerManagementScreen())),
                 _Action(icon: Icons.delivery_dining_outlined, title: 'مطابقات جاهزة للتوصيل', subtitle: 'أسند الموصل والدراجة بعد قبول المستفيد.', onTap: () => _open(const AcceptedMatchesScreen())),
-                _Action(icon: Icons.payments_outlined, title: 'المساهمات التشغيلية', subtitle: 'اعتمد المساهمة بعد تأكيد استلامها نقدًا من المندوب؛ لا توجد حوالات جديدة داخل التطبيق.', onTap: () => _open(const ContributionReviewScreen())),
+                _Action(icon: Icons.payments_outlined, title: 'المساهمات التشغيلية', subtitle: 'اعتمد المساهمة بعد تأكيد استلامها نقدًا من المندوب.', onTap: () => _open(const ContributionReviewScreen())),
                 _Action(icon: Icons.shield_outlined, title: 'مراجعة المخاطر', subtitle: 'راجع الإشارات وسجّل قرار المراجعة.', onTap: () => _open(const RiskManagementScreen())),
                 _Action(icon: Icons.manage_accounts_outlined, title: 'المستخدمون والموصلون', subtitle: 'إدارة الأدوار وتجميد الحسابات عند الضرورة.', onTap: () => _open(const UserManagementScreen())),
               ],
