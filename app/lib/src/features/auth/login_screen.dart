@@ -183,6 +183,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: const Icon(Icons.badge_outlined),
                   label: const Text('دخول فريق رحماء'),
                 ),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: () => context.push('/legal'),
+                  icon: const Icon(Icons.privacy_tip_outlined),
+                  label: const Text('الخصوصية والشروط وحذف الحساب'),
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -191,9 +197,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 ],
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 const Text(
-                  'لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.',
+                  'نستخدم بيانات حساب Google الأساسية لتسجيل الدخول فقط. لا نطلب صلاحيات Gmail أو Drive. رقم الهاتف والموقع يُستخدمان عند الحاجة التشغيلية للاستلام والتوصيل.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12),
                 ),
