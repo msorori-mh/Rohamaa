@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
       case 2:
         context.push('/handoffs');
       case 3:
-        context.push('/legal');
+        context.push('/account');
     }
   }
 
