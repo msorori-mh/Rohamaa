@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../theme/ruhamaa_theme.dart';
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -128,16 +130,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
           children: [
-            const Text(
-              'هذه البيانات لا تظهر للمتبرع أو المستفيد الآخر، وتستخدم فقط لتشغيل الاستلام والتوصيل.',
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: RuhamaaColors.softGreen,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined, color: RuhamaaColors.primary, size: 30),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'موقعك خاص',
+                          style: TextStyle(color: RuhamaaColors.primaryDark, fontSize: 17, fontWeight: FontWeight.w900),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          'هذه البيانات لا تظهر للطرف الآخر، وتستخدم فقط لتنفيذ الاستلام أو التوصيل بأمان.',
+                          style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+              decoration: const InputDecoration(
+                labelText: 'رقم الهاتف',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
               validator: (v) => v == null || v.trim().length < 7
                   ? 'أدخل رقم هاتف صحيحًا'
                   : null,
@@ -158,7 +190,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 }
                 return DropdownButtonFormField<String>(
                   initialValue: _serviceAreaId,
-                  decoration: const InputDecoration(labelText: 'المدينة / نطاق الخدمة'),
+                  decoration: const InputDecoration(
+                    labelText: 'المدينة / نطاق الخدمة',
+                    prefixIcon: Icon(Icons.location_city_outlined),
+                  ),
                   items: areas.map((a) {
                     final prefix = a['kind'] == 'city' ? 'مدينة' : 'منطقة';
                     return DropdownMenuItem(
@@ -177,6 +212,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               decoration: const InputDecoration(
                 labelText: 'الحي / المنطقة التفصيلية',
                 hintText: 'مثال: الروضة',
+                prefixIcon: Icon(Icons.home_work_outlined),
               ),
               validator: (v) => v == null || v.trim().isEmpty
                   ? 'أدخل الحي أو المنطقة'
@@ -189,22 +225,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               decoration: const InputDecoration(
                 labelText: 'وصف العنوان',
                 hintText: 'علامة مميزة تساعد الموصل فقط',
+                prefixIcon: Icon(Icons.description_outlined),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: _captureLocation,
-              icon: const Icon(Icons.my_location),
+              icon: Icon(
+                _position == null ? Icons.my_location_rounded : Icons.check_circle_rounded,
+              ),
               label: Text(
                 _position == null
                     ? 'تحديد موقعي الحالي'
                     : 'تم تحديد الموقع — اضغط للتحديث',
               ),
             ),
-            const SizedBox(height: 24),
-            FilledButton(
+            if (_position != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: RuhamaaColors.warmGoldSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.lock_outline_rounded, size: 20, color: RuhamaaColors.warmGold),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'تم حفظ نقطة الموقع للاستخدام التشغيلي فقط.',
+                        style: TextStyle(color: RuhamaaColors.primaryDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 26),
+            FilledButton.icon(
               onPressed: _busy ? null : _save,
-              child: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ'),
+              icon: const Icon(Icons.save_outlined),
+              label: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ بيانات التوصيل'),
             ),
           ],
         ),
