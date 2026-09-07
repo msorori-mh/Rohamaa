@@ -57,13 +57,21 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
         GoRoute(path: '/legal', builder: (_, __) => const LegalScreen()),
         GoRoute(path: '/', builder: (_, __) => const SessionLandingScreen()),
-        GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-        GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+        ShellRoute(
+          builder: (context, state, child) => _MainNavigationShell(
+            location: state.matchedLocation,
+            child: child,
+          ),
+          routes: [
+            GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+            GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
+            GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
+            GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+          ],
+        ),
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
         GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
-        GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
-        GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
         GoRoute(path: '/supervisor', builder: (_, __) => const _RoleGate(requiredRole: 'supervisor', child: SupervisorHomeScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
@@ -92,6 +100,66 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
       ],
       theme: RuhamaaTheme.light(),
       routerConfig: _router,
+    );
+  }
+}
+
+class _MainNavigationShell extends StatelessWidget {
+  const _MainNavigationShell({required this.location, required this.child});
+
+  final String location;
+  final Widget child;
+
+  int get _selectedIndex {
+    if (location.startsWith('/offers')) return 1;
+    if (location.startsWith('/handoffs')) return 2;
+    if (location.startsWith('/account')) return 3;
+    return 0;
+  }
+
+  void _go(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        context.go('/home');
+      case 1:
+        context.go('/offers');
+      case 2:
+        context.go('/handoffs');
+      case 3:
+        context.go('/account');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => _go(context, index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'الرئيسية',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_alt_outlined),
+            selectedIcon: Icon(Icons.people_alt_rounded),
+            label: 'المطابقات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'عملياتي',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'حسابي',
+          ),
+        ],
+      ),
     );
   }
 }
