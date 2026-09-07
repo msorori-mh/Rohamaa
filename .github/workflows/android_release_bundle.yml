@@ -66,19 +66,10 @@ jobs:
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          cat > android/key.properties <<EOF
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyPassword=$ANDROID_KEY_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=../upload-keystore.jks
-          EOF
-          chmod 600 android/upload-keystore.jks android/key.properties
+          chmod 600 android/upload-keystore.jks
 
       - name: Flutter dependencies
         run: flutter pub get
@@ -90,6 +81,11 @@ jobs:
         run: flutter test
 
       - name: Build signed Android App Bundle
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/app/android/upload-keystore.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: >-
           flutter build appbundle --release
           --build-name "${{ inputs.build_name }}"
@@ -115,5 +111,4 @@ jobs:
       - name: Remove temporary signing material
         if: always()
         shell: bash
-        run: |
-          rm -f android/upload-keystore.jks android/key.properties
+        run: rm -f android/upload-keystore.jks
