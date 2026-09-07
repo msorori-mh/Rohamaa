@@ -4,13 +4,73 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../theme/ruhamaa_theme.dart';
 
-class AccountScreen extends StatelessWidget {
-  const AccountScreen({super.key});
+class AccountScreen extends StatefulWidget {
+  const AccountScreen({
+    super.key,
+    this.email,
+    this.onSignOut,
+  });
+
+  final String? email;
+  final Future<void> Function()? onSignOut;
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  bool _signingOut = false;
+
+  Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تسجيل الخروج؟'),
+        content: const Text(
+          'سيتم إنهاء جلسة رحماء على هذا الجهاز، ويمكنك بعد ذلك الدخول بحساب Google آخر.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('cancel-sign-out'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            key: const Key('confirm-sign-out'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('تسجيل الخروج'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _signingOut = true);
+    try {
+      final handler = widget.onSignOut;
+      if (handler != null) {
+        await handler();
+      } else {
+        await Supabase.instance.client.auth.signOut();
+      }
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تسجيل الخروج: ${error.message}')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر تسجيل الخروج. تحقق من اتصالك ثم حاول مرة أخرى.')),
+      );
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    final email = user?.email;
+    final email = widget.email ?? Supabase.instance.client.auth.currentUser?.email;
 
     return Scaffold(
       appBar: AppBar(title: const Text('حسابي')),
@@ -116,15 +176,30 @@ class AccountScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () async {
-              await Supabase.instance.client.auth.signOut();
-            },
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('تسجيل الخروج'),
-          ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: RuhamaaColors.background,
+            border: Border(top: BorderSide(color: RuhamaaColors.border)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: OutlinedButton.icon(
+              key: const Key('account-sign-out'),
+              onPressed: _signingOut ? null : _signOut,
+              icon: _signingOut
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.logout_rounded),
+              label: Text(_signingOut ? 'جارٍ تسجيل الخروج...' : 'تسجيل الخروج'),
+            ),
+          ),
+        ),
       ),
     );
   }
