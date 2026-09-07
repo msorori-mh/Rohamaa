@@ -119,7 +119,7 @@ with check (public.is_admin() and actor_id=(select auth.uid()));
 
 create or replace function public.recovery_code(p_prefix text)
 returns text language sql volatile security invoker set search_path=public as $$
-  select p_prefix||'-MRB-'||to_char(now(),'YYMMDD')||'-'||upper(substr(encode(gen_random_bytes(5),'hex'),1,8));
+  select p_prefix||'-MRB-'||to_char(now(),'YYMMDD')||'-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8));
 $$;
 
 create or replace function public.admin_create_warehouse(
