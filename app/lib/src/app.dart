@@ -17,6 +17,7 @@ import 'features/home/home_screen.dart';
 import 'features/intro/intro_screen.dart';
 import 'features/legal/legal_screen.dart';
 import 'features/needs/create_need_screen.dart';
+import 'features/needs/need_discovery_screen.dart';
 import 'features/offers/match_offers_screen.dart';
 import 'features/profile/account_screen.dart';
 import 'features/profile/onboarding_screen.dart';
@@ -75,6 +76,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
         GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
+        GoRoute(path: '/verified-needs', builder: (_, __) => const NeedDiscoveryScreen()),
         GoRoute(path: '/offer-service', builder: (_, __) => const CreateServiceOfferScreen()),
         GoRoute(path: '/request-service', builder: (_, __) => const CreateServiceRequestScreen()),
         GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
