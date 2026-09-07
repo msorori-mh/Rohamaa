@@ -60,7 +60,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 _Action(icon: Icons.analytics_outlined, title: 'التقارير الأساسية', subtitle: 'الأثر، نجاح التوصيل، المساهمات، المصروفات ونسبة تغطية التشغيل.', onTap: () => _open(const ReportsScreen())),
                 _Action(icon: Icons.map_outlined, title: 'المدن والمناطق', subtitle: 'إدارة نطاقات الخدمة التي تُستخدم للتوصيل وإسناد المشرفين.', onTap: () => _open(const ServiceAreasScreen())),
                 _Action(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب فريق رحماء', subtitle: 'إنشاء موصل أو مشرف مدينة/منطقة ببريد وكلمة مرور ابتدائية.', onTap: () => _open(const CreateStaffScreen())),
-                _Action(icon: Icons.fact_check_outlined, title: 'الاحتياجات الموثقة', subtitle: 'راجع الطلبات واحدًا واحدًا واكتب بطاقة محايدة يمكنها تحفيز المتبرعين دون كشف الهوية.', onTap: () => _open(const NeedDiscoveryAdminScreen())),
+                _Action(icon: Icons.fact_check_outlined, title: 'احتياجات راجعها رحماء', subtitle: 'راجع الطلبات واحدًا واحدًا واكتب بطاقة محايدة تحفّز العطاء دون الادعاء بتحقق مالي أو كشف هوية.', onTap: () => _open(const NeedDiscoveryAdminScreen())),
                 _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء', subtitle: 'أرسل عروض مطابقة خاصة بين الأشياء والاحتياجات.', onTap: () => _open(const MatchingQueueScreen())),
                 _Action(icon: Icons.handyman_outlined, title: 'الوقت والمهارات', subtitle: 'راجع عروض الساعات والخدمات، واعتمد مقدميها، وطابقها بطلبات الخدمات.', onTap: () => _open(const ServiceMatchingScreen())),
                 _Action(icon: Icons.delivery_dining_outlined, title: 'مطابقات جاهزة للتوصيل', subtitle: 'أسند الموصل والدراجة بعد قبول المستفيد.', onTap: () => _open(const AcceptedMatchesScreen())),
