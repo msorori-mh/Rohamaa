@@ -30,11 +30,11 @@ class _NeedDiscoveryAdminAppBar extends StatelessWidget implements PreferredSize
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text('الاحتياجات الموثقة'),
+      title: const Text('احتياجات راجعها رحماء'),
       bottom: const TabBar(
         tabs: [
           Tab(text: 'للمراجعة', icon: Icon(Icons.fact_check_outlined)),
-          Tab(text: 'المنشورة', icon: Icon(Icons.visibility_outlined)),
+          Tab(text: 'المعروضة', icon: Icon(Icons.visibility_outlined)),
         ],
       ),
     );
@@ -91,13 +91,13 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم نشر بطاقة احتياج محجوبة الهوية بعد المراجعة.')),
+        const SnackBar(content: Text('تم عرض بطاقة احتياج محجوبة الهوية بعد المراجعة.')),
       );
       setState(_reload);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر نشر البطاقة: $e')),
+        SnackBar(content: Text('تعذر عرض البطاقة: $e')),
       );
     }
   }
@@ -160,7 +160,7 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
                             ),
                           ),
                           Chip(
-                            label: Text(active ? 'منشور' : 'غير منشور'),
+                            label: Text(active ? 'معروض' : 'غير معروض'),
                             avatar: Icon(
                               active ? Icons.visibility_rounded : Icons.visibility_off_outlined,
                               size: 17,
@@ -179,7 +179,7 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'خاص بفريق رحماء — لا تنسخه تلقائيًا إلى البطاقة العامة',
+                              'خاص بفريق رحماء — لا تنسخه تلقائيًا إلى البطاقة المعروضة',
                               style: TextStyle(
                                 color: RuhamaaColors.primaryDark,
                                 fontWeight: FontWeight.w800,
@@ -199,14 +199,14 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'عند النشر اكتب وصفًا محايدًا للشيء نفسه فقط. لا تنشر اسمًا أو رقمًا أو عنوانًا أو قصة شخصية أو سببًا حساسًا.',
+                        'عند العرض اكتب وصفًا محايدًا للشيء نفسه فقط. لا تعرض اسمًا أو رقمًا أو عنوانًا أو قصة شخصية أو سببًا حساسًا.',
                         style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45, fontSize: 12),
                       ),
                       const SizedBox(height: 14),
                       FilledButton.icon(
                         onPressed: () => _publish(need, existing),
-                        icon: Icon(active ? Icons.edit_outlined : Icons.publish_outlined),
-                        label: Text(active ? 'راجع أو عدّل البطاقة المنشورة' : 'راجع ثم انشر'),
+                        icon: Icon(active ? Icons.edit_outlined : Icons.visibility_outlined),
+                        label: Text(active ? 'راجع أو عدّل البطاقة المعروضة' : 'راجع ثم اعرض للمتبرعين'),
                       ),
                     ],
                   ),
@@ -273,7 +273,7 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
             .where((card) => card['is_active'] == true)
             .toList();
         if (cards.isEmpty) {
-          return const _AdminEmpty('لا توجد بطاقات احتياج منشورة الآن.');
+          return const _AdminEmpty('لا توجد بطاقات احتياج معروضة الآن.');
         }
         return RefreshIndicator(
           onRefresh: () async => setState(_reload),
@@ -286,7 +286,7 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
               return Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  leading: const Icon(Icons.verified_rounded, color: RuhamaaColors.primary),
+                  leading: const Icon(Icons.fact_check_outlined, color: RuhamaaColors.primary),
                   title: Text('${card['display_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
                   subtitle: Text(
                     '${card['category']} • ${card['city_label']}\n${card['display_detail'] ?? ''}',
@@ -348,7 +348,7 @@ class _PublishNeedDialogState extends State<_PublishNeedDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('صياغة البطاقة العامة'),
+      title: const Text('صياغة البطاقة للمتبرعين'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -397,7 +397,7 @@ class _PublishNeedDialogState extends State<_PublishNeedDialog> {
               ),
             );
           },
-          child: const Text('نشر البطاقة'),
+          child: const Text('اعرض البطاقة'),
         ),
       ],
     );
