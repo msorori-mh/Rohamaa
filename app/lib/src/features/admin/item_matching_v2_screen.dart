@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../catalog/item_category_catalog.dart';
 import '../../data/admin_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../items/item_form_components.dart';
 
 class ItemMatchingV2Screen extends StatefulWidget {
   const ItemMatchingV2Screen({super.key});
@@ -97,7 +98,7 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إرسال عرض المطابقة الخاص للمستفيد.')), 
+        const SnackBar(content: Text('تم إرسال عرض المطابقة الخاص للمستفيد.')),
       );
       Navigator.pop(context);
     } catch (e) {
@@ -206,7 +207,7 @@ String _attributes(Map<String, dynamic> row) {
   final category = itemCategoryByKey(_category(row));
   final parts = <String>[];
   for (final entry in raw.entries) {
-    if ('$entry'.isEmpty || '${entry.value}'.trim().isEmpty || '${entry.key}' == 'size_flexible') continue;
+    if ('${entry.value}'.trim().isEmpty || '${entry.key}' == 'size_flexible') continue;
     final specs = category.attributes.where((attribute) => attribute.key == '${entry.key}');
     if (specs.isEmpty) continue;
     final spec = specs.first;
