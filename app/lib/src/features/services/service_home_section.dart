@@ -44,7 +44,7 @@ class ServiceHomeSection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'احتياجات موثقة الآن',
+                          'احتياجات راجعها رحماء',
                           style: TextStyle(
                             color: RuhamaaColors.primaryDark,
                             fontWeight: FontWeight.w900,
@@ -53,7 +53,7 @@ class ServiceHomeSection extends StatelessWidget {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'شاهد احتياجات حقيقية راجعها رحماء؛ ربما يكون لديك شيء تستطيع توفيره.',
+                          'شاهد احتياجات حقيقية راجعها الفريق؛ ربما يكون لديك شيء تستطيع توفيره.',
                           style: TextStyle(
                             color: RuhamaaColors.textMuted,
                             height: 1.4,
