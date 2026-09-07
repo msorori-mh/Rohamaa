@@ -74,7 +74,18 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
           ],
         ),
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
-        GoRoute(path: '/donate', builder: (_, __) => const CreateDonationScreen()),
+        GoRoute(
+          path: '/donate',
+          builder: (_, state) {
+            final extra = state.extra;
+            final data = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+            return CreateDonationScreen(
+              prefillCategory: data['category'] as String?,
+              prefillTitle: data['title'] as String?,
+              inspiredByDiscoveryCardId: data['discoveryCardId'] as String?,
+            );
+          },
+        ),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
         GoRoute(path: '/verified-needs', builder: (_, __) => const NeedDiscoveryScreen()),
         GoRoute(path: '/offer-service', builder: (_, __) => const CreateServiceOfferScreen()),
