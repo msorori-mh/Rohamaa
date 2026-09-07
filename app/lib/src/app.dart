@@ -14,6 +14,7 @@ import 'features/courier/courier_tasks_screen.dart';
 import 'features/donations/create_donation_screen.dart';
 import 'features/handoffs/my_handoffs_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/legal/legal_screen.dart';
 import 'features/needs/create_need_screen.dart';
 import 'features/offers/match_offers_screen.dart';
 import 'features/profile/onboarding_screen.dart';
@@ -40,12 +41,14 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
       redirect: (context, state) {
         final loggedIn = Supabase.instance.client.auth.currentSession != null;
         final isLogin = state.matchedLocation == '/login';
-        if (!loggedIn && !isLogin) return '/login';
+        final isPublicLegal = state.matchedLocation == '/legal';
+        if (!loggedIn && !isLogin && !isPublicLegal) return '/login';
         if (loggedIn && isLogin) return '/';
         return null;
       },
       routes: [
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/legal', builder: (_, __) => const LegalScreen()),
         GoRoute(path: '/', builder: (_, __) => const SessionLandingScreen()),
         GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
