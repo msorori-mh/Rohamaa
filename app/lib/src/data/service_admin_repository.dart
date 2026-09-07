@@ -66,4 +66,35 @@ class ServiceAdminRepository {
     });
     return id as String;
   }
+
+  Future<List<Map<String, dynamic>>> acceptedMatches() async {
+    final rows = await _client
+        .from('service_matches')
+        .select(
+          'id,status,scheduled_at,operational_note,provider_response,requester_response,'
+          'service_offers!inner(id,title,provider_kind,category,service_type,available_hours),'
+          'service_requests!inner(id,title,details,service_type,category,preferred_time_note)',
+        )
+        .inFilter('status', ['accepted', 'scheduled'])
+        .order('updated_at', ascending: true);
+    return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> scheduleMatch({
+    required String matchId,
+    required DateTime scheduledAt,
+    String? note,
+  }) async {
+    await _client.rpc('admin_schedule_service_match', params: {
+      'p_match_id': matchId,
+      'p_scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      'p_note': note,
+    });
+  }
+
+  Future<void> completeMatch(String matchId) async {
+    await _client.rpc('admin_complete_service_match', params: {
+      'p_match_id': matchId,
+    });
+  }
 }
