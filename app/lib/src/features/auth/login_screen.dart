@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _authRedirectUrl = String.fromEnvironment(
   'AUTH_REDIRECT_URL',
-  defaultValue: 'io.sanad.app://login-callback',
+  defaultValue: 'com.ruhamaa.app://login-callback',
 );
 
 class LoginScreen extends StatefulWidget {
