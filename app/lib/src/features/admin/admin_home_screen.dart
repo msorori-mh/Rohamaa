@@ -5,8 +5,9 @@ import '../../data/admin_repository.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
-import 'admin_dashboard_screen.dart' show ContributionReviewScreen, MatchingQueueScreen;
+import 'admin_dashboard_screen.dart' show ContributionReviewScreen;
 import 'create_staff_screen.dart';
+import 'item_matching_v2_screen.dart';
 import 'need_discovery_admin_screen.dart';
 import 'partner_management_screen.dart';
 import 'risk_management_screen.dart';
@@ -63,7 +64,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 _Action(icon: Icons.map_outlined, title: 'المدن والمناطق', subtitle: 'إدارة نطاقات الخدمة التي تُستخدم للتوصيل وإسناد المشرفين.', onTap: () => _open(const ServiceAreasScreen())),
                 _Action(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب فريق رحماء', subtitle: 'إنشاء موصل أو مشرف مدينة/منطقة ببريد وكلمة مرور ابتدائية.', onTap: () => _open(const CreateStaffScreen())),
                 _Action(icon: Icons.fact_check_outlined, title: 'احتياجات راجعها رحماء', subtitle: 'راجع الطلبات واكتب بطاقة محايدة تحفّز العطاء دون كشف الهوية.', onTap: () => _open(const NeedDiscoveryAdminScreen())),
-                _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء V2', subtitle: 'مطابقة دقيقة حسب الفئة والنوع والمقاس/العمر/الصف عند توفرها.', onTap: () => _open(const MatchingQueueScreen())),
+                _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء V2', subtitle: 'مراجعة شفافة للتصنيف والنوع والمقاس/العمر/الصف والملاءمة قبل إرسال العرض.', onTap: () => _open(const ItemMatchingV2Screen())),
                 _Action(icon: Icons.handyman_outlined, title: 'الوقت والمهارات', subtitle: 'راجع عروض الأفراد وطابقها بطلبات الخدمات.', onTap: () => _open(const ServiceMatchingScreen())),
                 _Action(icon: Icons.storefront_outlined, title: 'شركاء رحماء', subtitle: 'تحقق من المحلات والورش والصالونات قبل السماح بعروض خدمات باسمها.', onTap: () => _open(const PartnerManagementScreen())),
                 _Action(icon: Icons.report_problem_outlined, title: 'بلاغات الخدمات', subtitle: 'راجع بلاغات الخصوصية، الرسوم غير المتفق عليها، التصوير، عدم الحضور وجودة التنفيذ.', onTap: () => _open(const ServiceIncidentManagementScreen())),
