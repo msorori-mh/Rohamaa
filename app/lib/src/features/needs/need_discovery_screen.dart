@@ -65,7 +65,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('احتياجات موثقة')),
+      appBar: AppBar(title: const Text('احتياجات راجعها رحماء')),
       body: RefreshIndicator(
         onRefresh: () async => setState(_reload),
         child: ListView(
@@ -98,7 +98,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'هذه بطاقات راجعها رحماء وأخفى هوية أصحابها. لا توجد مراسلة مباشرة ولا اختيار لشخص بعينه؛ بعد تبرعك يوجّه رحماء الشيء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+                    'هذه بطاقات راجعها فريق رحماء قبل عرضها وأخفى هوية أصحابها. لا توجد مراسلة مباشرة ولا اختيار لشخص بعينه؛ بعد تبرعك يوجّه رحماء الشيء للحاجة الأعلى أولوية من الحالات المتوافقة.',
                     style: TextStyle(color: RuhamaaColors.textMuted, height: 1.55),
                   ),
                 ],
@@ -146,7 +146,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      'تعذر تحميل الاحتياجات الموثقة: ${snapshot.error}',
+                      'تعذر تحميل الاحتياجات التي راجعها رحماء: ${snapshot.error}',
                       textAlign: TextAlign.center,
                     ),
                   );
@@ -233,7 +233,7 @@ class _NeedCard extends StatelessWidget {
                   ),
                 ),
                 const Tooltip(
-                  message: 'راجع رحماء هذه البطاقة قبل نشرها',
+                  message: 'راجع فريق رحماء هذه البطاقة قبل عرضها',
                   child: Icon(Icons.verified_rounded, color: RuhamaaColors.primary),
                 ),
               ],
@@ -290,7 +290,7 @@ class _EmptyDiscovery extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'لا توجد بطاقات موثقة في هذا التصنيف الآن',
+            'لا توجد بطاقات راجعها رحماء في هذا التصنيف الآن',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: RuhamaaColors.primaryDark,
