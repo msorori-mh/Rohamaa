@@ -1,12 +1,12 @@
 # Ruhamaa — Google Play + ruhamaa.com Release Checklist
 
-## 0. One decision before the first AAB upload
+## 0. Final Android identity
 
-Current Android application ID: `io.sanad.app`.
+The Android application ID is finalized as:
 
-Once the first app bundle is uploaded to a Play Console app, the package/application ID becomes effectively permanent for that Play listing. If the brand should use a reverse-domain ID such as `com.ruhamaa.app`, make that change before the first AAB upload. Do not change it after production distribution begins.
+`com.ruhamaa.app`
 
-This checklist assumes the current ID `io.sanad.app` until that decision is changed deliberately.
+This value must be used consistently in Android, Google Play, Android App Links, reviewer instructions, and release documentation. Do not change it after the first AAB is uploaded to the intended Play Console app.
 
 ## 1. Public domain
 
@@ -88,11 +88,15 @@ Scopes should remain minimal:
 
 Do not add Gmail, Drive, Contacts, or other scopes unless a real feature requires them.
 
-Current Google Web OAuth redirect URI via Supabase remains:
+Google Web OAuth redirect URI through Supabase remains:
 
 `https://vclicpejajxadsbuakdw.supabase.co/auth/v1/callback`
 
-The mobile redirect can remain `io.sanad.app://login-callback` for the first internal Play build. After Android App Links are verified, move the production mobile redirect to:
+For local/internal Android builds, allow this Supabase Auth redirect URL:
+
+`com.ruhamaa.app://login-callback`
+
+After Android App Links are verified, move the production mobile redirect to:
 
 `https://ruhamaa.com/login-callback`
 
@@ -148,7 +152,7 @@ Both `key.properties` and keystore files are gitignored.
 
 ## 8. Build the first signed Android App Bundle
 
-First internal-track build: keep the legacy OAuth callback until Play App Signing SHA-256 is available.
+First internal-track build can keep the app-specific callback until Play App Signing SHA-256 is available.
 
 ```powershell
 cd C:\src\Rohamaa\app
@@ -164,7 +168,7 @@ flutter test
 flutter build appbundle --release `
   "--dart-define=SUPABASE_URL=$SUPABASE_URL" `
   "--dart-define=SUPABASE_ANON_KEY=$SUPABASE_KEY" `
-  "--dart-define=AUTH_REDIRECT_URL=io.sanad.app://login-callback"
+  "--dart-define=AUTH_REDIRECT_URL=com.ruhamaa.app://login-callback"
 ```
 
 Expected AAB:
@@ -187,14 +191,14 @@ Create `site/.well-known/assetlinks.json` from the included template and replace
 
 `REPLACE_WITH_GOOGLE_PLAY_APP_SIGNING_SHA256`
 
-with the Play App Signing SHA-256 fingerprint.
+with the Play App Signing SHA-256 fingerprint. The template package name is already `com.ruhamaa.app`.
 
 After deploying, verify:
 
 ```powershell
 Invoke-WebRequest https://ruhamaa.com/.well-known/assetlinks.json -UseBasicParsing
-adb shell pm verify-app-links --re-verify io.sanad.app
-adb shell pm get-app-links io.sanad.app
+adb shell pm verify-app-links --re-verify com.ruhamaa.app
+adb shell pm get-app-links com.ruhamaa.app
 ```
 
 When the domain reports verified, add this Supabase Auth redirect URL:
@@ -207,7 +211,7 @@ Then build the next bundle with:
 "--dart-define=AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback"
 ```
 
-Keep `io.sanad.app://login-callback` in Android as a fallback until the HTTPS callback has been proven in the Play-distributed build.
+Keep `com.ruhamaa.app://login-callback` in Android as a fallback until the HTTPS callback has been proven in the Play-distributed build.
 
 ## 10. Play Console app creation
 
@@ -340,7 +344,7 @@ Do not send for review until all are true:
 - `https://ruhamaa.com/` is public over HTTPS
 - Privacy, terms and delete-account pages load publicly
 - `support@ruhamaa.com` and `privacy@ruhamaa.com` work
-- Package ID decision is final
+- Android application ID is `com.ruhamaa.app`
 - Release AAB is signed with upload key
 - Target SDK is API 36+
 - `flutter analyze` passes
