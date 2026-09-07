@@ -1,358 +1,190 @@
-# Ruhamaa — Google Play + ruhamaa.com Release Checklist
+# Ruhamaa — Google Play / Android release checklist
 
-## 0. Final Android identity
+This is the release checklist for the current Marib pilot build. Detailed signing commands live in `docs/ANDROID_RELEASE.md`; Data Safety source-of-truth lives in `docs/PLAY_DATA_SAFETY.md`. Do not duplicate secrets in this file.
 
-The Android application ID is finalized as:
+## 1. Fixed Android identity
 
-`com.ruhamaa.app`
+- Application ID: `com.ruhamaa.app`
+- Internal/mobile OAuth callback: `com.ruhamaa.app://login-callback`
+- Production domain: `https://ruhamaa.com`
+- Future verified App Link callback: `https://ruhamaa.com/login-callback`
+- Google Web OAuth callback through Supabase: `https://vclicpejajxadsbuakdw.supabase.co/auth/v1/callback`
+- Current Android target SDK configured by the project: API 36
 
-This value must be used consistently in Android, Google Play, Android App Links, reviewer instructions, and release documentation. Do not change it after the first AAB is uploaded to the intended Play Console app.
+Do not change `com.ruhamaa.app` after the Play Console app is created/uploaded under that package.
 
-## 1. Public domain
+## 2. Public web endpoints
 
-Production URLs:
+The release expects these public URLs:
 
-- Homepage: `https://ruhamaa.com/`
-- Privacy policy: `https://ruhamaa.com/privacy/`
-- Terms: `https://ruhamaa.com/terms/`
-- Account deletion: `https://ruhamaa.com/delete-account/`
-- Future OAuth App Link callback: `https://ruhamaa.com/login-callback`
-- Android Digital Asset Links: `https://ruhamaa.com/.well-known/assetlinks.json`
+- `https://ruhamaa.com/`
+- `https://ruhamaa.com/privacy/`
+- `https://ruhamaa.com/terms/`
+- `https://ruhamaa.com/delete-account/`
+- `https://ruhamaa.com/login-callback`
+- `https://ruhamaa.com/.well-known/assetlinks.json` — only after the Play App Signing SHA-256 is known
 
-The repository contains a static site under `site/` and a GitHub Pages deployment workflow. Enable GitHub Pages with GitHub Actions, then configure the domain DNS.
+The repository contains the static site under `site/`. GitHub Pages is configured to deploy production content from `main` after merge.
 
-## 2. DNS for GitHub Pages
+Before store submission, verify the URLs in a normal unauthenticated browser and verify `support@ruhamaa.com` / `privacy@ruhamaa.com` receive mail.
 
-At the domain registrar/DNS provider, for the apex domain `ruhamaa.com`, add the four GitHub Pages A records:
+## 3. Google Auth Platform
 
-- `185.199.108.153`
-- `185.199.109.153`
-- `185.199.110.153`
-- `185.199.111.153`
-
-Optional IPv6 AAAA records:
-
-- `2606:50c0:8000::153`
-- `2606:50c0:8001::153`
-- `2606:50c0:8002::153`
-- `2606:50c0:8003::153`
-
-For `www`, use a CNAME to the repository owner's GitHub Pages domain if desired. Avoid wildcard DNS records.
-
-After DNS resolves, enable **Enforce HTTPS** in GitHub Pages.
-
-PowerShell checks:
-
-```powershell
-Resolve-DnsName ruhamaa.com -Type A
-Invoke-WebRequest https://ruhamaa.com/ -UseBasicParsing
-Invoke-WebRequest https://ruhamaa.com/privacy/ -UseBasicParsing
-```
-
-## 3. Mailboxes that must exist before submission
-
-Create and test at least:
-
-- `support@ruhamaa.com` — Play Store user support
-- `privacy@ruhamaa.com` — privacy and account deletion
-
-Do not publish the store listing until these addresses receive mail successfully.
-
-## 4. Google Search Console / domain ownership
-
-Using a Google account that is Owner/Editor of the Google Cloud OAuth project:
-
-1. Add a **Domain property** for `ruhamaa.com` in Google Search Console.
-2. Add the TXT record Search Console supplies to DNS.
-3. Verify the domain.
-
-Use the Domain property method rather than only a URL-prefix property.
-
-## 5. Google Auth Platform / OAuth branding
-
-Branding:
+Branding/authorized-domain configuration should use:
 
 - App name: `Ruhamaa` / `رحماء`
-- Application home page: `https://ruhamaa.com/`
-- Privacy policy: `https://ruhamaa.com/privacy/`
-- Terms of service: `https://ruhamaa.com/terms/`
+- Home page: `https://ruhamaa.com/`
+- Privacy: `https://ruhamaa.com/privacy/`
+- Terms: `https://ruhamaa.com/terms/`
 - Authorized domain: `ruhamaa.com`
-- Support email: an active project support email
-- Developer contact email: an actively monitored address
 
-Scopes should remain minimal:
+Keep OAuth scopes minimal: basic OpenID profile/email only. Do not add Gmail, Drive, Contacts or other scopes unless a real feature is introduced and the privacy/Data Safety review is updated.
 
-- `openid`
-- `https://www.googleapis.com/auth/userinfo.email`
-- `https://www.googleapis.com/auth/userinfo.profile`
+Supabase Auth must allow `com.ruhamaa.app://login-callback` for the first internal mobile build. Do not switch the production mobile redirect to HTTPS until Android App Link verification is complete on a Play-installed build.
 
-Do not add Gmail, Drive, Contacts, or other scopes unless a real feature requires them.
+## 4. Physical-device release identity gate
 
-Google Web OAuth redirect URI through Supabase remains:
+Follow scenario 0 in `docs/UAT_CATEGORY_V2_PARTNERS.md`.
 
-`https://vclicpejajxadsbuakdw.supabase.co/auth/v1/callback`
+Required before first Play upload/reviewer use:
 
-For local/internal Android builds, allow this Supabase Auth redirect URL:
+- installed package resolves as `com.ruhamaa.app`;
+- normal-user Google OAuth returns to the app and creates/restores a session;
+- primary-admin Google OAuth returns to the app and role gate is correct;
+- no stale old-package deep-link loop remains.
 
-`com.ruhamaa.app://login-callback`
+## 5. Release signing
 
-After Android App Links are verified, move the production mobile redirect to:
+Follow `docs/ANDROID_RELEASE.md`.
 
-`https://ruhamaa.com/login-callback`
+Repository safeguards already in place:
 
-and add that exact URL to Supabase Auth redirect URLs.
+- release Gradle tasks fail without complete signing configuration;
+- keystore and `key.properties` are gitignored;
+- CI signing passwords/alias are injected through environment variables;
+- `.github/workflows/android_release_bundle.yml` builds a signed AAB only when the documented GitHub Actions secrets are configured.
 
-## 6. Android target API
+The upload keystore must be generated once on a trusted machine, stored outside the repository and backed up securely. Never paste private-key material or passwords into issues, PR comments or source files.
 
-The project explicitly targets Android 16 / API 36 for release readiness.
+## 6. First Internal Testing AAB
 
-Before every Play release:
+After the release workflow exists on the default branch and signing secrets are configured:
 
-```powershell
-cd C:\src\Rohamaa\app
-flutter doctor -v
-flutter analyze
-flutter test
-```
+1. Run **Android Release Bundle** manually.
+2. Use a monotonically increasing `build_number` / Android versionCode.
+3. Download the resulting signed AAB artifact and verify its SHA-256.
+4. Create/select the Play Console app with package `com.ruhamaa.app`.
+5. Upload the AAB to Internal Testing and enroll in Play App Signing as required by the current Play flow.
+6. Install the Play-distributed build and repeat login/UAT smoke tests.
 
-## 7. Create an upload keystore
+Do not upload a debug-signed APK/AAB as a production artifact.
 
-Generate the upload keystore locally. Never commit it.
+## 7. Play App Signing → Android App Links
 
-```powershell
-cd C:\src\Rohamaa\app\android
+After the first Play upload:
 
-keytool -genkeypair -v `
-  -keystore .\upload-keystore.jks `
-  -keyalg RSA `
-  -keysize 2048 `
-  -validity 10000 `
-  -alias ruhamaa-upload
-```
-
-Let `keytool` prompt for passwords; do not put passwords on the command line.
-
-Create the local signing properties file:
+1. Copy the **App signing certificate SHA-256**, not the upload-certificate fingerprint.
+2. Create `site/.well-known/assetlinks.json` from `assetlinks.json.template` and replace the placeholder fingerprint.
+3. Merge/deploy the site and verify the JSON is publicly reachable.
+4. Re-verify on the device:
 
 ```powershell
-Copy-Item .\key.properties.example .\key.properties
-notepad .\key.properties
-```
-
-Set the local-only values:
-
-```text
-storePassword=<your-keystore-password>
-keyPassword=<your-key-password>
-keyAlias=ruhamaa-upload
-storeFile=../upload-keystore.jks
-```
-
-Both `key.properties` and keystore files are gitignored.
-
-## 8. Build the first signed Android App Bundle
-
-First internal-track build can keep the app-specific callback until Play App Signing SHA-256 is available.
-
-```powershell
-cd C:\src\Rohamaa\app
-
-$SUPABASE_URL = 'https://vclicpejajxadsbuakdw.supabase.co'
-$SUPABASE_KEY = '<SUPABASE_PUBLISHABLE_KEY>'
-
-flutter clean
-flutter pub get
-flutter analyze
-flutter test
-
-flutter build appbundle --release `
-  "--dart-define=SUPABASE_URL=$SUPABASE_URL" `
-  "--dart-define=SUPABASE_ANON_KEY=$SUPABASE_KEY" `
-  "--dart-define=AUTH_REDIRECT_URL=com.ruhamaa.app://login-callback"
-```
-
-Expected AAB:
-
-`build\app\outputs\bundle\release\app-release.aab`
-
-Do not upload a debug-signed bundle.
-
-## 9. Play App Signing and Android App Links
-
-Create the app in Play Console and upload the first signed AAB to **Internal testing**. New apps use Play App Signing.
-
-Then open:
-
-**Test and release / Setup / App integrity / App signing** (wording may vary)
-
-Copy the **SHA-256 certificate fingerprint for the App signing key**. Do not use the upload-key fingerprint for production `assetlinks.json`.
-
-Create `site/.well-known/assetlinks.json` from the included template and replace:
-
-`REPLACE_WITH_GOOGLE_PLAY_APP_SIGNING_SHA256`
-
-with the Play App Signing SHA-256 fingerprint. The template package name is already `com.ruhamaa.app`.
-
-After deploying, verify:
-
-```powershell
-Invoke-WebRequest https://ruhamaa.com/.well-known/assetlinks.json -UseBasicParsing
 adb shell pm verify-app-links --re-verify com.ruhamaa.app
 adb shell pm get-app-links com.ruhamaa.app
+adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
 ```
 
-When the domain reports verified, add this Supabase Auth redirect URL:
+5. Only after the domain reports verified and the HTTPS link opens Ruhamaa should the production build use:
 
-`https://ruhamaa.com/login-callback`
-
-Then build the next bundle with:
-
-```powershell
-"--dart-define=AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback"
+```text
+AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback
 ```
 
-Keep `com.ruhamaa.app://login-callback` in Android as a fallback until the HTTPS callback has been proven in the Play-distributed build.
+Keep the custom scheme available as an internal/fallback path until the HTTPS callback has been proven in the Play-distributed build.
 
-## 10. Play Console app creation
+## 8. Store listing draft
 
-Suggested configuration:
+Suggested names:
 
-- App name (Arabic): `رحماء`
-- Localized English name: `Ruhamaa`
-- Type: App
-- Pricing: Free
-- Category: Lifestyle (recommended; review before final submission)
-- Contains ads: No
-- Target audience: Adults / 18+ only
-- Website: `https://ruhamaa.com/`
-- Privacy policy: `https://ruhamaa.com/privacy/`
-- Support email: `support@ruhamaa.com`
+- Arabic: `رحماء`
+- English: `Ruhamaa`
 
-### Suggested Arabic short description
+Suggested short description:
 
-`يوصل الأشياء التي لا تحتاجها إلى من يحتاجها بخصوصية وكرامة.`
+`يوصل الأشياء والوقت والمهارات إلى احتياجات مناسبة بخصوصية وكرامة.`
 
-### Suggested Arabic full description
+Suggested full-description direction:
 
-رحماء منصة مجتمعية تساعد على إيصال الأشياء التي لم يعد أصحابها بحاجة إليها إلى أشخاص سجلوا احتياجهم مسبقًا، مع الحفاظ على الخصوصية والكرامة.
+> رحماء منصة مجتمعية في مأرب تربط الأشياء التي لم يعد أصحابها بحاجة إليها، والوقت والمهارات والخدمات المجانية التي يستطيع أفراد أو شركاء موثّقون تقديمها، باحتياجات مسجلة مسبقًا. لا يتصفح المستفيد التبرعات ولا يختار المتبرع المستفيد. يراجع رحماء المطابقات بخصوصية، وفي عمليات الأشياء لا تُكشف هوية المتبرع للمستفيد أو هوية المستفيد للمتبرع. يمكن أيضًا تسجيل احتياج خدمة أو تقديم وقت/مهارة، وتتم المطابقة الخاصة بعد المراجعة والموافقة. شركاء رحماء يمرون بتحقق منفصل ويلتزمون بقواعد تمنع التصوير والتسويق والرسوم غير المتفق عليها. المساهمة في تكاليف التوصيل اختيارية ولا تؤثر على الاستحقاق، ولا يوجد دفع إلكتروني داخل التطبيق في التدفق الحالي.
 
-يسجل المستفيد احتياجه دون تصفح تبرعات الآخرين. وعندما يصل تبرع مناسب، يراجع رحماء المطابقة ويُرسل عرضًا خاصًا للمستفيد. بعد الموافقة، يتولى مندوب رحماء الاستلام والتوصيل دون كشف هوية المتبرع للمستفيد أو هوية المستفيد للمتبرع.
+Use screenshots with safe demo data only—no real names, phone numbers, addresses, coordinates, emails or private item photos.
 
-يمكن استخدام رحماء للملابس والأحذية، الكتب والمستلزمات التعليمية، مستلزمات الأطفال، الأدوات المنزلية والأثاث الخفيف، مستلزمات المناسبات، وبعض الأدوات والأجهزة البسيطة وفق قواعد السلامة.
+## 9. App access / reviewer path
 
-المساهمة في تكاليف التوصيل اختيارية تمامًا ولا تحدد الاستحقاق ولا تمنع الخدمة عند عدم القدرة على المساهمة. لا توجد مدفوعات أو تحويلات مالية داخل التطبيق؛ وإذا اختار المستخدم المساهمة التشغيلية فتُسلَّم نقدًا للمندوب عند الاستلام أو التوصيل.
+The app is login-gated for operational functionality. Prepare stable reviewer access according to the current Play Console App Access form.
 
-يستخدم رحماء بيانات التواصل والموقع بالحد الأدنى اللازم للتشغيل والتوصيل، ويتيح للمستخدم مراجعة سياسة الخصوصية وطلب حذف حسابه وبياناته.
+At minimum, reviewer instructions should explain:
 
-النسخة الأولى تستهدف التشغيل التجريبي في مأرب، اليمن.
+- how to sign in;
+- how to reach a community flow without creating real operational harm;
+- whether staff/admin screens need separate reviewer access;
+- that no OTP/MFA may depend on a reviewer receiving a code they cannot access.
 
-## 11. Store listing graphics
+Never use a real beneficiary/donor account as the review credential.
 
-Required/important assets:
+## 10. Data Safety / permissions
 
-- Play Store app icon: PNG, 512×512, max 1024 KB
-- Feature graphic: JPEG or 24-bit PNG, 1024×500
-- At least 2 phone screenshots; use current UI and do not show real user PII
-- Recommended screenshots: login/privacy, home, add donation, add need, match offer, handoff status
+Use `docs/PLAY_DATA_SAFETY.md` as the internal source of truth and compare it against the exact Play Console wording at submission time.
 
-Before screenshots, replace any test names, phone numbers, exact addresses, emails, coordinates, or private donation photos with safe demo data.
+Current manifest permissions are:
 
-## 12. App content declarations — prepared answers
-
-### Privacy policy
-
-`https://ruhamaa.com/privacy/`
-
-### Ads
-
-`No, the app does not contain ads.`
-
-### App access / sign-in details
-
-Select that some/all functionality is restricted by login. Provide reusable reviewer accounts and English instructions. Do not provide a real user's credentials.
-
-Prepare at least:
-
-1. Community demo account with operational profile/address populated.
-2. Staff/admin demo account if Google needs to review restricted operational screens.
-
-The credentials must remain valid throughout review and must not require OTP/MFA that the reviewer cannot obtain.
-
-### Target audience
-
-18+ only. The service does not support independent minor accounts.
-
-### Content rating
-
-Complete the IARC questionnaire truthfully. Current product has no public social feed, no donor-beneficiary direct chat, no gambling, sexual, violent, or drug content by design. User-entered donation/need text and images are operational/private and should still be considered when answering any user-generated-content questions.
-
-### Financial features
-
-The current app does not provide banking, loans, wallets, money transfer, investment, crypto, BNPL, or digital payment processing. The delivery contribution is an optional offline cash operational contribution and does not unlock digital features. Review the declaration at submission time and select the answer that accurately reflects the live build; the intended answer for the current build is **My app doesn't provide any financial features**.
-
-### News / government / health
-
-- News app: No
-- Government app: No
-- Health app/medical functionality: No
-
-## 13. Data Safety draft
-
-Review the final live build and every SDK before submitting. Based on the current code, expect to disclose collection of:
-
-- Personal info: name, email address, user ID, phone number, address/contact details
-- Location: approximate and precise location used for operational delivery
-- Photos: donation photos uploaded by users
-- User-generated content: donation descriptions, need descriptions/reasons, operational notes
-- App/service activity: matching, fulfillment, handoff and safety/abuse-prevention events where applicable
-
-Primary purposes:
-
-- App functionality
-- Account management
-- Fraud prevention, security and compliance
-- Operational analytics/service performance where applicable
-
-Security:
-
-- Data encrypted in transit: Yes
-- Account deletion request available: Yes
-- Data sale: No
-- Targeted advertising: No
-
-Supabase is used as a service provider for authentication, database, storage and Edge Functions; Google is used for OAuth sign-in. Confirm Google Play's current service-provider definition when answering whether data is "shared".
-
-## 14. Permissions
-
-Current Android manifest requests:
-
+- `INTERNET`
 - `ACCESS_COARSE_LOCATION`
 - `ACCESS_FINE_LOCATION`
 
-Do not request background location unless a future feature makes it essential and the Play policy declaration is completed. Current design does not need continuous tracking.
+There is no background-location permission in the current manifest and no continuous tracking design.
 
-## 15. Testing requirement for newer personal Play accounts
+Current product behavior also includes:
 
-If the Play developer account is a **personal account created after 13 Nov 2023**, production access requires a closed test with at least 12 opted-in testers continuously for 14 days before applying for production access. Organisation accounts are handled differently.
+- private donation photos;
+- user-generated donation/need/service text;
+- service/partner operational data;
+- private safety incident records;
+- optional cash-to-courier contribution amount/status records;
+- no targeted advertising and no data sale;
+- account-deletion request in-app and on the public site.
 
-Start with Internal testing, then Closed testing if the account requires it.
+Do **not** hard-code “no data shared” or “no financial information” without checking Google Play’s current definitions. In-person verified-partner services can involve user-initiated disclosure of minimum contact/location/scheduling data, and contribution amount/status may fall into a Play data category depending on the current form wording.
 
-## 16. Final pre-submission gate
+## 11. Other Play declarations
 
-Do not send for review until all are true:
+Complete the exact current Console forms truthfully for:
 
-- `https://ruhamaa.com/` is public over HTTPS
-- Privacy, terms and delete-account pages load publicly
-- `support@ruhamaa.com` and `privacy@ruhamaa.com` work
-- Android application ID is `com.ruhamaa.app`
-- Release AAB is signed with upload key
-- Target SDK is API 36+
-- `flutter analyze` passes
-- `flutter test` passes
-- Google login works in a Play-installed build
-- Demo reviewer credentials are valid
-- Account deletion request works
-- No real PII appears in screenshots
-- Data Safety answers match the exact live code/SDKs
-- Ads, target audience, content rating and financial declarations are completed
-- Android App Links are verified before switching production OAuth callback to `ruhamaa.com`
+- Ads
+- Target audience / age
+- Content rating
+- App Access
+- Data Safety
+- Financial features, if Play asks
+- Any other app-content declarations currently required
+
+The current product is designed for adults 18+, contains no ad SDK, has no public social feed/direct donor-beneficiary chat, and does not provide banking/wallet/loan/crypto/payment processing. Reconfirm the shipped code before every declaration.
+
+Testing/production-access requirements can vary by Play developer-account type and current policy. Follow the requirements shown in the actual Play Console account at submission time rather than relying on a hard-coded tester-count/date rule in repository docs.
+
+## 12. Final pre-submission gate
+
+Do not submit for review until all are true:
+
+- latest branch/default-branch CI passes migration-version validation, analyze, tests and Android build;
+- PR/release source is conflict-free;
+- public privacy/terms/delete-account pages load over HTTPS;
+- support/privacy contact mailboxes work;
+- `com.ruhamaa.app` Google OAuth succeeds on a physical device;
+- release AAB is signed with the backed-up upload key;
+- Play-installed build passes basic community/admin UAT;
+- reviewer access works;
+- Data Safety and permissions match the exact shipped code;
+- Store Listing/App Access/content declarations are complete;
+- real PII is absent from screenshots;
+- Android App Links are verified before switching production OAuth to HTTPS.

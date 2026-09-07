@@ -1,118 +1,140 @@
-# Sanad V1 — Pilot Execution Plan
+# Ruhamaa V1 — Marib Pilot Execution Plan
 
-Target: launch a controlled pilot in Marib with two couriers and two electric motorbikes, reach the first 1,000 completed handoffs, and measure social impact, fraud rate, delivery cost, and contribution coverage.
+Target: launch a controlled pilot in Marib with two couriers and the two active electric motorbikes (`BIKE-01`, `BIKE-02`), reach the first 1,000 successful item handoffs/services, and measure social impact, safety and operating sustainability.
 
-## Phase 0 — Foundation
+## Phase 0 — Foundation ✅
 
-- [x] Flutter/Supabase skeleton
-- [x] Google-auth-ready bootstrap
-- [x] Donations / needs / addresses / matches / deliveries / contributions schema
+- [x] Flutter/Supabase application foundation
+- [x] Google OAuth integration through Supabase
+- [x] Profiles / addresses / donations / needs / matches / deliveries / contributions
 - [x] Private donation-image storage
-- [x] Courier PIN verification baseline
+- [x] Courier PIN workflow and delivery events
 - [x] Risk flags and audit logs
+- [x] Service areas, supervisors and staff creation/password workflows
 
-## Phase 1 — Security and database hardening
+## Phase 1 — Security and database hardening ✅
 
-- [x] Role-based admin/courier authorization helpers
-- [x] Admin queue RPCs
-- [x] Matching score function and review queue
-- [x] Contribution verification RPC
-- [x] Courier minimum-information task RPC
-- [x] Delivery creation with server-generated PIN hashes
-- [ ] Apply all migrations to Supabase project `vclicpejajxadsbuakdw`
-- [ ] Seed the two courier accounts and two electric motorbikes
+- [x] RLS and role-based authorization
+- [x] Admin/courier/user RPC boundaries
+- [x] Minimum-information courier task flow
+- [x] Server-side match/assignment/verification operations
+- [x] Suspended-user enforcement
+- [x] Primary-admin protection
+- [x] Anonymous-access hardening for private service/partner/reviewed-needs data
+- [x] Migration version uniqueness check in CI
+- [x] Historical migration collision removed and daily-report history reconciled with live Supabase
 
-Exit criteria: no direct donor↔beneficiary identity exposure; privileged writes require admin/courier role.
+Exit criteria met for repository/backend work: privileged actions are role/ownership checked and donor↔beneficiary item identity is not exposed through community flows.
 
-## Phase 2 — Community app
+## Phase 2 — Community item experience ✅
 
-- [x] Arabic RTL shell
-- [x] Google login screen
-- [x] Profile/address capture
-- [x] Donation creation
-- [x] Need creation
-- [ ] Force onboarding completion before operational actions
-- [ ] Image picker + resize/compression + private upload
-- [ ] Contribution selector (1,000–5,000 YER) attached to donation/need
-- [ ] My donations / my needs / status history
-- [ ] Impact summary
+- [x] Arabic RTL + Ruhamaa branding
+- [x] Profile/address/location onboarding
+- [x] Category System V2 donation wizard
+- [x] Category System V2 need wizard
+- [x] Private image upload
+- [x] Reviewed-needs donor-inspiration cards
+- [x] Private match offers
+- [x] Handoff/status + pickup/delivery PIN
+- [x] Optional cash-to-courier contribution flow
+- [x] Privacy/terms/account deletion surfaces
 
-Exit criteria: a normal user can register, set delivery details, create a donation/need, contribute to operations, and track status without seeing another party's identity.
+## Phase 3 — Time and skills ✅
 
-## Phase 3 — Operations/admin web UI (same Flutter codebase)
+- [x] Individual free time/skill offers
+- [x] Private service requests
+- [x] Staff offer review
+- [x] Service candidate scoring
+- [x] Bilateral match responses
+- [x] Staff scheduling/completion
+- [x] Personal service-operation history
+- [x] Private incident reporting
 
-- [x] Backend admin queue primitives
-- [ ] Role-aware route guard
-- [ ] Dashboard KPIs
-- [ ] Donation review queue
-- [ ] Need review queue
-- [ ] Match candidate review / approve
-- [ ] Courier assignment
-- [ ] Contribution verification
-- [ ] Risk-review queue
-- [ ] Vehicle/courier status
+## Phase 4 — Verified Partner Services V1 ✅
 
-Exit criteria: pilot staff can run the full workflow without SQL console access.
+- [x] Separate partner profile and business kind
+- [x] Explicit Partner Safety Terms V1
+- [x] Staff verification/rejection/suspension
+- [x] Backend activity-scope enforcement
+- [x] UI limits partner service choices to verified activity scope
+- [x] Monthly case capacity
+- [x] No public partner/beneficiary marketplace
+- [x] No open prices/bidding; only free service or free labor + reviewed materials
+- [x] Incident-review workflow
 
-## Phase 4 — Courier workflow
+## Phase 5 — Courier and operations ✅
 
-- [x] Assigned task list baseline
-- [x] Pickup/delivery PIN verification baseline
-- [ ] Minimum-information pickup/drop-off detail screen
-- [ ] One-tap phone call only when operationally necessary
-- [ ] GPS event capture at pickup/delivery
-- [ ] Failure/reschedule reasons
-- [ ] Daily completed-task summary
+- [x] Assigned task list
+- [x] Minimum operational contact/location
+- [x] GPS capture at operational events, not continuous tracking
+- [x] Pickup/delivery PIN verification
+- [x] Failure/reschedule/no-show reporting
+- [x] Courier and vehicle assignment
+- [x] Contribution receipt verification
+- [x] Risk and user-management workflows
 
-Exit criteria: courier can perform a task without seeing donor/beneficiary stories or unrelated data.
+## Phase 6 — Impact and reporting ✅
 
-## Phase 5 — Fraud and abuse controls
+- [x] Delivery success and timing
+- [x] Courier performance
+- [x] Operating expenses and contribution coverage
+- [x] Category V2 item counts
+- [x] Reviewed-needs cards, inspired donations and inspiration rate
+- [x] Service offers/requests/completion and estimated hours
+- [x] Verified Partner impact
+- [x] Service incident metrics
 
-- [x] Risk flags table
-- [x] Invalid PIN risk event
-- [x] Payment reference uniqueness for verified contributions
-- [x] Matching score considers history and distance where available
-- [ ] Repeated-same-category request rule
-- [ ] High request velocity rule
-- [ ] No-show / cancellation rule
-- [ ] Suspicious multi-account/device signal (signal only, never automatic guilt)
-- [ ] High-value-item manual review policy
-- [ ] Admin resolution reasons and immutable audit records
+## Phase 7 — Release hardening (repository work complete; external UAT/config remains)
 
-Exit criteria: high-risk actions enter manual review and no sensitive social decision is made solely by AI.
+- [x] Android identity `com.ruhamaa.app`
+- [x] App-specific callback `com.ruhamaa.app://login-callback`
+- [x] Future HTTPS App Link intent for `ruhamaa.com/login-callback`
+- [x] Target SDK API 36 in project
+- [x] Secure release signing configuration
+- [x] Manual signed-AAB GitHub workflow
+- [x] Keystore/password Git protection
+- [x] Flutter analyze/tests/debug APK CI
+- [x] Supabase migration-number CI gate
+- [x] Privacy, terms, deletion and Data Safety documentation updated for items/services/partners
+- [x] Production Pages workflow configured for `main`
+- [ ] Physical-device OAuth test with **new** package/callback for normal user and primary admin
+- [ ] Full UAT matrix on Android device
+- [ ] Google Auth Platform branding/authorized-domain final configuration
+- [ ] Supabase Auth redirect allow-list verification for the new callback
+- [ ] Create/back up upload keystore and configure GitHub Actions secrets
+- [ ] First signed AAB to Google Play Internal Testing
+- [ ] Obtain Play App Signing SHA-256 and publish real `assetlinks.json`
+- [ ] Verify HTTPS App Link on Play-installed build
+- [ ] Complete Play Store listing/Data Safety/App Access/content declarations
 
-## Phase 6 — Testing and pilot readiness
-
-- [ ] Unit tests for scoring and state transitions
-- [ ] RLS regression tests
-- [ ] 1,000-operation synthetic fraud simulation dataset
-- [ ] Failure-mode test: wrong PIN, duplicate payment, stale need, courier no-show, user cancellation
-- [ ] Android release configuration and deep links
-- [ ] Google OAuth production configuration
-- [ ] Privacy policy / terms / prohibited items policy
-- [ ] Backup/export procedure
-- [ ] Pilot operations playbook
+See:
+- `docs/UAT_CATEGORY_V2_PARTNERS.md`
+- `docs/ANDROID_RELEASE.md`
+- `docs/PLAY_DATA_SAFETY.md`
+- `docs/GOOGLE_PLAY_RELEASE.md`
 
 ## Pilot KPIs
 
-1. Fulfilled needs
-2. Delivery success rate
-3. Median time to match
-4. Median time from match to delivery
-5. Cost per fulfilled need
-6. Contribution coverage = verified operational contributions / operating cost
-7. Review/risk rate
-8. Confirmed abuse rate
-9. No-show rate
-10. Repeat donor rate
+1. Successful item handoffs
+2. Completed service operations
+3. Delivery/service success rate
+4. Median time to private match
+5. Median time from accepted item match to delivery
+6. Estimated donated service hours
+7. Cost per completed fulfillment/service where meaningful
+8. Cash contribution coverage of operating expenses
+9. Reviewed-needs inspiration rate
+10. Risk/review and confirmed-abuse rate
+11. No-show/reschedule rate
+12. Partner capacity utilization and partner-service completion
+13. Private service-incident rate and resolution outcome
 
-## Cost-control rules
+## Operating principles
 
-- One Flutter codebase for Android + admin web.
-- Supabase/Postgres as the single backend for V1.
-- No independent delivery routing platform in V1.
-- No donor-beneficiary chat.
-- No marketplace/feed.
-- No SMS OTP dependency.
-- No service-role key in client applications.
-- Manual review is acceptable for the first 1,000 operations when automation would increase risk or cost.
+- Need-first; no donation/provider marketplace.
+- No donor-beneficiary direct chat in V1.
+- No contribution/previous-giving priority points.
+- No time-credit/barter debt.
+- Manual review is acceptable when automation would increase safety or dignity risk.
+- No service-role key or Android signing secret in client source.
+- Public claims must distinguish item-party privacy from the minimum information required for an accepted in-person service.
