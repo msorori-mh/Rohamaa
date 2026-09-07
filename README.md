@@ -1,6 +1,13 @@
-# Sanad | سند
+# Ruhamaa | رحماء
 
-منصة مجتمعية في مدينة مأرب تربط الأشياء المتبرع بها بالاحتياجات المناسبة، مع الحفاظ على خصوصية المتبرع والمستفيد وفصل الطرفين عبر عمليات توصيل تابعة لسند.
+منصة مجتمعية في مدينة مأرب تربط الأشياء المتبرع بها بالاحتياجات المناسبة، مع الحفاظ على خصوصية المتبرع والمستفيد وفصل الطرفين عبر عمليات توصيل تابعة لرحماء.
+
+## Android identity
+
+- Application ID: `com.ruhamaa.app`
+- Production domain: `https://ruhamaa.com`
+- Local/internal OAuth callback: `com.ruhamaa.app://login-callback`
+- Production App Link callback after verification: `https://ruhamaa.com/login-callback`
 
 ## V1 Scope
 
@@ -13,32 +20,31 @@
 - Workflow للمندوبين مع PIN للاستلام والتسليم
 - مساهمات تشغيلية اختيارية مرتبطة بالعمليات
 - Risk Flags ومراجعة يدوية للحالات المشبوهة
-- لوحة إدارة لاحقًا فوق نفس قاعدة البيانات
+- لوحة إدارة وتشغيل ضمن نفس قاعدة البيانات
 
 ## Supabase
 
 Project ref: `vclicpejajxadsbuakdw`
 
-لا يتم حفظ مفاتيح Supabase أو أي أسرار داخل المستودع. استخدم ملف `.env` محليًا بناءً على `.env.example`.
+لا يتم حفظ مفاتيح Supabase السرية داخل المستودع. استخدم متغيرات البيئة أو `--dart-define` للقيم العميلية المسموح بها.
 
 ## Repository structure
 
 ```text
+app/                 Flutter Android app
 supabase/
   migrations/        SQL schema and policies
-  seed.sql            development seed data
-
-docs/
-  architecture.md     product and system architecture
-  state-machines.md   workflow states
+  functions/         Edge Functions
+  seed.sql           development seed data
+site/                ruhamaa.com static site
+docs/                architecture and release documentation
 ```
 
 ## Core principles
 
-1. الاحتياج أولًا، ولا توجد واجهة Marketplace مجانية.
+1. الاحتياج أولًا، ولا توجد واجهة Marketplace.
 2. المتبرع والمستفيد لا يعرف أحدهما هوية الآخر.
 3. Google Auth للمصادقة، وليس كإثبات هوية نهائي.
-4. المساهمات المالية لدعم التشغيل ولا تعطي أولوية جوهرية في الاستحقاق.
+4. المساهمات التشغيلية اختيارية ولا تعطي أولوية في الاستحقاق.
 5. القرارات الحساسة أو عالية الخطورة تمر بمراجعة بشرية.
 6. أقل قدر ضروري من البيانات يظهر للمندوب أثناء تنفيذ المهمة.
-
