@@ -35,13 +35,34 @@ class AdminRepository {
   }
 
   Future<List<Map<String, dynamic>>> donationsQueue() async {
-    final rows = await _client.from('donations').select('id,public_code,category,item_type,condition,status,created_at').inFilter('status', ['submitted', 'under_review', 'available']).order('created_at');
+    final rows = await _client
+        .from('donations')
+        .select('id,public_code,category,category_version,category_group,item_type_key,item_attributes,item_type,condition,status,created_at')
+        .inFilter('status', ['submitted', 'under_review', 'available'])
+        .order('created_at');
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
   Future<List<Map<String, dynamic>>> matchCandidates(String donationId) async {
-    final rows = await _client.rpc('admin_match_candidates', params: {'p_donation_id': donationId, 'p_limit': 20});
-    return (rows as List).cast<Map<String, dynamic>>();
+    final raw = await _client.rpc('admin_match_candidates', params: {
+      'p_donation_id': donationId,
+      'p_limit': 20,
+    });
+    final candidates = (raw as List).cast<Map<String, dynamic>>();
+    if (candidates.isEmpty) return candidates;
+
+    final ids = candidates.map((row) => '${row['need_id']}').toList();
+    final detailRows = await _client
+        .from('needs')
+        .select('id,category,category_version,category_group,item_type_key,item_attributes,item_type,accepts_used')
+        .inFilter('id', ids);
+    final byId = <String, Map<String, dynamic>>{
+      for (final row in (detailRows as List).cast<Map<String, dynamic>>()) '${row['id']}': row,
+    };
+    return candidates.map((row) {
+      final detail = byId['${row['need_id']}'];
+      return {...row, if (detail != null) ...detail};
+    }).toList();
   }
 
   Future<String> approveMatch(String donationId, String needId) async {
