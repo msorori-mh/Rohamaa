@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties (which is gitignored).
+# Never commit passwords or keystores.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=ruhamaa-upload
+storeFile=../upload-keystore.jks
