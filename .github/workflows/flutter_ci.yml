@@ -7,6 +7,10 @@ on:
       - main
       - feat/mvp-foundation
 
+concurrency:
+  group: flutter-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-test-build:
     runs-on: ubuntu-latest
