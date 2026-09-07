@@ -70,6 +70,14 @@ class AccountScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
+                  title: const Text('كيف يعمل رحماء؟', style: TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: const Text('راجع بطاقات التعريف والخصوصية والمساهمة في التوصيل.'),
+                  trailing: const Icon(Icons.chevron_left_rounded),
+                  onTap: () => context.push('/intro'),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined, color: RuhamaaColors.primary),
                   title: const Text('الخصوصية والحساب', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('سياسة الخصوصية، الشروط وطلب حذف الحساب.'),
