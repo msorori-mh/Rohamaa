@@ -19,9 +19,10 @@ import 'features/legal/legal_screen.dart';
 import 'features/needs/create_need_v2_screen.dart';
 import 'features/needs/need_discovery_screen.dart';
 import 'features/offers/match_offers_screen.dart';
+import 'features/partners/partner_hub_screen.dart';
 import 'features/profile/account_screen.dart';
 import 'features/profile/onboarding_screen.dart';
-import 'features/services/create_service_offer_screen.dart';
+import 'features/services/create_personal_service_offer_screen.dart';
 import 'features/services/create_service_request_screen.dart';
 import 'features/services/my_services_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
@@ -95,9 +96,10 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         ),
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedV2Screen()),
         GoRoute(path: '/verified-needs', builder: (_, __) => const NeedDiscoveryScreen()),
-        GoRoute(path: '/offer-service', builder: (_, __) => const CreateServiceOfferScreen()),
+        GoRoute(path: '/offer-service', builder: (_, __) => const CreatePersonalServiceOfferScreen()),
         GoRoute(path: '/request-service', builder: (_, __) => const CreateServiceRequestScreen()),
         GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
+        GoRoute(path: '/partners', builder: (_, __) => const PartnerHubScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
         GoRoute(path: '/supervisor', builder: (_, __) => const _RoleGate(requiredRole: 'supervisor', child: SupervisorHomeScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
