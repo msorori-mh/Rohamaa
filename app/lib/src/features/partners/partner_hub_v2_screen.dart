@@ -16,6 +16,24 @@ const partnerKindsV2 = <String, String>{
   'other': 'نشاط آخر',
 };
 
+Set<String> allowedPartnerServiceCategories(String partnerKind) {
+  switch (partnerKind) {
+    case 'salon':
+    case 'clothing_shop':
+      return {'beauty_wedding'};
+    case 'event_setup':
+      return {'event_setup'};
+    case 'repair_shop':
+      return {'appliance_repair', 'device_repair'};
+    case 'printing_shop':
+      return {'printing_stationery'};
+    case 'workshop':
+      return {'carpentry', 'tailoring', 'painting', 'moving_assembly', 'appliance_repair', 'device_repair'};
+    default:
+      return ruhamaaServiceCategories.map((category) => category.key).toSet();
+  }
+}
+
 class PartnerHubV2Screen extends StatefulWidget {
   const PartnerHubV2Screen({super.key});
 
@@ -280,11 +298,21 @@ class _PartnerServiceOfferV2ScreenState extends State<PartnerServiceOfferV2Scree
   final _description = TextEditingController();
   final _availability = TextEditingController();
   final _hours = TextEditingController(text: '3');
-  String _category = ruhamaaServiceCategories.first.key;
-  String _serviceType = ruhamaaServiceCategories.first.types.first;
+  late String _category;
+  late String _serviceType;
   String _pricingMode = 'free';
   String _materialsMode = 'case_by_case';
   bool _saving = false;
+
+  Set<String> get _allowedCategories => allowedPartnerServiceCategories('${widget.partner['partner_kind']}');
+
+  @override
+  void initState() {
+    super.initState();
+    final firstCategory = ruhamaaServiceCategories.firstWhere((category) => _allowedCategories.contains(category.key));
+    _category = firstCategory.key;
+    _serviceType = firstCategory.types.first;
+  }
 
   @override
   void dispose() {
@@ -325,15 +353,25 @@ class _PartnerServiceOfferV2ScreenState extends State<PartnerServiceOfferV2Scree
   @override
   Widget build(BuildContext context) {
     final categoryData = serviceCategoryByKey(_category);
+    final visibleCategories = ruhamaaServiceCategories.where((category) => _allowedCategories.contains(category.key)).toList();
     return Scaffold(
       appBar: AppBar(title: Text('خدمة من ${widget.partner['display_name']}')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          Container(
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(16)),
+            child: const Text(
+              'تظهر هنا فقط أنواع الخدمات المتوافقة مع النشاط الذي راجعه فريق رحماء. توسيع نشاط الشريك يحتاج مراجعة جديدة.',
+              style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.45, fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 14),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ruhamaaServiceCategories.map((category) => ChoiceChip(
+            children: visibleCategories.map((category) => ChoiceChip(
                   avatar: Icon(category.icon, size: 18),
                   label: Text(category.label),
                   selected: _category == category.key,
