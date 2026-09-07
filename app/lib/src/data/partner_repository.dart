@@ -47,6 +47,8 @@ class PartnerRepository {
       'contact_phone': contactPhone.trim().isEmpty ? null : contactPhone.trim(),
       'monthly_case_capacity': monthlyCaseCapacity,
       'verification_status': 'pending',
+      'terms_version': 'v1',
+      'terms_accepted_at': DateTime.now().toIso8601String(),
     }).select('id').single();
     return row['id'] as String;
   }
@@ -54,7 +56,7 @@ class PartnerRepository {
   Future<List<Map<String, dynamic>>> myPartners() async {
     final rows = await _client
         .from('service_partners')
-        .select('id,public_code,display_name,partner_kind,description,contact_phone,monthly_case_capacity,verification_status,service_area_id,created_at,updated_at')
+        .select('id,public_code,display_name,partner_kind,description,contact_phone,monthly_case_capacity,verification_status,terms_version,terms_accepted_at,service_area_id,created_at,updated_at')
         .eq('owner_user_id', userId)
         .order('created_at', ascending: false);
     return (rows as List).cast<Map<String, dynamic>>();
@@ -63,7 +65,7 @@ class PartnerRepository {
   Future<List<Map<String, dynamic>>> adminPartners() async {
     final rows = await _client
         .from('service_partners')
-        .select('id,public_code,owner_user_id,display_name,partner_kind,description,contact_phone,monthly_case_capacity,verification_status,service_area_id,admin_note,created_at,updated_at')
+        .select('id,public_code,owner_user_id,display_name,partner_kind,description,contact_phone,monthly_case_capacity,verification_status,terms_version,terms_accepted_at,service_area_id,admin_note,created_at,updated_at')
         .order('created_at', ascending: true);
     return (rows as List).cast<Map<String, dynamic>>();
   }
