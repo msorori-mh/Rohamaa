@@ -23,12 +23,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Legacy OAuth deep link kept as a fallback while production App Links are being verified. -->
+            <!-- App-specific OAuth deep link for local/internal builds. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="io.sanad.app" android:host="login-callback" />
+                <data android:scheme="com.ruhamaa.app" android:host="login-callback" />
             </intent-filter>
 
             <!-- Production Android App Link. Verification becomes active once
