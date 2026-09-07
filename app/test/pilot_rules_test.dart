@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sanad/src/domain/pilot_rules.dart';
+import 'package:ruhamaa/src/domain/pilot_rules.dart';
 
 void main() {
   group('PilotRules', () {
