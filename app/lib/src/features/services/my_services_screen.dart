@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../data/service_incident_repository.dart';
 import '../../data/service_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 import 'service_catalog.dart';
@@ -11,7 +12,7 @@ class MyServicesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('وقتي ومهاراتي'),
@@ -19,6 +20,7 @@ class MyServicesScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'ما أقدّمه', icon: Icon(Icons.handyman_outlined)),
               Tab(text: 'ما أحتاجه', icon: Icon(Icons.support_agent_outlined)),
+              Tab(text: 'العمليات', icon: Icon(Icons.history_rounded)),
             ],
           ),
         ),
@@ -26,6 +28,7 @@ class MyServicesScreen extends StatelessWidget {
           children: [
             _MyOffersList(),
             _MyRequestsList(),
+            _ServiceHistoryList(),
           ],
         ),
       ),
@@ -58,9 +61,7 @@ class _MyOffersListState extends State<_MyOffersList> {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
         if (snapshot.hasError) return Center(child: Text('تعذر تحميل ما تقدمه: ${snapshot.error}'));
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -130,9 +131,7 @@ class _MyRequestsListState extends State<_MyRequestsList> {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
         if (snapshot.hasError) return Center(child: Text('تعذر تحميل احتياجات الخدمة: ${snapshot.error}'));
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -165,6 +164,195 @@ class _MyRequestsListState extends State<_MyRequestsList> {
                     child: Text('${category.label} • ${row['service_type']}\n${_requestStatus('${row['status']}')}'),
                   ),
                   isThreeLine: true,
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ServiceHistoryList extends StatefulWidget {
+  const _ServiceHistoryList();
+
+  @override
+  State<_ServiceHistoryList> createState() => _ServiceHistoryListState();
+}
+
+class _ServiceHistoryListState extends State<_ServiceHistoryList> {
+  late Future<List<Map<String, dynamic>>> _future;
+  ServiceIncidentRepository get _repo => ServiceIncidentRepository(Supabase.instance.client);
+
+  static const incidentTypes = <String, String>{
+    'unexpected_charge': 'طلب مبلغ غير متفق عليه',
+    'privacy': 'مشكلة خصوصية',
+    'photo_marketing': 'تصوير أو استخدام للتسويق',
+    'no_show': 'عدم الحضور',
+    'conduct': 'سلوك غير مناسب',
+    'quality': 'مشكلة في تنفيذ الخدمة',
+    'other': 'أخرى',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() => _future = _repo.serviceHistory();
+
+  String _status(String value) {
+    switch (value) {
+      case 'accepted':
+        return 'وافق الطرفان ويجري التنسيق';
+      case 'scheduled':
+        return 'تم ترتيب الموعد';
+      case 'completed':
+        return 'اكتملت الخدمة';
+      case 'cancelled':
+        return 'أُلغيت العملية';
+      default:
+        return value;
+    }
+  }
+
+  Future<void> _report(Map<String, dynamic> row) async {
+    var type = 'unexpected_charge';
+    final details = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('إبلاغ رحماء عن مشكلة'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'البلاغ خاص بفريق رحماء ولا ينشر كتقييم أو تعليق عام. استخدمه إذا حدثت مشكلة أثناء الخدمة أو بعدها.',
+                  style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'نوع المشكلة'),
+                  items: incidentTypes.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+                  onChanged: (value) => setDialogState(() => type = value ?? 'other'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: details,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'اشرح ما حدث',
+                    hintText: 'اذكر الوقائع التي تساعد فريق رحماء على المراجعة.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إرسال البلاغ')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) {
+      details.dispose();
+      return;
+    }
+    if (details.text.trim().length < 8) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف وصفًا مختصرًا لما حدث.')));
+      details.dispose();
+      return;
+    }
+    try {
+      await _repo.report(
+        serviceMatchId: '${row['match_id']}',
+        incidentType: type,
+        description: details.text,
+      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ لفريق رحماء للمراجعة.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال البلاغ: $e')));
+    } finally {
+      details.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return Center(child: Text('تعذر تحميل عمليات الخدمات: ${snapshot.error}'));
+        final rows = snapshot.data ?? const [];
+        if (rows.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.history_rounded,
+            title: 'لا توجد عمليات خدمة بعد',
+            subtitle: 'بعد موافقة الطرفين على مطابقة خدمة ستظهر هنا للمتابعة والرجوع إليها.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: () async => setState(_reload),
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+            itemCount: rows.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final row = rows[index];
+              final category = serviceCategoryByKey('${row['category']}');
+              final scheduledRaw = row['scheduled_at'];
+              final scheduled = scheduledRaw == null ? null : DateTime.tryParse('$scheduledRaw')?.toLocal();
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: RuhamaaColors.softGreen,
+                            foregroundColor: RuhamaaColors.primary,
+                            child: Icon(category.icon),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${row['service_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                                Text('${category.label} • ${row['service_type']}', style: const TextStyle(color: RuhamaaColors.textMuted)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 9),
+                      Text(_status('${row['status']}'), style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w700)),
+                      if (scheduled != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          'الموعد: ${scheduled.year}-${scheduled.month.toString().padLeft(2, '0')}-${scheduled.day.toString().padLeft(2, '0')} ${scheduled.hour.toString().padLeft(2, '0')}:${scheduled.minute.toString().padLeft(2, '0')}',
+                          style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
+                        ),
+                      ],
+                      if ('${row['status']}' != 'cancelled') ...[
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _report(row),
+                          icon: const Icon(Icons.report_outlined),
+                          label: const Text('إبلاغ رحماء عن مشكلة'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               );
             },
