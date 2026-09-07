@@ -81,7 +81,7 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إنشاء حساب فريق سند')),
+      appBar: AppBar(title: const Text('إنشاء حساب فريق رحماء')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 620),
