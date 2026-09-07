@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/admin_repository.dart';
+import '../../data/handoff_repository.dart';
+import '../../data/match_offer_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -18,11 +20,6 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'بيانات التوصيل',
             onPressed: () => context.push('/onboarding'),
             icon: const Icon(Icons.location_on_outlined),
-          ),
-          IconButton(
-            tooltip: 'تسجيل الخروج',
-            onPressed: () => Supabase.instance.client.auth.signOut(),
-            icon: const Icon(Icons.logout_rounded),
           ),
         ],
       ),
@@ -67,6 +64,8 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            const _HomeActivityPulse(),
             const SizedBox(height: 22),
             _PrimaryActionCard(
               icon: Icons.inventory_2_outlined,
@@ -164,6 +163,141 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HomeActivityPulse extends StatefulWidget {
+  const _HomeActivityPulse();
+
+  @override
+  State<_HomeActivityPulse> createState() => _HomeActivityPulseState();
+}
+
+class _HomeActivityPulseState extends State<_HomeActivityPulse> {
+  late Future<_PulseData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<_PulseData> _load() async {
+    final client = Supabase.instance.client;
+    final results = await Future.wait<dynamic>([
+      MatchOfferRepository(client).pendingOffers(),
+      HandoffRepository(client).myHandoffs(),
+    ]);
+    final offers = results[0] as List<MatchOffer>;
+    final handoffs = results[1] as List<UserHandoff>;
+    final active = handoffs.where((row) => row.status != 'delivered').toList();
+    if (offers.isNotEmpty) {
+      return _PulseData(
+        icon: Icons.auto_awesome_rounded,
+        title: 'لديك تطابق ينتظر ردك',
+        subtitle: 'وجد رحماء شيئًا مناسبًا لاحتياجك. راجعه الآن حتى نكمل الترتيب.',
+        route: '/offers',
+        warm: true,
+      );
+    }
+    if (active.isNotEmpty) {
+      return _PulseData(
+        icon: Icons.local_shipping_rounded,
+        title: 'هناك عملية تتحرك الآن',
+        subtitle: 'تابع رحلة الاستلام أو التسليم خطوة بخطوة من «عملياتي».',
+        route: '/handoffs',
+      );
+    }
+    return const _PulseData.none();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_PulseData>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done || snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
+        final data = snapshot.data ?? const _PulseData.none();
+        if (data.route == null) return const SizedBox.shrink();
+        final background = data.warm ? RuhamaaColors.warmGoldSoft : RuhamaaColors.softGreen;
+        final accent = data.warm ? RuhamaaColors.warmGold : RuhamaaColors.primary;
+        return Material(
+          color: background,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => context.go(data.route!),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.82),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(data.icon, color: accent),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'آخر تحديث',
+                          style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          data.title,
+                          style: const TextStyle(
+                            color: RuhamaaColors.primaryDark,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          data.subtitle,
+                          style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_left_rounded, color: accent),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PulseData {
+  const _PulseData({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.route,
+    this.warm = false,
+  });
+
+  const _PulseData.none()
+      : icon = Icons.info_outline_rounded,
+        title = '',
+        subtitle = '',
+        route = null,
+        warm = false;
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? route;
+  final bool warm;
 }
 
 class _PrimaryActionCard extends StatelessWidget {
