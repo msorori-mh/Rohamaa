@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../catalog/item_category_catalog.dart';
 import '../../data/need_discovery_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 
@@ -15,17 +16,6 @@ class NeedDiscoveryScreen extends StatefulWidget {
 class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
   String? _category;
   late Future<List<NeedDiscoveryCard>> _future;
-
-  static const categories = <String, (String, IconData)>{
-    'clothes': ('ملابس', Icons.checkroom_rounded),
-    'books': ('كتب وتعليم', Icons.menu_book_rounded),
-    'furniture': ('أثاث', Icons.chair_alt_rounded),
-    'children': ('أطفال', Icons.toys_rounded),
-    'home': ('أدوات منزلية', Icons.home_repair_service_rounded),
-    'electronics': ('أجهزة', Icons.devices_other_rounded),
-    'events': ('مناسبات', Icons.card_giftcard_rounded),
-    'other': ('أخرى', Icons.more_horiz_rounded),
-  };
 
   NeedDiscoveryRepository get _repo => NeedDiscoveryRepository(Supabase.instance.client);
 
@@ -49,6 +39,9 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
   void _offerFor(NeedDiscoveryCard card) {
     context.push('/donate', extra: {
       'category': card.category,
+      'categoryGroup': card.categoryGroup,
+      'itemTypeKey': card.itemTypeKey,
+      'attributes': card.attributes,
       'title': card.title,
       'discoveryCardId': card.id,
     });
@@ -60,6 +53,20 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
     if (days == 2) return 'ينتظر منذ يومين';
     if (days >= 3 && days <= 10) return 'ينتظر منذ $days أيام';
     return 'ينتظر منذ $days يومًا';
+  }
+
+  String _structuredDetail(NeedDiscoveryCard card) {
+    if (card.attributes.isEmpty) return '';
+    final category = itemCategoryByKey(card.category);
+    final parts = <String>[];
+    for (final entry in card.attributes.entries) {
+      if (entry.key == 'size_flexible' || entry.value.trim().isEmpty) continue;
+      final spec = category.attributes.where((attribute) => attribute.key == entry.key).firstOrNull;
+      if (spec == null) continue;
+      final value = spec.choices[entry.value] ?? entry.value;
+      parts.add('${spec.label}: $value');
+    }
+    return parts.join(' • ');
   }
 
   @override
@@ -118,14 +125,14 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                       onSelected: (_) => _selectCategory(null),
                     ),
                   ),
-                  ...categories.entries.map(
-                    (entry) => Padding(
+                  ...itemCategoriesV2.map(
+                    (category) => Padding(
                       padding: const EdgeInsets.only(left: 7),
                       child: ChoiceChip(
-                        avatar: Icon(entry.value.$2, size: 18),
-                        label: Text(entry.value.$1),
-                        selected: _category == entry.key,
-                        onSelected: (_) => _selectCategory(entry.key),
+                        avatar: Icon(category.icon, size: 18),
+                        label: Text(category.label),
+                        selected: _category == category.key,
+                        onSelected: (_) => _selectCategory(category.key),
                       ),
                     ),
                   ),
@@ -152,24 +159,22 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                   );
                 }
                 final cards = snapshot.data ?? const [];
-                if (cards.isEmpty) {
-                  return const _EmptyDiscovery();
-                }
+                if (cards.isEmpty) return const _EmptyDiscovery();
                 return Column(
-                  children: cards
-                      .map(
-                        (card) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _NeedCard(
-                            card: card,
-                            label: categories[card.category]?.$1 ?? card.category,
-                            icon: categories[card.category]?.$2 ?? Icons.inventory_2_outlined,
-                            waitLabel: _waitLabel(card.waitDays),
-                            onOffer: () => _offerFor(card),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children: cards.map((card) {
+                    final category = itemCategoryByKey(card.category);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _NeedCard(
+                        card: card,
+                        label: category.label,
+                        icon: category.icon,
+                        structuredDetail: _structuredDetail(card),
+                        waitLabel: _waitLabel(card.waitDays),
+                        onOffer: () => _offerFor(card),
+                      ),
+                    );
+                  }).toList(),
                 );
               },
             ),
@@ -185,6 +190,7 @@ class _NeedCard extends StatelessWidget {
     required this.card,
     required this.label,
     required this.icon,
+    required this.structuredDetail,
     required this.waitLabel,
     required this.onOffer,
   });
@@ -192,6 +198,7 @@ class _NeedCard extends StatelessWidget {
   final NeedDiscoveryCard card;
   final String label;
   final IconData icon;
+  final String structuredDetail;
   final String waitLabel;
   final VoidCallback onOffer;
 
@@ -238,12 +245,16 @@ class _NeedCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (card.detail != null && card.detail!.trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
+            if (structuredDetail.isNotEmpty) ...[
+              const SizedBox(height: 10),
               Text(
-                card.detail!,
-                style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                structuredDetail,
+                style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w700, height: 1.45),
               ),
+            ],
+            if (card.detail != null && card.detail!.trim().isNotEmpty) ...[
+              const SizedBox(height: 9),
+              Text(card.detail!, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.5)),
             ],
             const SizedBox(height: 14),
             Container(
@@ -282,21 +293,14 @@ class _EmptyDiscovery extends StatelessWidget {
           Container(
             width: 88,
             height: 88,
-            decoration: const BoxDecoration(
-              color: RuhamaaColors.softGreen,
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(color: RuhamaaColors.softGreen, shape: BoxShape.circle),
             child: const Icon(Icons.fact_check_outlined, color: RuhamaaColors.primary, size: 44),
           ),
           const SizedBox(height: 16),
           const Text(
             'لا توجد بطاقات راجعها رحماء في هذا التصنيف الآن',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: RuhamaaColors.primaryDark,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(color: RuhamaaColors.primaryDark, fontSize: 17, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 7),
           const Text(
@@ -307,5 +311,12 @@ class _EmptyDiscovery extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull {
+    final iterator = this.iterator;
+    return iterator.moveNext() ? iterator.current : null;
   }
 }
