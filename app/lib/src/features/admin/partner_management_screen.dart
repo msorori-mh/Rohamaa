@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/partner_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
-import '../partners/partner_hub_screen.dart' show partnerKinds;
+import '../partners/partner_hub_v2_screen.dart' show partnerKindsV2;
 
 class PartnerManagementScreen extends StatefulWidget {
   const PartnerManagementScreen({super.key});
@@ -117,7 +117,7 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('${row['display_name']}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                                  Text(partnerKinds['${row['partner_kind']}'] ?? '${row['partner_kind']}', style: const TextStyle(color: RuhamaaColors.textMuted)),
+                                  Text(partnerKindsV2['${row['partner_kind']}'] ?? '${row['partner_kind']}', style: const TextStyle(color: RuhamaaColors.textMuted)),
                                 ],
                               ),
                             ),
