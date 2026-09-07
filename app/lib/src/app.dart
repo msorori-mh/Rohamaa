@@ -22,6 +22,7 @@ import 'features/profile/account_screen.dart';
 import 'features/profile/onboarding_screen.dart';
 import 'features/services/create_service_offer_screen.dart';
 import 'features/services/create_service_request_screen.dart';
+import 'features/services/my_services_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
 import 'theme/ruhamaa_theme.dart';
 
@@ -76,6 +77,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         GoRoute(path: '/need', builder: (_, __) => const CreateNeedScreen()),
         GoRoute(path: '/offer-service', builder: (_, __) => const CreateServiceOfferScreen()),
         GoRoute(path: '/request-service', builder: (_, __) => const CreateServiceRequestScreen()),
+        GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
         GoRoute(path: '/supervisor', builder: (_, __) => const _RoleGate(requiredRole: 'supervisor', child: SupervisorHomeScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
