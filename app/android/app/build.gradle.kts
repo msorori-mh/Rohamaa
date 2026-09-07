@@ -23,7 +23,7 @@ if (isReleaseTask && !keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "io.sanad.app"
+    namespace = "com.ruhamaa.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -33,7 +33,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.sanad.app"
+        applicationId = "com.ruhamaa.app"
         minSdk = flutter.minSdkVersion
         // Google Play requires new apps and updates to target Android 16 / API 36 from Aug 31, 2026.
         targetSdk = 36
