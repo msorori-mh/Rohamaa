@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,16 +14,47 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = Supabase.instance.client.auth;
+    _authSubscription = auth.onAuthStateChange.listen((data) {
+      debugPrint('Login auth event: ${data.event}; session=${data.session != null}');
+      if (data.session != null) _openApp();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (auth.currentSession != null) _openApp();
+    });
+  }
+
+  void _openApp() {
+    if (!mounted) return;
+    context.go('/');
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
 
   Future<void> _googleSignIn() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'io.sanad.app://login-callback',
       );
-    } catch (_) {
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول: ${e.message}');
+    } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تسجيل الدخول بحساب Google. حاول مرة أخرى.');
+      debugPrint('Google OAuth launch error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -46,14 +80,25 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Text('للإدارة، مشرفي المدن/المناطق، والموصلين.'),
                 const SizedBox(height: 16),
-                TextField(controller: email, enabled: !busy, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
+                TextField(
+                  controller: email,
+                  enabled: !busy,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: password,
                   enabled: !busy,
                   obscureText: obscure,
                   onSubmitted: (_) {},
-                  decoration: InputDecoration(labelText: 'كلمة المرور', suffixIcon: IconButton(onPressed: busy ? null : () => setDialogState(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور',
+                    suffixIcon: IconButton(
+                      onPressed: busy ? null : () => setDialogState(() => obscure = !obscure),
+                      icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                  ),
                 ),
                 if (dialogError != null) ...[
                   const SizedBox(height: 10),
@@ -65,25 +110,40 @@ class _LoginScreenState extends State<LoginScreen> {
           actions: [
             TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('إلغاء')),
             FilledButton(
-              onPressed: busy ? null : () async {
-                if (email.text.trim().isEmpty || password.text.isEmpty) return;
-                setDialogState(() { busy = true; dialogError = null; });
-                try {
-                  await Supabase.instance.client.auth.signInWithPassword(email: email.text.trim(), password: password.text);
-                  if (context.mounted) Navigator.pop(context);
-                } on AuthException catch (e) {
-                  setDialogState(() { busy = false; dialogError = e.message; });
-                } catch (_) {
-                  setDialogState(() { busy = false; dialogError = 'تعذر تسجيل الدخول. تحقق من البيانات.'; });
-                }
-              },
+              onPressed: busy
+                  ? null
+                  : () async {
+                      if (email.text.trim().isEmpty || password.text.isEmpty) return;
+                      setDialogState(() {
+                        busy = true;
+                        dialogError = null;
+                      });
+                      try {
+                        await Supabase.instance.client.auth.signInWithPassword(
+                          email: email.text.trim(),
+                          password: password.text,
+                        );
+                        if (context.mounted) Navigator.pop(context);
+                      } on AuthException catch (e) {
+                        setDialogState(() {
+                          busy = false;
+                          dialogError = e.message;
+                        });
+                      } catch (_) {
+                        setDialogState(() {
+                          busy = false;
+                          dialogError = 'تعذر تسجيل الدخول. تحقق من البيانات.';
+                        });
+                      }
+                    },
               child: Text(busy ? 'جارٍ الدخول...' : 'دخول'),
             ),
           ],
         ),
       ),
     );
-    email.dispose(); password.dispose();
+    email.dispose();
+    password.dispose();
   }
 
   @override
@@ -99,21 +159,45 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Icon(Icons.handshake_outlined, size: 72),
                 const SizedBox(height: 20),
-                Text('رحماء', textAlign: TextAlign.center, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'رحماء',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 10),
                 const Text('ما لديك قد يصنع فرقًا.', textAlign: TextAlign.center),
                 const SizedBox(height: 36),
-                FilledButton.icon(onPressed: _loading ? null : _googleSignIn, icon: const Icon(Icons.login), label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google')),
+                FilledButton.icon(
+                  onPressed: _loading ? null : _googleSignIn,
+                  icon: const Icon(Icons.login),
+                  label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google'),
+                ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(onPressed: _loading ? null : _staffLogin, icon: const Icon(Icons.badge_outlined), label: const Text('دخول فريق رحماء')),
+                OutlinedButton.icon(
+                  onPressed: _loading ? null : _staffLogin,
+                  icon: const Icon(Icons.badge_outlined),
+                  label: const Text('دخول فريق رحماء'),
+                ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
                 ],
                 const SizedBox(height: 20),
-                const Text('لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                const Text(
+                  'لا نستخدم رسائل SMS لتسجيل الدخول. رقم الهاتف يُستخدم فقط عند الحاجة التشغيلية للتوصيل.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12),
+                ),
                 const SizedBox(height: 8),
-                const Text('عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب رحماء تعيين كلمة مرور خاصة بفريق التشغيل.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
+                const Text(
+                  'عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب رحماء تعيين كلمة مرور خاصة بفريق التشغيل.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12),
+                ),
               ],
             ),
           ),
