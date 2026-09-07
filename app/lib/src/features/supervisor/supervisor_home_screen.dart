@@ -11,16 +11,37 @@ class SupervisorHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إشراف سند'),
+        title: const Text('إشراف رحماء'),
         actions: [
-          IconButton(tooltip: 'تغيير كلمة المرور', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen(role: 'supervisor', requiredChange: false))), icon: const Icon(Icons.password_outlined)),
-          IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
+          IconButton(
+            tooltip: 'تغيير كلمة المرور',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ChangePasswordScreen(
+                  role: 'supervisor',
+                  requiredChange: false,
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.password_outlined),
+          ),
+          IconButton(
+            tooltip: 'تسجيل الخروج',
+            onPressed: () => Supabase.instance.client.auth.signOut(),
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Text('لوحة مشرف المنطقة', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'لوحة مشرف المنطقة',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
           const SizedBox(height: 8),
           const Text('تظهر لك التقارير ضمن المدينة أو المناطق المسندة إلى حسابك فقط.'),
           const SizedBox(height: 24),
@@ -30,7 +51,10 @@ class SupervisorHomeScreen extends StatelessWidget {
               title: const Text('التقارير الأساسية'),
               subtitle: const Text('الأثر، التوصيل، المساهمات والمصروفات ضمن نطاقك.'),
               trailing: const Icon(Icons.chevron_left),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportsScreen()),
+              ),
             ),
           ),
         ],
