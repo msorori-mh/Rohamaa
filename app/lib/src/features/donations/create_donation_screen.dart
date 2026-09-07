@@ -6,12 +6,21 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/donation_image_repository.dart';
-import '../../data/sanad_repository.dart';
+import '../../data/ruhamaa_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 import '../contributions/contribution_screen.dart';
 
 class CreateDonationScreen extends StatefulWidget {
-  const CreateDonationScreen({super.key});
+  const CreateDonationScreen({
+    super.key,
+    this.prefillCategory,
+    this.prefillTitle,
+    this.inspiredByDiscoveryCardId,
+  });
+
+  final String? prefillCategory;
+  final String? prefillTitle;
+  final String? inspiredByDiscoveryCardId;
 
   @override
   State<CreateDonationScreen> createState() => _CreateDonationScreenState();
@@ -23,6 +32,7 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   final _description = TextEditingController();
   final _picker = ImagePicker();
   final List<XFile> _images = [];
+
   String _condition = 'good';
   String _category = 'clothes';
   bool _saving = false;
@@ -45,6 +55,22 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
     'good': 'جيد',
     'minor_repair': 'يحتاج إصلاحًا بسيطًا',
   };
+
+  bool get _inspired => widget.inspiredByDiscoveryCardId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final category = widget.prefillCategory;
+    if (category != null && categories.containsKey(category)) {
+      _category = category;
+    }
+    final title = widget.prefillTitle?.trim();
+    if (title != null && title.isNotEmpty) {
+      _title.text = title;
+    }
+    if (_inspired) _step = 1;
+  }
 
   @override
   void dispose() {
@@ -69,7 +95,7 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   }
 
   Future<bool> _ensureProfile() async {
-    final repo = SanadRepository(Supabase.instance.client);
+    final repo = RuhamaaRepository(Supabase.instance.client);
     if (await repo.hasOperationalProfile()) return true;
     if (!mounted) return false;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -98,14 +124,16 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
     setState(() => _saving = true);
     try {
       if (!await _ensureProfile()) return;
-      final repo = SanadRepository(Supabase.instance.client);
+      final repo = RuhamaaRepository(Supabase.instance.client);
       final donationId = await repo.createDonation(
         title: _title.text.trim(),
         description: _description.text.trim(),
         condition: _condition,
         category: _category,
         addressId: await repo.defaultAddressId(),
+        inspiredByDiscoveryCardId: widget.inspiredByDiscoveryCardId,
       );
+
       final imageRepo = DonationImageRepository(Supabase.instance.client);
       for (var i = 0; i < _images.length; i++) {
         final x = _images[i];
@@ -118,6 +146,7 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
           sortOrder: i,
         );
       }
+
       if (!mounted) return;
       final contribute = await showDialog<bool>(
         context: context,
@@ -138,6 +167,7 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
           ],
         ),
       );
+
       if (!mounted) return;
       if (contribute == true) {
         await Navigator.push(
@@ -168,6 +198,29 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
           children: [
             _ProgressHeader(current: _step + 1),
             const SizedBox(height: 18),
+            if (_inspired) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: RuhamaaColors.warmGoldSoft,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.lightbulb_outline_rounded, color: RuhamaaColors.warmGold),
+                    SizedBox(width: 9),
+                    Expanded(
+                      child: Text(
+                        'هذه الحاجة ألهمت عطائك، لذلك ملأنا بعض البيانات لك. لا يعني ذلك أن الشيء محجوز لنفس الحالة؛ رحماء يوجّه العطاء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+                        style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
               child: switch (_step) {
@@ -383,15 +436,17 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
             color: RuhamaaColors.softGreen,
             borderRadius: BorderRadius.circular(18),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.lock_outline_rounded, color: RuhamaaColors.primary),
-              SizedBox(width: 10),
+              const Icon(Icons.lock_outline_rounded, color: RuhamaaColors.primary),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'بعد الإرسال يراجع رحماء العطاء ويبحث عن احتياج مناسب. لا يختار المتبرع المستفيد ولا تظهر هوية أي طرف للآخر.',
-                  style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
+                  _inspired
+                      ? 'بعد الإرسال يراجع رحماء العطاء ويطابقه بعدل. البطاقة التي رأيتها تحفّز العطاء فقط ولا تمنح صاحبها حقًا حصريًا في هذا الشيء.'
+                      : 'بعد الإرسال يراجع رحماء العطاء ويبحث عن احتياج مناسب. لا يختار المتبرع المستفيد ولا تظهر هوية أي طرف للآخر.',
+                  style: const TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                 ),
               ),
             ],
@@ -424,7 +479,6 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
 
 class _ProgressHeader extends StatelessWidget {
   const _ProgressHeader({required this.current});
-
   final int current;
 
   @override
@@ -464,7 +518,6 @@ class _ProgressHeader extends StatelessWidget {
 
 class _ReviewRow extends StatelessWidget {
   const _ReviewRow({required this.label, required this.value});
-
   final String label;
   final String value;
 
@@ -542,7 +595,6 @@ class _CategoryTile extends StatelessWidget {
 
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
-
   final String text;
 
   @override
