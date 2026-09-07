@@ -115,32 +115,56 @@ class RuhamaaBrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            right: size * 0.08,
-            bottom: size * 0.10,
-            child: Icon(
-              Icons.eco_rounded,
-              size: size * 0.72,
-              color: RuhamaaColors.primary,
-            ),
-          ),
-          Positioned(
-            left: size * 0.08,
-            top: size * 0.05,
-            child: Icon(
-              Icons.favorite_rounded,
-              size: size * 0.52,
-              color: RuhamaaColors.warmGold,
-            ),
-          ),
-        ],
-      ),
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(painter: const _RuhamaaBrandPainter()),
     );
   }
+}
+
+class _RuhamaaBrandPainter extends CustomPainter {
+  const _RuhamaaBrandPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final green = Paint()
+      ..color = RuhamaaColors.primary
+      ..style = PaintingStyle.fill;
+    final gold = Paint()
+      ..color = RuhamaaColors.warmGold
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(Offset(w * 0.34, h * 0.22), w * 0.105, green);
+    canvas.drawCircle(Offset(w * 0.69, h * 0.28), w * 0.085, gold);
+
+    final left = Path()
+      ..moveTo(w * 0.33, h * 0.36)
+      ..cubicTo(w * 0.17, h * 0.40, w * 0.14, h * 0.62, w * 0.50, h * 0.88)
+      ..cubicTo(w * 0.46, h * 0.70, w * 0.48, h * 0.50, w * 0.33, h * 0.36)
+      ..close();
+    canvas.drawPath(left, green);
+
+    final right = Path()
+      ..moveTo(w * 0.68, h * 0.39)
+      ..cubicTo(w * 0.84, h * 0.38, w * 0.92, h * 0.53, w * 0.81, h * 0.67)
+      ..cubicTo(w * 0.72, h * 0.78, w * 0.61, h * 0.84, w * 0.50, h * 0.90)
+      ..cubicTo(w * 0.56, h * 0.72, w * 0.56, h * 0.52, w * 0.68, h * 0.39)
+      ..close();
+    canvas.drawPath(right, gold);
+
+    final embrace = Paint()
+      ..color = RuhamaaColors.warmSurface
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.055
+      ..strokeCap = StrokeCap.round;
+    final arc = Path()
+      ..moveTo(w * 0.42, h * 0.50)
+      ..quadraticBezierTo(w * 0.53, h * 0.59, w * 0.61, h * 0.49);
+    canvas.drawPath(arc, embrace);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RuhamaaBrandPainter oldDelegate) => false;
 }
