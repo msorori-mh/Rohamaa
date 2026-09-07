@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/sanad_repository.dart';
+import '../../theme/ruhamaa_theme.dart';
 import '../contributions/contribution_screen.dart';
 
 class CreateNeedScreen extends StatefulWidget {
@@ -18,17 +19,17 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
   final _reason = TextEditingController();
   bool _acceptsUsed = true;
   bool _saving = false;
-  String _category = 'other';
+  String _category = 'clothes';
 
-  static const categories = <String, String>{
-    'clothes': 'ملابس',
-    'books': 'كتب وتعليم',
-    'furniture': 'أثاث',
-    'children': 'مستلزمات أطفال',
-    'home': 'أدوات منزلية',
-    'electronics': 'أجهزة',
-    'events': 'مستلزمات مناسبات',
-    'other': 'أخرى',
+  static const categories = <String, (String, IconData)>{
+    'clothes': ('ملابس', Icons.checkroom_rounded),
+    'books': ('كتب وتعليم', Icons.menu_book_rounded),
+    'furniture': ('أثاث', Icons.chair_alt_rounded),
+    'children': ('أطفال', Icons.toys_rounded),
+    'home': ('أدوات منزلية', Icons.home_repair_service_rounded),
+    'electronics': ('أجهزة', Icons.devices_other_rounded),
+    'events': ('مناسبات', Icons.card_giftcard_rounded),
+    'other': ('أخرى', Icons.more_horiz_rounded),
   };
 
   @override
@@ -42,7 +43,9 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
     final repo = SanadRepository(Supabase.instance.client);
     if (await repo.hasOperationalProfile()) return true;
     if (!mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')),
+    );
     await context.push('/onboarding');
     return repo.hasOperationalProfile();
   }
@@ -66,21 +69,34 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل احتياجك'),
           content: const Text(
-            'طلبك مستمر سواء ساهمت أم لا، وعدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إذا كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة وعلى إيصال احتياجات أخرى لأشخاص لا يستطيعون تحمل التكلفة. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للمندوب عند التوصيل.',
+            'طلبك مستمر سواء ساهمت أم لا، وعدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إذا كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة وعلى إيصال احتياجات أخرى لأشخاص لا يستطيعون تحمل التكلفة. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند التوصيل.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('بدون مساهمة')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أرغب بالمساهمة')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('بدون مساهمة'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('أرغب بالمساهمة'),
+            ),
           ],
         ),
       );
       if (!mounted) return;
       if (contribute == true) {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => ContributionScreen(needId: needId)));
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ContributionScreen(needId: needId)),
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الطلب: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر حفظ الطلب: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -93,44 +109,176 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
           children: [
-            const Text('سجّل احتياجك فقط. لا توجد قائمة تبرعات للتصفح حفاظًا على عدالة المطابقة والخصوصية.'),
-            const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'الفئة'),
-              items: categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-              onChanged: (v) => setState(() => _category = v ?? 'other'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: RuhamaaColors.warmGoldSoft,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.favorite_rounded, color: RuhamaaColors.warmGold),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'سجّل احتياجك بخصوصية. لا توجد قائمة تبرعات للتصفح؛ رحماء يبحث عن التطابق المناسب لك.',
+                      style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
+            const _SectionTitle('ما الفئة التي تحتاجها؟'),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.4,
+              children: categories.entries.map((entry) {
+                final selected = _category == entry.key;
+                return _CategoryTile(
+                  label: entry.value.$1,
+                  icon: entry.value.$2,
+                  selected: selected,
+                  onTap: () => setState(() => _category = entry.key),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            const _SectionTitle('تفاصيل احتياجك'),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _title,
-              decoration: const InputDecoration(labelText: 'ماذا تحتاج؟', hintText: 'مثال: كتب الصف السادس'),
-              validator: (v) => v == null || v.trim().length < 3 ? 'اكتب احتياجًا واضحًا' : null,
+              decoration: const InputDecoration(
+                labelText: 'ماذا تحتاج؟',
+                hintText: 'مثال: كتب الصف السادس أو ملابس أطفال',
+              ),
+              validator: (v) => v == null || v.trim().length < 3
+                  ? 'اكتب احتياجًا واضحًا'
+                  : null,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             TextFormField(
               controller: _reason,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'لماذا تحتاجه؟', helperText: 'هذه المعلومة داخلية وتساعد رحماء على المطابقة، ولا تُعرض للمتبرع.'),
-              validator: (v) => v == null || v.trim().length < 8 ? 'أضف وصفًا مختصرًا للاحتياج' : null,
+              decoration: const InputDecoration(
+                labelText: 'تفاصيل تساعدنا في فهم احتياجك',
+                hintText: 'مثل المقاس، العدد، العمر أو أي تفاصيل تساعد على إيجاد المناسب',
+                helperText: 'هذه التفاصيل خاصة بفريق رحماء ولا تظهر للمتبرع.',
+              ),
+              validator: (v) => v == null || v.trim().length < 8
+                  ? 'أضف تفاصيل مختصرة تساعدنا في المطابقة'
+                  : null,
             ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('أقبل المستعمل بحالة جيدة'),
-              value: _acceptsUsed,
-              onChanged: (v) => setState(() => _acceptsUsed = v),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: RuhamaaColors.border),
+              ),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                title: const Text('أقبل المستعمل بحالة جيدة', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('يساعد هذا الخيار على توسيع فرص العثور على شيء مناسب.'),
+                value: _acceptsUsed,
+                onChanged: (v) => setState(() => _acceptsUsed = v),
+              ),
             ),
-            const SizedBox(height: 24),
-            FilledButton(
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: RuhamaaColors.softGreen,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lock_outline_rounded, color: RuhamaaColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'المتبرع لا يرى اسمك أو سبب احتياجك أو موقعك. نستخدم بياناتك فقط للمطابقة والتوصيل.',
+                      style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 26),
+            FilledButton.icon(
               onPressed: _saving ? null : _submit,
-              child: Text(_saving ? 'جارٍ الحفظ...' : 'تسجيل الاحتياج'),
+              icon: const Icon(Icons.favorite_outline_rounded),
+              label: Text(_saving ? 'جارٍ الحفظ...' : 'تسجيل الاحتياج'),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.label, required this.icon, required this.selected, required this.onTap});
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? RuhamaaColors.warmGoldSoft : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? RuhamaaColors.warmGold : RuhamaaColors.border,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: selected ? RuhamaaColors.warmGold : RuhamaaColors.textMuted, size: 23),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label, style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: RuhamaaColors.primaryDark,
+            fontWeight: FontWeight.w900,
+          ),
     );
   }
 }
