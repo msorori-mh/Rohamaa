@@ -13,11 +13,6 @@ class PartnerRepository {
     return id;
   }
 
-  String _publicCode() {
-    final suffix = _uuid.v4().replaceAll('-', '').substring(0, 10).toUpperCase();
-    return 'RHM-MRB-PRT-$suffix';
-  }
-
   Future<String?> defaultServiceAreaId() async {
     final rows = await _client
         .from('addresses')
@@ -37,20 +32,18 @@ class PartnerRepository {
     required String contactPhone,
     required int monthlyCaseCapacity,
   }) async {
-    final row = await _client.from('service_partners').insert({
-      'public_code': _publicCode(),
-      'owner_user_id': userId,
-      'service_area_id': await defaultServiceAreaId(),
-      'display_name': displayName.trim(),
-      'partner_kind': partnerKind,
-      'description': description.trim().isEmpty ? null : description.trim(),
-      'contact_phone': contactPhone.trim().isEmpty ? null : contactPhone.trim(),
-      'monthly_case_capacity': monthlyCaseCapacity,
-      'verification_status': 'pending',
-      'terms_version': 'v1',
-      'terms_accepted_at': DateTime.now().toIso8601String(),
-    }).select('id').single();
-    return row['id'] as String;
+    final areaId = await defaultServiceAreaId();
+    if (areaId == null) throw StateError('Operational service area is required');
+    final id = await _client.rpc('user_register_service_partner', params: {
+      'p_display_name': displayName.trim(),
+      'p_partner_kind': partnerKind,
+      'p_description': description.trim(),
+      'p_contact_phone': contactPhone.trim(),
+      'p_monthly_case_capacity': monthlyCaseCapacity,
+      'p_service_area_id': areaId,
+      'p_terms_version': 'v1',
+    });
+    return id as String;
   }
 
   Future<List<Map<String, dynamic>>> myPartners() async {
