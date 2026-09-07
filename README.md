@@ -15,7 +15,7 @@
 - حساب مستخدم واحد يمكنه التبرع، تسجيل احتياج، تقديم وقت/مهارة، أو طلب خدمة
 - عناوين متعددة مع موقع جغرافي
 - **Category System V2** للأشياء: فئة رئيسية → قسم → نوع دقيق → خصائص مثل المقاس/العمر/الصف/المادة/الأبعاد
-- توافق كامل مع التبرعات والاحتياجات القديمة عبر canonical category mapping
+- توافق مع التبرعات والاحتياجات القديمة عبر canonical category mapping
 - مطابقة V2 تعطي وزنًا للنوع الدقيق والخصائص مع بقاء العمر/المسافة/الثقة/العدالة ضمن القرار
 - عرض محدود ومحجوب الهوية لـ **احتياجات راجعها رحماء** بهدف تحفيز العطاء، وليس إنشاء Marketplace
 - زر «أستطيع توفير هذا» يفتح نموذج العطاء بنفس التصنيف والخصائص الدقيقة ولا يضمن توجيه الشيء إلى صاحب البطاقة المعروضة
@@ -85,6 +85,20 @@
 Project ref: `vclicpejajxadsbuakdw`
 
 لا يتم حفظ مفاتيح Supabase السرية داخل المستودع. استخدم متغيرات البيئة أو `--dart-define` للقيم العميلية المسموح بها.
+
+سلسلة migrations تُفحص في CI للتأكد من عدم تكرار أرقام الإصدارات؛ لا تضف ملفين بنفس البادئة الرقمية.
+
+## Release documentation
+
+- [Android release signing and signed AAB](docs/ANDROID_RELEASE.md)
+- [Google Play Data Safety source of truth](docs/PLAY_DATA_SAFETY.md)
+- [Physical-device UAT for release identity, Category V2, services and partners](docs/UAT_CATEGORY_V2_PARTNERS.md)
+- [Public Privacy Policy](site/privacy/index.html)
+- [Public Terms of Use](site/terms/index.html)
+- [Account deletion page](site/delete-account/index.html)
+- `site/.well-known/assetlinks.json.template` is a template only; publish the real `assetlinks.json` after Google Play supplies the App Signing SHA-256.
+
+The manual `Android Release Bundle` GitHub Actions workflow builds a signed AAB only when the upload-keystore secrets are configured. Signing secrets are never committed, and CI keeps signing passwords in the build environment rather than writing them to a plaintext `key.properties` file.
 
 ## Repository structure
 

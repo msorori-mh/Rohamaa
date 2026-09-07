@@ -1,6 +1,40 @@
-# Ruhamaa UAT — Category V2, Reviewed Needs, Time & Skills, Partners
+# Ruhamaa UAT — Release Identity, Category V2, Reviewed Needs, Time & Skills, Partners
 
 هذه مصفوفة قبول على جهاز Android فعلي قبل أول AAB للإطلاق التجريبي.
+
+## 0. هوية الإصدار وGoogle OAuth
+
+> هذا الاختبار إلزامي لأن هوية Android الحالية هي `com.ruhamaa.app`، ولا يكفي نجاح تسجيل الدخول على هوية package قديمة.
+
+1. حدّث الفرع وابنِ/ثبّت النسخة الحالية على الهاتف.
+2. تحقق أن الحزمة الجديدة موجودة:
+
+```powershell
+adb shell pm list packages -3 | Select-String "com.ruhamaa.app"
+```
+
+3. إذا كان على الهاتف إصدار قديم أو نسخة Samsung Dual App، لا تحذف النسخة الرئيسية عشوائيًا؛ تحقق من المستخدم/الحزمة أولًا.
+4. افتح التطبيق وسجّل الدخول بحساب Google لمستخدم مجتمعي عادي.
+5. سجّل الخروج ثم اختبر حساب الإدارة الأساسي عبر Google.
+6. تأكد أن المتصفح يعود إلى التطبيق عبر `com.ruhamaa.app://login-callback` بدون صفحة عالقة أو redirect loop.
+7. قبل الاختبار، يجب أن تحتوي Supabase Auth Redirect URLs على `com.ruhamaa.app://login-callback`، مع بقاء Google Cloud callback إلى Supabase كما هو.
+
+**النتيجة المطلوبة:**
+- الحزمة المثبتة هي `com.ruhamaa.app`.
+- Google OAuth ينشئ/يستعيد Session صحيحة للمستخدم والإدارة.
+- لا يحتاج التطبيق إلى صلاحيات Gmail أو Drive.
+- العودة الداخلية تعمل من الهاتف الحقيقي.
+
+### App Link بعد أول Play Internal Testing
+
+بعد الحصول على بصمة **Play App Signing SHA-256** ونشر `https://ruhamaa.com/.well-known/assetlinks.json`:
+
+```powershell
+adb shell pm get-app-links com.ruhamaa.app
+adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
+```
+
+**النتيجة المطلوبة:** النطاق يظهر Verified ويفتح رابط HTTPS داخل رحماء. لا نحول OAuth الإنتاجي إلى HTTPS قبل نجاح هذا الاختبار.
 
 ## 1. Category System V2 — عطـاء ملابس
 
@@ -107,7 +141,7 @@
 ## 12. نطاق نشاط الشريك
 
 - صالون موثّق: جرّب خدمة تجهيز عروس — يجب أن تعمل.
-- حاول من نفس الصالون تسجيل سباكة — يجب أن يرفض backend.
+- يجب ألا تعرض واجهة الصالون تصنيفات سباكة/كهرباء غير مرتبطة بنشاطه، وحتى مع عميل معدل يرفضها backend.
 - محل صيانة: يسمح `appliance_repair/device_repair` ولا يسمح بكوشة.
 
 ## 13. خدمات المناسبات المجانية
@@ -154,11 +188,18 @@
 - اسم أو هاتف أو عنوان الطرف الآخر قبل الحاجة التشغيلية.
 - بقية احتياجات المستخدم أو تاريخه لمقدم الخدمة.
 - بيانات الشريك الخاصة بالتحقق كرقم الهاتف للمستفيدين في مرحلة الاستعراض/المطابقة.
+- هوية المتبرع للمستفيد أو هوية المستفيد للمتبرع في عمليات الأشياء.
+
+وفي الخدمة الحضورية، بعد موافقة الأطراف، تأكد أن ما يُشارك يقتصر على بيانات الموعد/التواصل/الموقع اللازمة للتنفيذ فقط.
 
 ## Release gate
 
-لا يُبنى أول AAB للإرسال إلى Google Play Internal Testing حتى ينجح:
-- `flutter analyze`
-- `flutter test`
-- Android debug build
+لا يُرفع أول AAB إلى Google Play Internal Testing حتى ينجح:
+- فحص أرقام Supabase migrations بدون تكرار.
+- `flutter analyze`.
+- `flutter test`.
+- Android debug build.
+- اختبار `com.ruhamaa.app` + Google OAuth على جهاز فعلي للمستخدم والإدارة.
 - UAT الأساسي أعلاه على جهاز فعلي، مع تسجيل أي ملاحظة UI/RTL/overflow وإغلاق المشاكل الحرجة.
+
+ولا يتحول OAuth الإنتاجي إلى `https://ruhamaa.com/login-callback` حتى تُنشر بصمة Play App Signing في `assetlinks.json` وينجح تحقق Android App Links على جهاز فعلي.
