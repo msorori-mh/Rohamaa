@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const _authRedirectUrl = String.fromEnvironment(
+  'AUTH_REDIRECT_URL',
+  defaultValue: 'io.sanad.app://login-callback',
+);
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -48,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.sanad.app://login-callback',
+        redirectTo: _authRedirectUrl,
       );
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = 'تعذر تسجيل الدخول: ${e.message}');
