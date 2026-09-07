@@ -114,7 +114,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            value: _serviceType,
+            initialValue: _serviceType,
             decoration: const InputDecoration(labelText: 'نوع الخدمة'),
             items: categoryData.types.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
             onChanged: (value) => setState(() => _serviceType = value ?? categoryData.types.first),
