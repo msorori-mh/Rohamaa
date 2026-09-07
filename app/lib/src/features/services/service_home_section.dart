@@ -11,6 +11,65 @@ class ServiceHomeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Material(
+          color: RuhamaaColors.warmSurface,
+          borderRadius: BorderRadius.circular(22),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () => context.push('/verified-needs'),
+            child: Container(
+              padding: const EdgeInsets.all(17),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: RuhamaaColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: const BoxDecoration(
+                      color: RuhamaaColors.warmGoldSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.fact_check_outlined,
+                      color: RuhamaaColors.warmGold,
+                      size: 29,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'احتياجات موثقة الآن',
+                          style: TextStyle(
+                            color: RuhamaaColors.primaryDark,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'شاهد احتياجات حقيقية راجعها رحماء؛ ربما يكون لديك شيء تستطيع توفيره.',
+                          style: TextStyle(
+                            color: RuhamaaColors.textMuted,
+                            height: 1.4,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_left_rounded, color: RuhamaaColors.warmGold),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Row(
           children: [
             const Icon(Icons.schedule_rounded, color: RuhamaaColors.primary),
