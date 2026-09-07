@@ -151,7 +151,7 @@ class ItemAttributesEditor extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: DropdownButtonFormField<String>(
-                value: values[attribute.key]?.isEmpty ?? true ? null : values[attribute.key],
+                initialValue: values[attribute.key]?.isEmpty ?? true ? null : values[attribute.key],
                 decoration: InputDecoration(labelText: attribute.label),
                 items: attribute.choices.entries
                     .map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value)))
