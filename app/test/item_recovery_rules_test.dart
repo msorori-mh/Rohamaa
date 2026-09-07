@@ -7,7 +7,7 @@ void main(){
       expect(ItemRecoveryRules.gradeLabels['A'],contains('مباشرة'));
       expect(ItemRecoveryRules.gradeLabels['B'],contains('تنظيف'));
       expect(ItemRecoveryRules.gradeLabels['C'],contains('إصلاح'));
-      expect(ItemRecoveryRules.gradeLabels['D'],contains('التدوير'));
+      expect(ItemRecoveryRules.gradeLabels['D'],contains('تدوير'));
     });
     test('only active processing states expose an action',(){
       expect(ItemRecoveryRules.status('inspection_pending').nextAction,'inspect');
