@@ -14,22 +14,38 @@ concurrency:
 jobs:
   analyze-test-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-      - name: Ensure Flutter platform scaffolding
-        run: flutter create . --platforms=android,web --org com.ruhamaa
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+
+      - name: Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
       - name: Build Android debug APK
-        run: flutter build apk --debug
+        timeout-minutes: 20
+        run: flutter build apk --debug --no-pub
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
