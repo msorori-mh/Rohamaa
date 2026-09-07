@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../theme/ruhamaa_theme.dart';
+
 const _authRedirectUrl = String.fromEnvironment(
   'AUTH_REDIRECT_URL',
   defaultValue: 'com.ruhamaa.app://login-callback',
@@ -96,7 +98,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: password,
                   enabled: !busy,
                   obscureText: obscure,
-                  onSubmitted: (_) {},
                   decoration: InputDecoration(
                     labelText: 'كلمة المرور',
                     suffixIcon: IconButton(
@@ -159,22 +160,61 @@ class _LoginScreenState extends State<LoginScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
               children: [
-                const Icon(Icons.handshake_outlined, size: 72),
-                const SizedBox(height: 20),
+                const Center(child: RuhamaaBrandMark(size: 96)),
+                const SizedBox(height: 8),
                 Text(
                   'رحماء',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        color: RuhamaaColors.primaryDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
-                const SizedBox(height: 10),
-                const Text('ما لديك قد يصنع فرقًا.', textAlign: TextAlign.center),
-                const SizedBox(height: 36),
+                const SizedBox(height: 4),
+                const Text(
+                  'ما لديك قد يصنع فرقًا',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: RuhamaaColors.textMuted,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: RuhamaaColors.softGreen,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.handshake_rounded, color: RuhamaaColors.primary, size: 46),
+                      SizedBox(height: 10),
+                      Text(
+                        'من الناس إلى الناس، بخصوصية وكرامة',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: RuhamaaColors.primaryDark,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        'رحماء يتولى المطابقة والتنسيق والتوصيل دون كشف هوية المتبرع والمستفيد لبعضهما.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: _loading ? null : _googleSignIn,
-                  icon: const Icon(Icons.login),
+                  icon: const Icon(Icons.login_rounded),
                   label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google'),
                 ),
                 const SizedBox(height: 12),
@@ -183,31 +223,40 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: const Icon(Icons.badge_outlined),
                   label: const Text('دخول فريق رحماء'),
                 ),
-                const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: () => context.push('/legal'),
-                  icon: const Icon(Icons.privacy_tip_outlined),
-                  label: const Text('الخصوصية والشروط وحذف الحساب'),
-                ),
                 if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+                    ),
                   ),
                 ],
-                const SizedBox(height: 14),
-                const Text(
-                  'نستخدم بيانات حساب Google الأساسية لتسجيل الدخول فقط. لا نطلب صلاحيات Gmail أو Drive. رقم الهاتف والموقع يُستخدمان عند الحاجة التشغيلية للاستلام والتوصيل.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12),
+                const SizedBox(height: 18),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline_rounded, size: 17, color: RuhamaaColors.primary),
+                    SizedBox(width: 7),
+                    Flexible(
+                      child: Text(
+                        'نستخدم بيانات Google الأساسية لتسجيل الدخول فقط؛ لا نطلب الوصول إلى Gmail أو Drive.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.5),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'عند تهيئة حساب الإدارة الرئيسي لأول مرة، استخدم Google بالبريد المعتمد، ثم سيطلب رحماء تعيين كلمة مرور خاصة بفريق التشغيل.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12),
+                TextButton(
+                  onPressed: () => context.push('/legal'),
+                  child: const Text('الخصوصية والشروط وحذف الحساب'),
                 ),
               ],
             ),
