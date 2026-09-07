@@ -70,6 +70,14 @@ class AccountScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
+                  leading: const Icon(Icons.handyman_outlined, color: RuhamaaColors.primary),
+                  title: const Text('وقتي ومهاراتي', style: TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: const Text('شاهد ما تقدمه من وقت أو مهارة وما سجلته من احتياجات للخدمات.'),
+                  trailing: const Icon(Icons.chevron_left_rounded),
+                  onTap: () => context.push('/my-services'),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
                   title: const Text('كيف يعمل رحماء؟', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('راجع بطاقات التعريف والخصوصية والمساهمة في التوصيل.'),
@@ -101,7 +109,7 @@ class AccountScreen extends StatelessWidget {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'بيانات حسابك التشغيلية لا تظهر للمتبرع أو المستفيد الآخر، ويستخدمها رحماء عند الحاجة للمطابقة والتوصيل فقط.',
+                    'في رحماء لا توجد هوية ثابتة باسم «متبرع» أو «محتاج». يمكنك تسجيل احتياجك، وفي الوقت نفسه تقديم شيء أو وقت أو مهارة عندما تستطيع.',
                     style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                   ),
                 ),
