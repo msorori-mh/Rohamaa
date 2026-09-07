@@ -19,7 +19,7 @@ import 'features/legal/legal_screen.dart';
 import 'features/needs/create_need_v2_screen.dart';
 import 'features/needs/need_discovery_screen.dart';
 import 'features/offers/match_offers_screen.dart';
-import 'features/partners/partner_hub_screen.dart';
+import 'features/partners/partner_hub_v2_screen.dart';
 import 'features/profile/account_screen.dart';
 import 'features/profile/onboarding_screen.dart';
 import 'features/services/create_personal_service_offer_screen.dart';
@@ -99,7 +99,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         GoRoute(path: '/offer-service', builder: (_, __) => const CreatePersonalServiceOfferScreen()),
         GoRoute(path: '/request-service', builder: (_, __) => const CreateServiceRequestScreen()),
         GoRoute(path: '/my-services', builder: (_, __) => const MyServicesScreen()),
-        GoRoute(path: '/partners', builder: (_, __) => const PartnerHubScreen()),
+        GoRoute(path: '/partners', builder: (_, __) => const PartnerHubV2Screen()),
         GoRoute(path: '/courier', builder: (_, __) => const _RoleGate(requiredRole: 'courier', child: CourierTasksScreen())),
         GoRoute(path: '/supervisor', builder: (_, __) => const _RoleGate(requiredRole: 'supervisor', child: SupervisorHomeScreen())),
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
@@ -166,26 +166,10 @@ class _MainNavigationShell extends StatelessWidget {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => _go(context, index),
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'الرئيسية',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_alt_outlined),
-            selectedIcon: Icon(Icons.people_alt_rounded),
-            label: 'المطابقات',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'عملياتي',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'حسابي',
-          ),
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+          NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'المطابقات'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'عملياتي'),
+          NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
         ],
       ),
     );
