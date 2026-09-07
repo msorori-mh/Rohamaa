@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/admin_repository.dart';
 import '../../data/handoff_repository.dart';
 import '../../data/match_offer_repository.dart';
+import '../../data/service_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 import '../services/service_home_section.dart';
 
@@ -188,12 +189,28 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
     final client = Supabase.instance.client;
     final results = await Future.wait<dynamic>([
       MatchOfferRepository(client).pendingOffers(),
+      ServiceRepository(client).pendingServiceMatches(),
       HandoffRepository(client).myHandoffs(),
     ]);
-    final offers = results[0] as List<MatchOffer>;
-    final handoffs = results[1] as List<UserHandoff>;
-    final active = handoffs.where((row) => row.status != 'delivered').toList();
-    if (offers.isNotEmpty) {
+    final itemOffers = results[0] as List<MatchOffer>;
+    final serviceOffers = results[1] as List<ServiceMatchOffer>;
+    final handoffs = results[2] as List<UserHandoff>;
+    final activeHandoffs = handoffs.where((row) => row.status != 'delivered').toList();
+    final waitingServiceResponse = serviceOffers.where((row) => row.myResponse == 'pending').toList();
+
+    if (waitingServiceResponse.isNotEmpty) {
+      final match = waitingServiceResponse.first;
+      return _PulseData(
+        icon: Icons.handyman_rounded,
+        title: match.mySide == 'provider'
+            ? 'هناك احتياج يناسب مهارتك'
+            : 'هناك مهارة تناسب احتياجك',
+        subtitle: 'مطابقة خدمة خاصة تنتظر ردك. راجعها قبل أن نكمل التنسيق.',
+        route: '/offers',
+        warm: true,
+      );
+    }
+    if (itemOffers.isNotEmpty) {
       return _PulseData(
         icon: Icons.auto_awesome_rounded,
         title: 'لديك تطابق ينتظر ردك',
@@ -202,7 +219,7 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
         warm: true,
       );
     }
-    if (active.isNotEmpty) {
+    if (activeHandoffs.isNotEmpty) {
       return _PulseData(
         icon: Icons.local_shipping_rounded,
         title: 'هناك عملية تتحرك الآن',
