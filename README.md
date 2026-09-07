@@ -33,6 +33,9 @@
 - Risk Flags ومراجعة يدوية للحالات المشبوهة، بما فيها كثافة طلبات غير اعتيادية دون عقوبة تلقائية
 - تقارير أثر تشمل الأشياء المسلمة، تصنيفات V2، الخدمات المكتملة، ساعات الخدمة التقديرية، خدمات الشركاء، أثر بطاقات الاحتياج، وبلاغات السلامة
 - لوحة إدارة وتشغيل ضمن نفس قاعدة البيانات
+- مركز متابعة موحّد يعرض حالة العطاء والاحتياج والمطابقة والتوصيل والخدمات والخطوة التالية
+- تنبيهات خاصة داخل التطبيق تُنشأ من تغيّرات الحالة الموثوقة مع صلاحية المستخدم للقراءة ووضع علامة «مقروء» فقط
+- طابور أولوية إداري يرتب المخاطر والتعطل والعمليات المنتظرة دون كشف بيانات المستفيد الشخصية في الملخص
 
 ## Category System V2
 
@@ -93,6 +96,7 @@ Project ref: `vclicpejajxadsbuakdw`
 - [Android release signing and signed AAB](docs/ANDROID_RELEASE.md)
 - [Google Play Data Safety source of truth](docs/PLAY_DATA_SAFETY.md)
 - [Physical-device UAT for release identity, Category V2, services and partners](docs/UAT_CATEGORY_V2_PARTNERS.md)
+- [Operations Center and admin-priority UAT](docs/UAT_OPERATIONS_CENTER.md)
 - [Public Privacy Policy](site/privacy/index.html)
 - [Public Terms of Use](site/terms/index.html)
 - [Account deletion page](site/delete-account/index.html)

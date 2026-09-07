@@ -70,7 +70,12 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
           routes: [
             GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
             GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
-            GoRoute(path: '/handoffs', builder: (_, __) => const MyHandoffsScreen()),
+            GoRoute(
+              path: '/handoffs',
+              builder: (_, state) => MyHandoffsScreen(
+                initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+              ),
+            ),
             GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
           ],
         ),
@@ -168,7 +173,7 @@ class _MainNavigationShell extends StatelessWidget {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
           NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'المطابقات'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'عملياتي'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'المتابعة'),
           NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
         ],
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/admin_repository.dart';
+import '../../data/operations_repository.dart';
+import '../../theme/ruhamaa_theme.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
@@ -24,12 +26,46 @@ class AdminHomeScreen extends StatefulWidget {
 }
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
-  late Future<AdminStats> _future;
+  late Future<_AdminHomeData> _future;
 
   @override
   void initState() { super.initState(); _reload(); }
-  void _reload() { _future = AdminRepository(Supabase.instance.client).stats(); }
+  void _reload() { _future = _load(); }
+  Future<_AdminHomeData> _load() async {
+    final client = Supabase.instance.client;
+    final results = await Future.wait<dynamic>([
+      AdminRepository(client).stats(),
+      OperationsRepository(client).adminQueue(),
+    ]);
+    return _AdminHomeData(
+      stats: results[0] as AdminStats,
+      queue: results[1] as List<AdminQueueItem>,
+    );
+  }
   Future<void> _open(Widget screen) async { await Navigator.push(context, MaterialPageRoute(builder: (_) => screen)); if (mounted) setState(_reload); }
+
+  Future<void> _openQueue(AdminQueueItem item) async {
+    final Widget? screen = switch (item.actionKey) {
+      'risks' => const RiskManagementScreen(),
+      'incidents' => const ServiceIncidentManagementScreen(),
+      'accepted_matches' => const AcceptedMatchesScreen(),
+      'contributions' => const ContributionReviewScreen(),
+      'partners' => const PartnerManagementScreen(),
+      'item_matching' => const ItemMatchingV2Screen(),
+      'needs' => const NeedDiscoveryAdminScreen(),
+      'service_matching' => const ServiceMatchingScreen(),
+      _ => null,
+    };
+    if (screen != null) {
+      await _open(screen);
+      return;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('هذه العملية تحتاج تنسيقًا مباشرًا مع المشرف أو الموصل.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +77,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout)),
         ],
       ),
-      body: FutureBuilder<AdminStats>(
+      body: FutureBuilder<_AdminHomeData>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           if (snapshot.hasError) return Center(child: Text('تعذر تحميل لوحة التشغيل: ${snapshot.error}'));
-          final stats = snapshot.data!;
+          final data = snapshot.data!;
+          final stats = data.stats;
           return RefreshIndicator(
             onRefresh: () async => setState(_reload),
             child: ListView(
@@ -60,6 +97,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   _Metric(label: 'مخاطر مفتوحة', value: stats.openRiskFlags),
                 ]),
                 const SizedBox(height: 24),
+                Row(children: [
+                  const Expanded(child: Text('الأولوية الآن', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(color: RuhamaaColors.warmGoldSoft, borderRadius: BorderRadius.circular(20)),
+                    child: Text('${data.queue.length} عملية', style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w800)),
+                  ),
+                ]),
+                const SizedBox(height: 6),
+                const Text('مرتبة حسب المخاطر والتعطل ثم مدة الانتظار، دون إظهار بيانات المستفيدين الشخصية.', style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
+                const SizedBox(height: 12),
+                if (data.queue.isEmpty)
+                  const Card(child: Padding(padding: EdgeInsets.all(18), child: Row(children: [Icon(Icons.check_circle_outline_rounded, color: RuhamaaColors.success), SizedBox(width: 10), Expanded(child: Text('لا توجد عمليات معلقة في طابور الأولوية.'))])))
+                else
+                  ...data.queue.take(8).map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _PriorityItem(item: item, onTap: () => _openQueue(item)),
+                  )),
+                const SizedBox(height: 14),
+                const Text('أدوات التشغيل', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 10),
                 _Action(icon: Icons.analytics_outlined, title: 'التقارير الأساسية', subtitle: 'الأثر، نجاح التوصيل، الخدمات، المساهمات والمصروفات.', onTap: () => _open(const ReportsScreen())),
                 _Action(icon: Icons.map_outlined, title: 'المدن والمناطق', subtitle: 'إدارة نطاقات الخدمة التي تُستخدم للتوصيل وإسناد المشرفين.', onTap: () => _open(const ServiceAreasScreen())),
                 _Action(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب فريق رحماء', subtitle: 'إنشاء موصل أو مشرف مدينة/منطقة ببريد وكلمة مرور ابتدائية.', onTap: () => _open(const CreateStaffScreen())),
@@ -76,6 +134,38 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _AdminHomeData {
+  const _AdminHomeData({required this.stats, required this.queue});
+  final AdminStats stats;
+  final List<AdminQueueItem> queue;
+}
+
+class _PriorityItem extends StatelessWidget {
+  const _PriorityItem({required this.item, required this.onTap});
+  final AdminQueueItem item;
+  final VoidCallback onTap;
+  @override Widget build(BuildContext context) {
+    final urgent = item.priority >= 80;
+    final age = item.ageHours < 24 ? '${item.ageHours.round()} ساعة' : '${(item.ageHours / 24).floor()} يوم';
+    return Card(
+      color: urgent ? RuhamaaColors.warmGoldSoft : RuhamaaColors.warmSurface,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: urgent ? Colors.white : RuhamaaColors.softGreen,
+          foregroundColor: urgent ? RuhamaaColors.warmGold : RuhamaaColors.primary,
+          child: Icon(urgent ? Icons.priority_high_rounded : Icons.pending_actions_rounded),
+        ),
+        title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+        subtitle: Text('${item.subtitle}\n${item.code} • منذ $age'),
+        isThreeLine: true,
+        trailing: const Icon(Icons.chevron_left_rounded),
+        onTap: onTap,
       ),
     );
   }
