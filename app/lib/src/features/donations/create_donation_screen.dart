@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/donation_image_repository.dart';
 import '../../data/sanad_repository.dart';
+import '../../theme/ruhamaa_theme.dart';
 import '../contributions/contribution_screen.dart';
 
 class CreateDonationScreen extends StatefulWidget {
@@ -23,18 +24,25 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   final _picker = ImagePicker();
   final List<XFile> _images = [];
   String _condition = 'good';
-  String _category = 'other';
+  String _category = 'clothes';
   bool _saving = false;
 
-  static const categories = <String, String>{
-    'clothes': 'ملابس',
-    'books': 'كتب وتعليم',
-    'furniture': 'أثاث',
-    'children': 'مستلزمات أطفال',
-    'home': 'أدوات منزلية',
-    'electronics': 'أجهزة',
-    'events': 'مستلزمات مناسبات',
-    'other': 'أخرى',
+  static const categories = <String, (String, IconData)>{
+    'clothes': ('ملابس', Icons.checkroom_rounded),
+    'books': ('كتب وتعليم', Icons.menu_book_rounded),
+    'furniture': ('أثاث', Icons.chair_alt_rounded),
+    'children': ('أطفال', Icons.toys_rounded),
+    'home': ('أدوات منزلية', Icons.home_repair_service_rounded),
+    'electronics': ('أجهزة', Icons.devices_other_rounded),
+    'events': ('مناسبات', Icons.card_giftcard_rounded),
+    'other': ('أخرى', Icons.more_horiz_rounded),
+  };
+
+  static const conditions = <String, String>{
+    'new': 'جديد',
+    'excellent': 'ممتاز',
+    'good': 'جيد',
+    'minor_repair': 'يحتاج إصلاحًا بسيطًا',
   };
 
   @override
@@ -45,7 +53,12 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   }
 
   Future<void> _pickImages() async {
-    final picked = await _picker.pickMultiImage(maxWidth: 1440, maxHeight: 1440, imageQuality: 72, limit: 4);
+    final picked = await _picker.pickMultiImage(
+      maxWidth: 1440,
+      maxHeight: 1440,
+      imageQuality: 72,
+      limit: 4,
+    );
     if (!mounted) return;
     setState(() {
       _images
@@ -58,7 +71,9 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
     final repo = SanadRepository(Supabase.instance.client);
     if (await repo.hasOperationalProfile()) return true;
     if (!mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')),
+    );
     await context.push('/onboarding');
     return repo.hasOperationalProfile();
   }
@@ -81,7 +96,12 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
         final x = _images[i];
         final Uint8List bytes = await x.readAsBytes();
         final ext = x.name.contains('.') ? x.name.split('.').last : 'jpg';
-        await imageRepo.upload(donationId: donationId, bytes: bytes, extension: ext, sortOrder: i);
+        await imageRepo.upload(
+          donationId: donationId,
+          bytes: bytes,
+          extension: ext,
+          sortOrder: i,
+        );
       }
       if (!mounted) return;
       final contribute = await showDialog<bool>(
@@ -89,21 +109,34 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل عطائك'),
           content: const Text(
-            'تبرعك بالشيء هو الأهم وقد يصنع فرقًا حقيقيًا. وإذا استطعت، يمكنك أيضًا المساهمة في تكلفة استلامه وتوصيله؛ ومساهمتك تساعد رحماء على إيصال تبرعات أخرى لأشخاص لا يستطيعون تحمل تكلفة التوصيل. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للمندوب عند الاستلام.',
+            'تبرعك بالشيء هو الأهم وقد يصنع فرقًا حقيقيًا. وإذا استطعت، يمكنك أيضًا المساهمة في تكلفة استلامه وتوصيله؛ ومساهمتك تساعد رحماء على إيصال تبرعات أخرى لأشخاص لا يستطيعون تحمل تكلفة التوصيل. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند الاستلام.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('أكتفي بالتبرع')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أساهم في التوصيل')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('أكتفي بالتبرع'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('أساهم في التوصيل'),
+            ),
           ],
         ),
       );
       if (!mounted) return;
       if (contribute == true) {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => ContributionScreen(donationId: donationId)));
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ContributionScreen(donationId: donationId)),
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ التبرع: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر حفظ التبرع: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -112,28 +145,216 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('لدي شيء')),
+      appBar: AppBar(title: const Text('أعطي شيئًا')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
           children: [
-            const Text('أخبرنا عن الشيء الذي تريد أن يستفيد منه غيرك. لن تظهر هويتك للمستفيد.'),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(onPressed: _saving ? null : _pickImages, icon: const Icon(Icons.add_a_photo_outlined), label: Text(_images.isEmpty ? 'إضافة صور (حتى 4)' : 'تم اختيار ${_images.length} صورة — تغيير')),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(initialValue: _category, decoration: const InputDecoration(labelText: 'الفئة'), items: categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(), onChanged: (v) => setState(() => _category = v ?? 'other')),
-            const SizedBox(height: 16),
-            TextFormField(controller: _title, decoration: const InputDecoration(labelText: 'ما هو الشيء؟', hintText: 'مثال: سرير طفل'), validator: (v) => v == null || v.trim().length < 3 ? 'اكتب اسمًا واضحًا للشيء' : null),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(initialValue: _condition, decoration: const InputDecoration(labelText: 'الحالة'), items: const [DropdownMenuItem(value: 'new', child: Text('جديد')), DropdownMenuItem(value: 'excellent', child: Text('ممتاز')), DropdownMenuItem(value: 'good', child: Text('جيد')), DropdownMenuItem(value: 'minor_repair', child: Text('يحتاج إصلاحًا بسيطًا'))], onChanged: (v) => setState(() => _condition = v ?? 'good')),
-            const SizedBox(height: 16),
-            TextFormField(controller: _description, maxLines: 4, decoration: const InputDecoration(labelText: 'وصف اختياري', hintText: 'الحالة، العمر التقريبي، أي ملاحظات مهمة')),
+            const _ProgressHeader(current: 1),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: RuhamaaColors.softGreen,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.favorite_outline_rounded, color: RuhamaaColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'أخبرنا عن الشيء الذي تريد أن يستفيد منه غيرك. هويتك لا تظهر للمستفيد.',
+                      style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            const _SectionTitle('اختر التصنيف المناسب'),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.4,
+              children: categories.entries.map((entry) {
+                final selected = _category == entry.key;
+                return _CategoryTile(
+                  label: entry.value.$1,
+                  icon: entry.value.$2,
+                  selected: selected,
+                  onTap: () => setState(() => _category = entry.key),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: 24),
-            FilledButton(onPressed: _saving ? null : _submit, child: Text(_saving ? 'جارٍ الحفظ والرفع...' : 'إرسال التبرع')),
+            const _SectionTitle('تفاصيل الشيء'),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _title,
+              decoration: const InputDecoration(
+                labelText: 'ما هو الشيء؟',
+                hintText: 'مثال: جاكيت شتوي رجالي',
+              ),
+              validator: (v) => v == null || v.trim().length < 3
+                  ? 'اكتب اسمًا واضحًا للشيء'
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _description,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'تفاصيل إضافية (اختياري)',
+                hintText: 'المقاس، العمر التقريبي، أي ملاحظات مهمة',
+              ),
+            ),
+            const SizedBox(height: 18),
+            const _SectionTitle('حالة الشيء'),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: conditions.entries.map((entry) {
+                return ChoiceChip(
+                  label: Text(entry.value),
+                  selected: _condition == entry.key,
+                  onSelected: (_) => setState(() => _condition = entry.key),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+            const _SectionTitle('أضف صورًا للعطاء'),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _pickImages,
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: Text(
+                _images.isEmpty
+                    ? 'إضافة صور (حتى 4)'
+                    : 'تم اختيار ${_images.length} صورة — تغيير',
+              ),
+            ),
+            if (_images.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: RuhamaaColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.photo_library_outlined, color: RuhamaaColors.primary),
+                    const SizedBox(width: 10),
+                    Text('جاهز لرفع ${_images.length} صورة'),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 26),
+            FilledButton.icon(
+              onPressed: _saving ? null : _submit,
+              icon: const Icon(Icons.volunteer_activism_outlined),
+              label: Text(_saving ? 'جارٍ الحفظ والرفع...' : 'أرسل عطائي'),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProgressHeader extends StatelessWidget {
+  const _ProgressHeader({required this.current});
+
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['التصنيف', 'التفاصيل', 'المراجعة'];
+    return Row(
+      children: List.generate(labels.length, (index) {
+        final active = index + 1 <= current;
+        return Expanded(
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: active ? RuhamaaColors.primary : RuhamaaColors.border,
+                foregroundColor: active ? Colors.white : RuhamaaColors.textMuted,
+                child: Text('${index + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(height: 5),
+              Text(labels[index], style: const TextStyle(fontSize: 11, color: RuhamaaColors.textMuted)),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.label, required this.icon, required this.selected, required this.onTap});
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? RuhamaaColors.softGreen : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? RuhamaaColors.primary : RuhamaaColors.border,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: selected ? RuhamaaColors.primary : RuhamaaColors.textMuted, size: 23),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label, style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: RuhamaaColors.primaryDark,
+            fontWeight: FontWeight.w900,
+          ),
     );
   }
 }
