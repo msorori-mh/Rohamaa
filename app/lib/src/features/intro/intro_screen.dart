@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../theme/ruhamaa_theme.dart';
 
@@ -47,7 +48,7 @@ class _IntroScreenState extends State<IntroScreen> {
     _IntroPageData(
       icon: Icons.local_shipping_rounded,
       title: 'المساهمة في التوصيل اختيارية',
-      body: 'يمكنك — إن استطعت — المساهمة بجزء من تكاليف الاستلام والتوصيل. هذه مساهمة تشغيلية اختيارية وليست سعرًا ثابتًا للخدمة.',
+      body: 'إن استطعت، يمكنك المساهمة في تكلفة استلام عطائك أو توصيل احتياجك. ومساهمات القادرين تساعد رحماء أيضًا على خدمة أشخاص لا يستطيعون تحمل تكلفة التوصيل.',
       accent: RuhamaaColors.warmGold,
       contribution: true,
       footer: 'لا يوجد دفع داخل التطبيق. المبلغ يُسلّم نقدًا لموصل رحماء، وعدم المساهمة لا يمنع الخدمة ولا يقلل أولوية الاستحقاق.',
@@ -66,7 +67,8 @@ class _IntroScreenState extends State<IntroScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(ruhamaaIntroSeenKey, true);
     if (!mounted) return;
-    context.go('/login');
+    final loggedIn = Supabase.instance.client.auth.currentSession != null;
+    context.go(loggedIn ? '/account' : '/login');
   }
 
   Future<void> _next() async {
@@ -160,7 +162,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'يمكنك مراجعة الخصوصية والشروط لاحقًا من داخل التطبيق.',
+                    'يمكنك مراجعة هذه البطاقات والخصوصية والشروط لاحقًا من «حسابي».',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: RuhamaaColors.textMuted,
