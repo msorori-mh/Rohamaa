@@ -49,7 +49,7 @@ Paste that clipboard value into the `ANDROID_KEYSTORE_BASE64` GitHub Actions sec
 
 ## 3. Build a signed AAB
 
-Open GitHub Actions and run **Android Release Bundle** manually. Supply:
+After this workflow exists on the repository default branch, open GitHub Actions and run **Android Release Bundle** manually. Supply:
 
 - `build_name`: for example `0.1.0`
 - `build_number`: integer versionCode; it must increase for every Google Play upload
@@ -58,16 +58,16 @@ The workflow performs:
 
 1. Java/Flutter setup
 2. secret-presence validation
-3. temporary keystore materialization on the runner
+3. temporary upload-keystore materialization on the runner
 4. `flutter pub get`
 5. `flutter analyze`
 6. `flutter test`
 7. signed `flutter build appbundle --release`
 8. SHA-256 generation
 9. signed AAB artifact upload
-10. deletion of temporary signing files from the runner workspace
+10. deletion of the temporary keystore from the runner workspace
 
-If any signing secret is missing, the workflow stops before building.
+Signing passwords and alias are injected only into the release-build process environment. The CI workflow does not write them into `key.properties` or another plaintext file. If any signing secret is missing, the workflow stops before building.
 
 ## 4. Google Play Internal Testing
 
@@ -84,7 +84,31 @@ After the first successful signed AAB:
 
 ## 5. Local release build (optional)
 
-For a local release bundle, create `app/android/key.properties` only temporarily:
+### Option A — environment variables
+
+This is the closest local equivalent to CI and avoids a plaintext password file:
+
+```powershell
+$env:ANDROID_KEYSTORE_PATH = Join-Path $env:USERPROFILE ".ruhamaa\upload-keystore.jks"
+$env:ANDROID_KEYSTORE_PASSWORD = Read-Host "Keystore password"
+$env:ANDROID_KEY_ALIAS = "ruhamaa-upload"
+$env:ANDROID_KEY_PASSWORD = Read-Host "Key password"
+
+cd C:\src\Rohamaa\app
+flutter pub get
+flutter analyze
+flutter test
+flutter build appbundle --release
+
+Remove-Item Env:ANDROID_KEYSTORE_PATH
+Remove-Item Env:ANDROID_KEYSTORE_PASSWORD
+Remove-Item Env:ANDROID_KEY_ALIAS
+Remove-Item Env:ANDROID_KEY_PASSWORD
+```
+
+### Option B — temporary `key.properties`
+
+For a local release bundle, `app/android/key.properties` remains supported for Android/Flutter tooling compatibility:
 
 ```properties
 storePassword=<keystore password>
@@ -93,17 +117,9 @@ keyAlias=ruhamaa-upload
 storeFile=<path relative to app/android/app, e.g. ../upload-keystore.jks>
 ```
 
-Then:
+Then run the same `flutter analyze`, `flutter test` and `flutter build appbundle --release` commands. Delete `app/android/key.properties` and any copied keystore immediately after the build.
 
-```powershell
-cd C:\src\Rohamaa\app
-flutter pub get
-flutter analyze
-flutter test
-flutter build appbundle --release
-```
-
-Delete `app/android/key.properties` and any copied keystore immediately after the build. The repository Gradle configuration intentionally refuses release builds when `android/key.properties` is missing, which protects against accidentally shipping an unsigned or debug-signed release.
+The Gradle configuration intentionally refuses a release build unless all four signing values are present from environment variables or `android/key.properties`. This protects against accidentally shipping an unsigned or debug-signed release.
 
 ## 6. Certificate roles
 
