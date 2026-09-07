@@ -23,6 +23,7 @@ class RuhamaaRepository {
     required String condition,
     String category = 'other',
     String? addressId,
+    String? inspiredByDiscoveryCardId,
   }) async {
     final row = await _client.from('donations').insert({
       'public_code': _publicCode('DON'),
@@ -33,6 +34,7 @@ class RuhamaaRepository {
       'condition': condition,
       'address_id': addressId,
       'status': 'submitted',
+      'inspired_by_discovery_card_id': inspiredByDiscoveryCardId,
     }).select('id').single();
     return row['id'] as String;
   }
