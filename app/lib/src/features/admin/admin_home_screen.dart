@@ -11,6 +11,7 @@ import 'need_discovery_admin_screen.dart';
 import 'partner_management_screen.dart';
 import 'risk_management_screen.dart';
 import 'service_areas_screen.dart';
+import 'service_incident_management_screen.dart';
 import 'service_matching_screen.dart';
 import 'user_management_screen.dart';
 
@@ -65,6 +66,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 _Action(icon: Icons.hub_outlined, title: 'مطابقة الأشياء V2', subtitle: 'مطابقة دقيقة حسب الفئة والنوع والمقاس/العمر/الصف عند توفرها.', onTap: () => _open(const MatchingQueueScreen())),
                 _Action(icon: Icons.handyman_outlined, title: 'الوقت والمهارات', subtitle: 'راجع عروض الأفراد وطابقها بطلبات الخدمات.', onTap: () => _open(const ServiceMatchingScreen())),
                 _Action(icon: Icons.storefront_outlined, title: 'شركاء رحماء', subtitle: 'تحقق من المحلات والورش والصالونات قبل السماح بعروض خدمات باسمها.', onTap: () => _open(const PartnerManagementScreen())),
+                _Action(icon: Icons.report_problem_outlined, title: 'بلاغات الخدمات', subtitle: 'راجع بلاغات الخصوصية، الرسوم غير المتفق عليها، التصوير، عدم الحضور وجودة التنفيذ.', onTap: () => _open(const ServiceIncidentManagementScreen())),
                 _Action(icon: Icons.delivery_dining_outlined, title: 'مطابقات جاهزة للتوصيل', subtitle: 'أسند الموصل والدراجة بعد قبول المستفيد.', onTap: () => _open(const AcceptedMatchesScreen())),
                 _Action(icon: Icons.payments_outlined, title: 'المساهمات التشغيلية', subtitle: 'اعتمد المساهمة بعد تأكيد استلامها نقدًا من المندوب.', onTap: () => _open(const ContributionReviewScreen())),
                 _Action(icon: Icons.shield_outlined, title: 'مراجعة المخاطر', subtitle: 'راجع الإشارات وسجّل قرار المراجعة.', onTap: () => _open(const RiskManagementScreen())),
