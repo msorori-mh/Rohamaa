@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
@@ -17,14 +19,24 @@ import 'features/offers/match_offers_screen.dart';
 import 'features/profile/onboarding_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
 
-class RuhamaaApp extends StatelessWidget {
+class RuhamaaApp extends StatefulWidget {
   const RuhamaaApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final router = GoRouter(
+  State<RuhamaaApp> createState() => _RuhamaaAppState();
+}
+
+class _RuhamaaAppState extends State<RuhamaaApp> {
+  late final _AuthRefreshNotifier _authRefreshNotifier;
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _authRefreshNotifier = _AuthRefreshNotifier();
+    _router = GoRouter(
       initialLocation: '/',
-      refreshListenable: _AuthRefreshNotifier(),
+      refreshListenable: _authRefreshNotifier,
       redirect: (context, state) {
         final loggedIn = Supabase.instance.client.auth.currentSession != null;
         final isLogin = state.matchedLocation == '/login';
@@ -46,20 +58,34 @@ class RuhamaaApp extends StatelessWidget {
         GoRoute(path: '/admin', builder: (_, __) => const _RoleGate(requiredRole: 'admin', child: AdminHomeScreen())),
       ],
     );
+  }
 
+  @override
+  void dispose() {
+    _router.dispose();
+    _authRefreshNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'رحماء',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
-      localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF226B5E),
         scaffoldBackgroundColor: const Color(0xFFF8FAF9),
         inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
       ),
-      routerConfig: router,
+      routerConfig: _router,
     );
   }
 }
@@ -74,10 +100,15 @@ class _RoleGate extends StatelessWidget {
     return FutureBuilder<StaffStatus>(
       future: StaffRepository(Supabase.instance.client).myStatus(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
         final status = snapshot.data;
         if (status == null || status.role != requiredRole) {
-          return Scaffold(appBar: AppBar(title: const Text('رحماء')), body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')));
+          return Scaffold(
+            appBar: AppBar(title: const Text('رحماء')),
+            body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')),
+          );
         }
         if (status.forcePasswordChange) return ChangePasswordScreen(role: status.role);
         return child;
@@ -88,6 +119,17 @@ class _RoleGate extends StatelessWidget {
 
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((_) => notifyListeners());
+    _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      debugPrint('Ruhamaa auth event: ${data.event}; session=${data.session != null}');
+      notifyListeners();
+    });
+  }
+
+  late final StreamSubscription<AuthState> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 }
