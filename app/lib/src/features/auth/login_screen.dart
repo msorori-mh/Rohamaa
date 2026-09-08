@@ -58,7 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
         redirectTo: _authRedirectUrl,
       );
     } on AuthException catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول: ${e.message}');
+      debugPrint('Google sign-in rejected: ${e.message}');
+      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول. حاول مرة أخرى أو استخدم حسابًا آخر.');
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تسجيل الدخول بحساب Google. حاول مرة أخرى.');
       debugPrint('Google OAuth launch error: $e');
@@ -194,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Icon(Icons.handshake_rounded, color: RuhamaaColors.primary, size: 46),
                       SizedBox(height: 10),
                       Text(
-                        'من الناس إلى الناس، بخصوصية وكرامة',
+                        'تبرّع أو اطلب المساعدة بخصوصية',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: RuhamaaColors.primaryDark,
@@ -204,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'رحماء يتولى المطابقة والتنسيق والتوصيل دون كشف هوية المتبرع والمستفيد لبعضهما.',
+                        'يراجع رحماء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                       ),
@@ -246,7 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(width: 7),
                     Flexible(
                       child: Text(
-                        'نستخدم بيانات Google الأساسية لتسجيل الدخول فقط؛ لا نطلب الوصول إلى Gmail أو Drive.',
+                        'نستخدم بيانات حساب Google لتسجيل الدخول فقط، ولا نصل إلى Gmail أو Drive.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.5),
                       ),
@@ -256,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.push('/legal'),
-                  child: const Text('الخصوصية والشروط وحذف الحساب'),
+                  child: const Text('الخصوصية والشروط'),
                 ),
               ],
             ),
