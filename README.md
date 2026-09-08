@@ -36,6 +36,8 @@
 - مركز متابعة موحّد يعرض حالة العطاء والاحتياج والمطابقة والتوصيل والخدمات والخطوة التالية
 - تنبيهات خاصة داخل التطبيق تُنشأ من تغيّرات الحالة الموثوقة مع صلاحية المستخدم للقراءة ووضع علامة «مقروء» فقط
 - طابور أولوية إداري يرتب المخاطر والتعطل والعمليات المنتظرة دون كشف بيانات المستفيد الشخصية في الملخص
+- مسار تأهيل ومخزون للأشياء غير الغذائية وغير الطبية: استلام ومستودع، فحص A–D، تنظيف أو إصلاح، جاهزية للتوزيع أو إعادة تدوير موثقة
+- تكاليف التأهيل وعوائد التدوير تظهر للإدارة فقط، بينما يرى المتبرع حالة تشغيلية مختصرة ومحجوبة التفاصيل الداخلية
 
 ## Category System V2
 
@@ -97,6 +99,7 @@ Project ref: `vclicpejajxadsbuakdw`
 - [Google Play Data Safety source of truth](docs/PLAY_DATA_SAFETY.md)
 - [Physical-device UAT for release identity, Category V2, services and partners](docs/UAT_CATEGORY_V2_PARTNERS.md)
 - [Operations Center and admin-priority UAT](docs/UAT_OPERATIONS_CENTER.md)
+- [Item recovery and inventory UAT](docs/UAT_ITEM_RECOVERY_INVENTORY.md)
 - [Public Privacy Policy](site/privacy/index.html)
 - [Public Terms of Use](site/terms/index.html)
 - [Account deletion page](site/delete-account/index.html)

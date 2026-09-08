@@ -6,7 +6,7 @@ _Last reviewed against the live Marib pilot project: 7 September 2026._
 
 Project ref: `vclicpejajxadsbuakdw`
 
-The live project currently has **51 recorded migrations**, ending with `staff_daily_reports_reconciliation`. The repository migration chain is checked in CI for duplicate numeric versions.
+The live project currently has **56 recorded migrations**, including P2 recovery, its atomic A–D verification, and foreign-key index hardening. The repository migration chain is checked in CI for duplicate numeric versions.
 
 ### Live backend capabilities
 
@@ -26,6 +26,7 @@ The live project currently has **51 recorded migrations**, ending with `staff_da
 - Private service incident reporting and admin review.
 - Delivery, courier, economics and community-impact reports.
 - Risk flags remain review signals rather than automatic eligibility decisions.
+- P2 adds a live privacy-protected non-food/non-medical recovery path: warehouse intake, A–D inspection, cleaning/repair work orders, readiness for distribution, recycling evidence, and admin-only costs/proceeds. Its database paths passed atomic verification; physical-device UAT remains before the P2 gate is closed.
 
 ### Security state verified against live Supabase
 
@@ -77,6 +78,7 @@ Supabase Advisor is **not** at zero warnings. Remaining warnings include intenti
 - Contribution verification after physical cash receipt confirmation.
 - Risk review, user management and suspension.
 - Delivery/economics/courier/community-impact reports.
+- Recovery/inventory screen with warehouse intake, A–D inspection, processing queue, recycling confirmation, and impact summary.
 
 ## Android / OAuth identity
 
