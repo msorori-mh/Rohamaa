@@ -112,10 +112,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SnackBar(content: Text('تم حفظ بيانات التوصيل.')),
       );
       Navigator.of(context).pop();
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذر حفظ البيانات: $e')),
+          const SnackBar(content: Text('تعذر حفظ البيانات. تحقق من اتصالك وحاول مرة أخرى.')),
         );
       }
     } finally {
@@ -126,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('بيانات التوصيل')),
+      appBar: AppBar(title: const Text('عنوان الاستلام والتسليم')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -153,7 +153,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         SizedBox(height: 5),
                         Text(
-                          'هذه البيانات لا تظهر للطرف الآخر، وتستخدم فقط لتنفيذ الاستلام أو التوصيل بأمان.',
+                          'لا نشارك هذه البيانات إلا عند الحاجة لإتمام الاستلام أو التسليم.',
                           style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                         ),
                       ],
@@ -182,7 +182,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   return const LinearProgressIndicator();
                 }
                 if (snapshot.hasError) {
-                  return Text('تعذر تحميل نطاقات الخدمة: ${snapshot.error}');
+                  return const Text('تعذر تحميل مناطق الخدمة. تحقق من اتصالك وحاول مجددًا.');
                 }
                 final areas = snapshot.data ?? const [];
                 if (areas.isEmpty) {
@@ -191,7 +191,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 return DropdownButtonFormField<String>(
                   initialValue: _serviceAreaId,
                   decoration: const InputDecoration(
-                    labelText: 'المدينة / نطاق الخدمة',
+                labelText: 'المدينة أو منطقة الخدمة',
                     prefixIcon: Icon(Icons.location_city_outlined),
                   ),
                   items: areas.map((a) {
@@ -210,7 +210,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextFormField(
               controller: _area,
               decoration: const InputDecoration(
-                labelText: 'الحي / المنطقة التفصيلية',
+                labelText: 'الحي أو المنطقة',
                 hintText: 'مثال: الروضة',
                 prefixIcon: Icon(Icons.home_work_outlined),
               ),
@@ -224,7 +224,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'وصف العنوان',
-                hintText: 'علامة مميزة تساعد الموصل فقط',
+                hintText: 'مثال: بجوار المدرسة أو المسجد',
                 prefixIcon: Icon(Icons.description_outlined),
               ),
             ),
@@ -254,7 +254,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'تم حفظ نقطة الموقع للاستخدام التشغيلي فقط.',
+                        'حُفظ الموقع لاستخدامه في الاستلام أو التسليم فقط.',
                         style: TextStyle(color: RuhamaaColors.primaryDark),
                       ),
                     ),
@@ -266,7 +266,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             FilledButton.icon(
               onPressed: _busy ? null : _save,
               icon: const Icon(Icons.save_outlined),
-              label: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ بيانات التوصيل'),
+              label: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ العنوان'),
             ),
           ],
         ),
