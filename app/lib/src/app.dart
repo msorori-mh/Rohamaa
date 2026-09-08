@@ -213,16 +213,29 @@ class _RoleGate extends StatelessWidget {
 
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier() {
+    _loggedIn = Supabase.instance.client.auth.currentSession != null;
     _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       debugPrint('Ruhamaa auth event: ${data.event}; session=${data.session != null}');
-      notifyListeners();
+      final loggedIn = data.session != null;
+      if (loggedIn == _loggedIn) return;
+      _loggedIn = loggedIn;
+      if (_notificationScheduled) return;
+      _notificationScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _notificationScheduled = false;
+        if (!_disposed) notifyListeners();
+      });
     });
   }
 
   late final StreamSubscription<AuthState> _subscription;
+  late bool _loggedIn;
+  bool _notificationScheduled = false;
+  bool _disposed = false;
 
   @override
   void dispose() {
+    _disposed = true;
     _subscription.cancel();
     super.dispose();
   }
