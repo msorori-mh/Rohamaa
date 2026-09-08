@@ -84,7 +84,7 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل الشركاء: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل الشركاء. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) {
             return const Center(child: Text('لا توجد طلبات شراكة حتى الآن.'));
