@@ -111,7 +111,7 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل الاحتياجات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل الاحتياجات. حاول مجددًا.'));
         }
         final data = snapshot.data!;
         if (data.needs.isEmpty) {
@@ -267,7 +267,7 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل البطاقات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل البطاقات. حاول مجددًا.'));
         }
         final cards = (snapshot.data ?? const [])
             .where((card) => card['is_active'] == true)
