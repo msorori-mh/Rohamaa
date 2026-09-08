@@ -31,32 +31,32 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     _PrimaryActionCard(
                       icon: Icons.volunteer_activism_rounded,
-                      title: 'أعطِ شيئًا الآن',
-                      subtitle: 'ما يزيد عن حاجتك قد يصنع أثرًا حقيقيًا.',
+                      title: 'تبرّع بشيء',
+                      subtitle: 'سنستلمه ونوصله لمن يحتاجه.',
                       foreground: RuhamaaColors.primaryBright,
                       onTap: () => context.push('/donate'),
                     ),
                     const SizedBox(height: 14),
                     _PrimaryActionCard(
                       icon: Icons.front_hand_rounded,
-                      title: 'سجّل احتياجًا',
-                      subtitle: 'بخصوصية وكرامة، وسنبحث عن الأنسب لك.',
+                      title: 'اطلب ما تحتاجه',
+                      subtitle: 'أخبرنا بما تحتاجه وسنحافظ على خصوصيتك.',
                       foreground: RuhamaaColors.vividGold,
                       onTap: () => context.push('/need'),
                     ),
                     const SizedBox(height: 16),
                     const _HomeActivityPulse(),
                     const SizedBox(height: 24),
-                    const _SectionTitle(title: 'خدماتك السريعة', subtitle: 'كل ما تحتاجه في مكان واضح'),
+                    const _SectionTitle(title: 'وصول سريع', subtitle: 'اختر ما تريد القيام به'),
                     const SizedBox(height: 12),
                     Row(children: [
-                      Expanded(child: _QuickActionCard(icon: Icons.fact_check_outlined,title: 'احتياجات موثوقة',subtitle: 'راجعها فريق رحماء',accent: RuhamaaColors.primaryBright,tint: const Color(0xFFE8F8F4),onTap:()=>context.push('/verified-needs'))),
+                      Expanded(child: _QuickActionCard(icon: Icons.fact_check_outlined,title: 'طلبات للمساعدة',subtitle: 'طلبات راجعها فريقنا',accent: RuhamaaColors.primaryBright,tint: const Color(0xFFE8F8F4),onTap:()=>context.push('/verified-needs'))),
                       const SizedBox(width: 12),
-                      Expanded(child: _QuickActionCard(icon: Icons.local_shipping_outlined,title: 'عملياتي',subtitle: 'تابع كل خطوة',accent: RuhamaaColors.rose,tint: const Color(0xFFFFEDF3),onTap:()=>context.go('/handoffs'))),
+                      Expanded(child: _QuickActionCard(icon: Icons.local_shipping_outlined,title: 'المتابعة',subtitle: 'تابع تبرعاتك وطلباتك',accent: RuhamaaColors.rose,tint: const Color(0xFFFFEDF3),onTap:()=>context.go('/handoffs'))),
                     ]),
                     const SizedBox(height: 12),
                     Row(children: [
-                      Expanded(child: _QuickActionCard(icon: Icons.mark_email_unread_outlined,title: 'المطابقات',subtitle: 'فرص مناسبة لك',accent: RuhamaaColors.vividGold,tint: const Color(0xFFFFF6E6),onTap:()=>context.go('/offers'))),
+                      Expanded(child: _QuickActionCard(icon: Icons.mark_email_unread_outlined,title: 'عروض مناسبة',subtitle: 'راجع العروض المتاحة',accent: RuhamaaColors.vividGold,tint: const Color(0xFFFFF6E6),onTap:()=>context.go('/offers'))),
                       const SizedBox(width: 12),
                       Expanded(child: _QuickActionCard(icon: Icons.location_on_rounded,title: 'عناويني',subtitle: 'إدارة مواقع التوصيل',accent: RuhamaaColors.blue,tint: const Color(0xFFEAF7FB),onTap:()=>context.push('/onboarding'))),
                     ]),
@@ -66,7 +66,7 @@ class HomeScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(17),
                       decoration: BoxDecoration(color: Colors.white.withValues(alpha: .92),borderRadius: BorderRadius.circular(24),boxShadow:[BoxShadow(color:RuhamaaColors.primaryDark.withValues(alpha:.07),blurRadius:22,offset:const Offset(0,8))]),
-                      child: const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.shield_rounded,color:RuhamaaColors.primaryBright),SizedBox(width:12),Expanded(child:Text('هويتك وموقعك محفوظان بخصوصية، ولا يظهر للطرف الآخر إلا الحد الضروري للتنفيذ.',style:TextStyle(color:RuhamaaColors.textMuted,height:1.5,fontWeight:FontWeight.w500)))]),
+                      child: const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.shield_rounded,color:RuhamaaColors.primaryBright),SizedBox(width:12),Expanded(child:Text('بياناتك خاصة، ولا نشارك إلا ما يلزم لإتمام الاستلام أو التسليم.',style:TextStyle(color:RuhamaaColors.textMuted,height:1.5,fontWeight:FontWeight.w500)))]),
                     ),
                     const SizedBox(height: 18),
                     FutureBuilder<String>(future:AdminRepository(Supabase.instance.client).myRole(),builder:(context,snapshot){final role=snapshot.data;if(role=='admin')return _OperationsCard(icon:Icons.admin_panel_settings_outlined,title:'لوحة التشغيل',subtitle:'المطابقة والمخزون والمخاطر ومتابعة العمليات.',onTap:()=>context.push('/admin'));if(role=='courier')return _OperationsCard(icon:Icons.delivery_dining_outlined,title:'مهام التوصيل',subtitle:'الاستلام والتسليم المخصص لك فقط.',onTap:()=>context.push('/courier'));return const SizedBox.shrink();}),
@@ -165,7 +165,7 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
         title: match.mySide == 'provider'
             ? 'هناك احتياج يناسب مهارتك'
             : 'هناك مهارة تناسب احتياجك',
-        subtitle: 'مطابقة خدمة خاصة تنتظر ردك. راجعها قبل أن نكمل التنسيق.',
+        subtitle: 'راجع العرض وأخبرنا بقرارك.',
         route: '/offers',
         warm: true,
       );
@@ -173,8 +173,8 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
     if (itemOffers.isNotEmpty) {
       return _PulseData(
         icon: Icons.auto_awesome_rounded,
-        title: 'لديك تطابق ينتظر ردك',
-        subtitle: 'وجد رحماء شيئًا مناسبًا لاحتياجك. راجعه الآن حتى نكمل الترتيب.',
+        title: 'لديك عرض مناسب',
+        subtitle: 'راجع العرض وأخبرنا إن كنت ما زلت تحتاجه.',
         route: '/offers',
         warm: true,
       );
@@ -182,8 +182,8 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
     if (activeHandoffs.isNotEmpty) {
       return _PulseData(
         icon: Icons.local_shipping_rounded,
-        title: 'هناك عملية تتحرك الآن',
-        subtitle: 'تابع رحلة الاستلام أو التسليم خطوة بخطوة من «عملياتي».',
+        title: 'لديك طلب قيد التنفيذ',
+        subtitle: 'تابع حالة الاستلام أو التسليم.',
         route: '/handoffs',
       );
     }
@@ -218,13 +218,13 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
                   Container(width:58,height:58,decoration:BoxDecoration(color:accent,shape:BoxShape.circle,boxShadow:[BoxShadow(color:accent.withValues(alpha:.25),blurRadius:14,offset:const Offset(0,6))]),child:Icon(data.icon,color:Colors.white,size:29)),
                   const SizedBox(width:13),
                   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    const Text('طلب نشط',style:TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w700)),
+                    const Text('تحديث جديد',style:TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w700)),
                     const SizedBox(height:2),
                     Text(data.title,style:const TextStyle(color:RuhamaaColors.primaryDark,fontWeight:FontWeight.w800,fontSize:18)),
                     const SizedBox(height:3),
                     Text(data.subtitle,style:const TextStyle(color:RuhamaaColors.textMuted,height:1.35,fontSize:12,fontWeight:FontWeight.w500)),
                   ])),
-                  Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:accent.withValues(alpha:.11),borderRadius:BorderRadius.circular(20)),child:Row(mainAxisSize:MainAxisSize.min,children:[Text('تتبّع',style:TextStyle(color:accent,fontWeight:FontWeight.w800)),const SizedBox(width:4),Icon(Icons.arrow_back_rounded,color:accent,size:17)])),
+                  Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:7),decoration:BoxDecoration(color:accent.withValues(alpha:.11),borderRadius:BorderRadius.circular(20)),child:Row(mainAxisSize:MainAxisSize.min,children:[Text('راجع',style:TextStyle(color:accent,fontWeight:FontWeight.w800)),const SizedBox(width:4),Icon(Icons.arrow_back_rounded,color:accent,size:17)])),
                 ]),
                 const SizedBox(height:16),
                 ClipRRect(borderRadius:BorderRadius.circular(10),child:LinearProgressIndicator(value:.45,minHeight:8,backgroundColor:RuhamaaColors.border,valueColor:AlwaysStoppedAnimation(accent))),
