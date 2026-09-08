@@ -11,50 +11,6 @@ class ServiceHomeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Material(
-          color: RuhamaaColors.warmSurface,
-          borderRadius: BorderRadius.circular(22),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => context.push('/verified-needs'),
-            child: Container(
-              padding: const EdgeInsets.all(17),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: RuhamaaColors.border),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: const BoxDecoration(color: RuhamaaColors.warmGoldSoft, shape: BoxShape.circle),
-                    child: const Icon(Icons.fact_check_outlined, color: RuhamaaColors.warmGold, size: 29),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'احتياجات راجعها رحماء',
-                          style: TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 16),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'شاهد احتياجات حقيقية راجعها الفريق؛ ربما يكون لديك شيء تستطيع توفيره.',
-                          style: TextStyle(color: RuhamaaColors.textMuted, height: 1.4, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_left_rounded, color: RuhamaaColors.warmGold),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
         Row(
           children: [
             const Icon(Icons.schedule_rounded, color: RuhamaaColors.primary),
@@ -62,8 +18,8 @@ class ServiceHomeSection extends StatelessWidget {
             Text(
               'الوقت والمهارة',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: RuhamaaColors.primaryDark,
-                    fontWeight: FontWeight.w900,
+                            color: RuhamaaColors.primaryDark,
+                            fontWeight: FontWeight.w800,
                   ),
             ),
           ],
@@ -148,9 +104,11 @@ class _ServiceActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: background,
-      borderRadius: BorderRadius.circular(20),
+      elevation:4,
+      shadowColor:RuhamaaColors.primaryDark.withValues(alpha:.09),
+      borderRadius: BorderRadius.circular(25),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(25),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -159,8 +117,8 @@ class _ServiceActionCard extends StatelessWidget {
               Container(
                 width: 50,
                 height: 50,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.84), shape: BoxShape.circle),
-                child: Icon(icon, color: accent, size: 27),
+                decoration: BoxDecoration(color:accent,shape:BoxShape.circle,boxShadow:[BoxShadow(color:accent.withValues(alpha:.23),blurRadius:12,offset:const Offset(0,5))]),
+                child: Icon(icon, color: Colors.white, size: 27),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -169,7 +127,7 @@ class _ServiceActionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 16),
+                      style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w800, fontSize: 16),
                     ),
                     const SizedBox(height: 3),
                     Text(subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.4, fontSize: 12)),

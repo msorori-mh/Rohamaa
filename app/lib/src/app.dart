@@ -167,15 +167,18 @@ class _MainNavigationShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => _go(context, index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-          NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'المطابقات'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'المتابعة'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        decoration:BoxDecoration(color:Colors.white,boxShadow:[BoxShadow(color:RuhamaaColors.primaryDark.withValues(alpha:.12),blurRadius:22,offset:const Offset(0,-7))]),
+        child:NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) => _go(context, index),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+            NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'المطابقات'),
+            NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'المتابعة'),
+            NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
+          ],
+        ),
       ),
     );
   }
