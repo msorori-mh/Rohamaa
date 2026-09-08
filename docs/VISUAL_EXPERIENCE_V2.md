@@ -1,6 +1,16 @@
 # Ruhamaa Visual Experience V2 — Approved Direction
 
-Status: provisionally approved for implementation.
+Status: implemented baseline; Visual System V3 refines it with the approved high-depth card direction.
+
+## Visual System V3
+
+- Bundled `Tajawal` Arabic family (400/500/700/800/900), with no runtime font download.
+- Deep Ruhamaa green hero gradient; the external reference's blue is not copied.
+- White elevated cards with 28–30px corners and soft, low-opacity shadows.
+- Colored circular or rounded-square icon badges that identify action families.
+- Active-operation card with a clear status label, action chip and visual progress line.
+- Light mint page gradient and a clean white bottom navigation bar.
+- Compact-phone and RTL behavior remain release gates; no user data, matching logic or workflow is changed by this visual stage.
 
 ## Experience principles
 
