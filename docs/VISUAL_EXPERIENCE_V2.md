@@ -12,6 +12,14 @@ Status: implemented baseline; Visual System V3 refines it with the approved high
 - Light mint page gradient and a clean white bottom navigation bar.
 - Compact-phone and RTL behavior remain release gates; no user data, matching logic or workflow is changed by this visual stage.
 
+## Admin Operations V2
+
+- A dedicated operations-center hero separates administrative context from the public app.
+- Five responsive metrics replace fixed-width summary cards on compact phones.
+- The priority queue can be filtered by urgency, matching, delivery, and safeguards.
+- Thirteen tools are grouped into four operational domains instead of one long list.
+- Refresh awaits real data reload, sign-out requires confirmation, and load failure remains fail-closed with an explicit retry.
+
 ## Experience principles
 
 Ruhamaa should feel:
