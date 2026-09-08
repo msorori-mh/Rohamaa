@@ -18,7 +18,7 @@ class MyHandoffsScreen extends StatelessWidget {
       initialIndex: initialTab.clamp(0, 2).toInt(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('متابعة عملياتي'),
+          title: const Text('المتابعة'),
           bottom: const TabBar(tabs: [
             Tab(icon: Icon(Icons.track_changes_outlined), text: 'الحالة'),
             Tab(icon: Icon(Icons.notifications_none_rounded), text: 'التنبيهات'),
@@ -68,7 +68,7 @@ class _OperationsListState extends State<_OperationsList> {
           itemCount: rows.isEmpty ? 1 : rows.length + 1,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            if (rows.isEmpty) return const _EmptyState(icon: Icons.track_changes_outlined, title: 'لا توجد عمليات بعد', subtitle: 'عند تسجيل عطاء أو احتياج أو خدمة ستجد حالتها والخطوة التالية هنا.');
+            if (rows.isEmpty) return const _EmptyState(icon: Icons.track_changes_outlined, title: 'لا يوجد ما تتابعه الآن', subtitle: 'ستظهر هنا حالة تبرعاتك وطلباتك والخطوة التالية.');
             if (index == 0) return _SummaryBanner(total: rows.length, attention: rows.where((row) => row.requiresAction).length);
             final row = rows[index - 1];
             final copy = OperationStatusPresenter.present(row.kind, row.status);
@@ -88,7 +88,7 @@ class _OperationsListState extends State<_OperationsList> {
               Text(copy.nextStep, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
               if (row.requiresAction && row.actionRoute != '/handoffs') ...[
                 const SizedBox(height: 12),
-                FilledButton.icon(onPressed: () => context.push(row.actionRoute), icon: const Icon(Icons.arrow_back_rounded), label: const Text('تنفيذ الخطوة الآن')),
+                FilledButton.icon(onPressed: () => context.push(row.actionRoute), icon: const Icon(Icons.arrow_back_rounded), label: const Text('أكمل الآن')),
               ],
             ])));
           },
@@ -135,7 +135,7 @@ class _NotificationsListState extends State<_NotificationsList> {
           itemCount: rows.isEmpty ? 1 : rows.length + (unread > 0 ? 1 : 0),
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            if (rows.isEmpty) return const _EmptyState(icon: Icons.notifications_none_rounded, title: 'لا توجد تنبيهات بعد', subtitle: 'ستظهر هنا التغييرات المهمة التي تحتاج معرفتها أو إجراءً منك.');
+            if (rows.isEmpty) return const _EmptyState(icon: Icons.notifications_none_rounded, title: 'لا توجد تنبيهات', subtitle: 'ستظهر هنا التحديثات المهمة وما يحتاج إلى إجراء منك.');
             if (unread > 0 && index == 0) return OutlinedButton.icon(onPressed: _markAll, icon: const Icon(Icons.done_all_rounded), label: Text('تحديد الكل كمقروء ($unread)'));
             final item = rows[index - (unread > 0 ? 1 : 0)];
             return Card(
@@ -178,8 +178,8 @@ class _HandoffsListState extends State<_HandoffsList> {
           const SizedBox(height: 10), const Text('عند توليد رمز جديد يصبح السابق غير صالح.', textAlign: TextAlign.center, style: TextStyle(color: RuhamaaColors.textMuted)),
         ]), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
       ));
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء الرمز: $error')));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إنشاء الرمز. حاول مرة أخرى.')));
     }
   }
 
@@ -195,7 +195,7 @@ class _HandoffsListState extends State<_HandoffsList> {
           physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           itemCount: rows.isEmpty ? 1 : rows.length, separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            if (rows.isEmpty) return const _EmptyState(icon: Icons.local_shipping_outlined, title: 'لا توجد عملية تسليم الآن', subtitle: 'بعد قبول المطابقة وترتيب الموصل ستظهر الرحلة ورمز التسليم هنا.');
+            if (rows.isEmpty) return const _EmptyState(icon: Icons.local_shipping_outlined, title: 'لا يوجد تسليم الآن', subtitle: 'بعد قبول عرض وترتيب الموصل ستظهر التفاصيل والرمز هنا.');
             final row = rows[index];
             final copy = OperationStatusPresenter.present('delivery', row.status);
             return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -214,7 +214,7 @@ class _HandoffsListState extends State<_HandoffsList> {
 class _SummaryBanner extends StatelessWidget {
   const _SummaryBanner({required this.total, required this.attention});
   final int total; final int attention;
-  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: attention > 0 ? RuhamaaColors.warmGoldSoft : RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(18)), child: Row(children: [Icon(attention > 0 ? Icons.pending_actions_rounded : Icons.check_circle_outline_rounded, color: attention > 0 ? RuhamaaColors.warmGold : RuhamaaColors.primary), const SizedBox(width: 10), Expanded(child: Text(attention > 0 ? 'لديك $attention إجراء مهم من أصل $total عملية.' : 'كل عملياتك تحت المتابعة، ولا يوجد إجراء مطلوب الآن.', style: const TextStyle(fontWeight: FontWeight.w800)))]));
+  @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: attention > 0 ? RuhamaaColors.warmGoldSoft : RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(18)), child: Row(children: [Icon(attention > 0 ? Icons.pending_actions_rounded : Icons.check_circle_outline_rounded, color: attention > 0 ? RuhamaaColors.warmGold : RuhamaaColors.primary), const SizedBox(width: 10), Expanded(child: Text(attention > 0 ? 'لديك $attention إجراء يحتاج إلى انتباهك.' : 'لا يوجد إجراء مطلوب منك الآن.', style: const TextStyle(fontWeight: FontWeight.w800)))]));
 }
 
 class _EmptyState extends StatelessWidget {
