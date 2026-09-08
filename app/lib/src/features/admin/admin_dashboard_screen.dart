@@ -32,7 +32,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         future: _stats,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل لوحة الإدارة: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل لوحة الإدارة. حاول مجددًا.'));
           final s = snapshot.data!;
           return RefreshIndicator(
             onRefresh: () async => setState(_reload),
