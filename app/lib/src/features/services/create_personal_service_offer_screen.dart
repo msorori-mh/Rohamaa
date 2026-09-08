@@ -67,16 +67,17 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل وقتك أو مهارتك'),
+          title: const Text('تم تسجيل خدمتك'),
           content: const Text(
-            'يراجع فريق رحماء العرض قبل مطابقته باحتياج مناسب. لن يظهر كإعلان عام، وتقديمك للخدمة لا يزيد أولوية احتياجاتك الشخصية.',
+            'سنراجع الخدمة ونخبرك عند وجود طلب مناسب. لن تظهر خدمتك كإعلان عام.',
           ),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
         ),
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تسجيل العرض: $e')));
+      debugPrint('Personal service offer failed: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الخدمة. تحقق من اتصالك وحاول مرة أخرى.')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -86,7 +87,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
   Widget build(BuildContext context) {
     final categoryData = serviceCategoryByKey(_category);
     return Scaffold(
-      appBar: AppBar(title: const Text('أقدّم وقتي أو مهارتي')),
+      appBar: AppBar(title: const Text('تبرّع بوقتك أو مهارتك')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -94,7 +95,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(18)),
             child: const Text(
-              'هذا المسار للأفراد. إذا كنت تمثل محلًا أو ورشة أو صالونًا فاستخدم «شركاء رحماء» حتى يتم التحقق من النشاط أولًا.',
+              'هذا الخيار للأفراد. إذا كنت تمثل نشاطًا تجاريًا، فسجّله أولًا من صفحة الشركاء.',
               style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
             ),
           ),
@@ -164,14 +165,14 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
           ),
           const SizedBox(height: 18),
           const Text(
-            'لا توجد نقاط أو مقايضة: تقديمك لهذه الساعات لا يرفع أولوية طلباتك، ومن يحصل على خدمتك لا يصبح مدينًا لك بخدمة مقابلة.',
+            'الخدمة تطوعية وليست مقايضة، ولا تغيّر أولوية طلباتك.',
             style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: _saving ? null : _submit,
             icon: const Icon(Icons.handyman_outlined),
-            label: Text(_saving ? 'جارٍ الحفظ...' : 'سجّل وقتي أو مهارتي'),
+            label: Text(_saving ? 'جارٍ الإرسال...' : 'إرسال الخدمة'),
           ),
         ],
       ),
