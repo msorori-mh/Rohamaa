@@ -45,8 +45,10 @@ void main() {
 
   Future<void> login(WidgetTester tester, String email, String password) async {
     await tester.pumpWidget(const SizedBox.shrink());
-    await Supabase.instance.client.auth.signOut();
-    await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+    if (Supabase.instance.client.auth.currentUser?.email != email) {
+      await Supabase.instance.client.auth.signOut();
+      await Supabase.instance.client.auth.signInWithPassword(email: email, password: password);
+    }
     await tester.pumpWidget(ProviderScope(child: RuhamaaApp(key: UniqueKey())));
     await settle(tester);
   }
@@ -84,6 +86,33 @@ void main() {
     await login(tester, adminEmail, adminPassword);
     expect(find.text('لوحة إدارة رحماء'), findsOneWidget);
   });
+  const adminTools = <String, String>{
+    'التأهيل والمخزون': 'RecoveryInventoryScreen',
+    'الاحتياجات الموثوقة': 'NeedDiscoveryAdminScreen',
+    'مطابقة الأشياء': 'ItemMatchingV2Screen',
+    'الوقت والمهارات': 'ServiceMatchingScreen',
+    'جاهز للتوصيل': 'AcceptedMatchesScreen',
+    'متابعة التوصيل': 'DeliveryOperationsScreen',
+    'مراجعة المخاطر': 'RiskManagementScreen',
+    'بلاغات الخدمات': 'ServiceIncidentManagementScreen',
+    'شركاء رحماء': 'PartnerManagementScreen',
+    'المساهمات التشغيلية': 'ContributionReviewScreen',
+    'التقارير الأساسية': 'ReportsScreen',
+    'المدن والمناطق': 'ServiceAreasScreen',
+    'إضافة فريق': 'CreateStaffScreen',
+    'المستخدمون والأدوار': 'UserManagementScreen',
+  };
+  for (final entry in adminTools.entries) {
+    testWidgets('admin opens ${entry.value} from operations center', (tester) async {
+      await login(tester, adminEmail, adminPassword);
+      final tool = find.text(entry.key);
+      await tester.scrollUntilVisible(tool, 400,
+          scrollable: find.byType(Scrollable).first, maxScrolls: 100);
+      await tester.tap(tool);
+      await settle(tester);
+      expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == entry.value), findsOneWidget);
+    });
+  }
   testWidgets('live courier tasks', (tester) async {
     await login(tester, courierEmail, courierPassword);
     expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == 'CourierTasksScreen'), findsOneWidget);
