@@ -1,0 +1,108 @@
+name: Isolated E2E and Security
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isolated-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      E2E_STATUS_FILE: ${{ runner.temp }}/supabase-status.json
+      E2E_RUNTIME_FILE: ${{ runner.temp }}/e2e-runtime.json
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start disposable Supabase from committed migrations
+        id: backend
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase init --help
+          supabase start --help
+          mkdir -p "$RUNNER_TEMP/ruhamaa-e2e"
+          cd "$RUNNER_TEMP/ruhamaa-e2e"
+          supabase init
+          cp "$GITHUB_WORKSPACE"/supabase/migrations/*.sql supabase/migrations/
+          cp "$GITHUB_WORKSPACE/supabase/seed.sql" supabase/seed.sql
+          supabase start
+          supabase status -o json > "$E2E_STATUS_FILE"
+      - name: Provision isolated roles and fixtures
+        id: fixtures
+        run: python3 tests/e2e/run_api.py --bootstrap
+      - name: Run real Auth REST Storage and security tests
+        id: api
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          python3 tests/e2e/run_api.py 2>&1 | tee test-results/api.log
+      - uses: subosito/flutter-action@v2
+        if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
+        with:
+          channel: stable
+          cache: true
+      - name: Install desktop test runtime
+        if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
+      - name: Analyze and existing tests
+        id: unit
+        if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter analyze 2>&1 | tee ../test-results/analyze.log
+          flutter test test 2>&1 | tee ../test-results/unit.log
+      - name: Run full app against real local backend on Linux
+        id: ui
+        if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: |
+          set -o pipefail
+          flutter create --platforms=linux --project-name ruhamaa .
+          xvfb-run -a flutter test integration_test/live_app_test.dart -d linux --dart-define-from-file="$RUNNER_TEMP/ui-defines.json" 2>&1 | tee ../test-results/ui.log
+      - name: Upload test evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-e2e-results
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Destroy disposable backend and credentials
+        if: always()
+        run: |
+          if [ -d "$RUNNER_TEMP/ruhamaa-e2e/supabase" ]; then
+            cd "$RUNNER_TEMP/ruhamaa-e2e"
+            supabase stop --no-backup
+          fi
+          rm -f "$E2E_STATUS_FILE" "$E2E_RUNTIME_FILE" "$RUNNER_TEMP/ui-defines.json"
+      - name: Enforce all executed gates
+        if: always()
+        env:
+          BACKEND: ${{ steps.backend.outcome }}
+          FIXTURES: ${{ steps.fixtures.outcome }}
+          API: ${{ steps.api.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          UI: ${{ steps.ui.outcome }}
+        run: |
+          test "$BACKEND" = success
+          test "$FIXTURES" = success
+          test "$API" = success
+          test "$UNIT" = success
+          test "$UI" = success
