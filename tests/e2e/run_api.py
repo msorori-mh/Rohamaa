@@ -4,6 +4,7 @@ Only fixture provisioning uses service_role. Tests exercise real authenticated J
 The CI job destroys the complete disposable stack in its always() cleanup step.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
@@ -265,6 +266,66 @@ class EndToEnd(unittest.TestCase):
             with self.subTest(rpc=rpc):
                 self.denied(self.clients['donor'], 'POST', '/rest/v1/rpc/' + rpc, {})
                 self.assertIsInstance(self.clients['admin'].rpc(rpc), list)
+
+    def test_concurrent_courier_acceptance_has_one_winner(self):
+        task, _, _ = self.delivery()
+        def accept():
+            return self.clients['courier'].request('POST', '/rest/v1/rpc/courier_respond_delivery', {'p_delivery_id': task, 'p_accept': True})[0]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: accept(), range(2)))
+        self.assertEqual(sum(200 <= code < 300 for code in results), 1, results)
+        events = self.root.ok('GET', '/rest/v1/delivery_events?delivery_id=eq.' + task + '&event_type=eq.courier_accepted')
+        self.assertEqual(len(events), 1)
+
+    def test_reviewed_need_publish_hide_republish(self):
+        need = self.create_item('needs', 'recipient')
+        params = {'p_need_id': need['id'], 'p_display_title': 'TEST_ONLY chair needed', 'p_display_detail': 'TEST_ONLY public description', 'p_city_label': 'مأرب'}
+        card = self.clients['admin'].rpc('admin_publish_need_discovery_card', params)
+        def visible():
+            return {r['card_id'] for r in self.clients['donor'].rpc('discovery_need_cards_v2', {'p_limit': 100})}
+        self.assertIn(card, visible())
+        self.clients['admin'].rpc('admin_unpublish_need_discovery_card', {'p_card_id': card})
+        self.assertNotIn(card, visible())
+        card = self.clients['admin'].rpc('admin_publish_need_discovery_card', params)
+        self.assertIn(card, visible())
+
+    def test_inventory_grade_routes_and_work_orders(self):
+        admin = self.clients['admin']
+        warehouse = admin.rpc('admin_create_warehouse', {'p_code': 'T-' + uuid.uuid4().hex[:8], 'p_name': 'TEST_ONLY warehouse'})
+        for grade, expected in [('A', 'ready_for_distribution'), ('B', 'cleaning_queued'), ('C', 'repair_queued'), ('D', 'recycling')]:
+            with self.subTest(grade=grade):
+                donation = self.create_item('donations', 'donor')
+                item = admin.rpc('admin_receive_inventory_item', {'p_donation_id': donation['id'], 'p_warehouse_id': warehouse})
+                self.assertEqual(admin.rpc('admin_inspect_inventory_item', {'p_inventory_item_id': item, 'p_grade': grade, 'p_estimated_cost_yer': 1000}), expected)
+                self.denied(self.clients['donor'], 'POST', '/rest/v1/rpc/admin_inspect_inventory_item', {'p_inventory_item_id': item, 'p_grade': 'A'})
+                if grade in ('B', 'C'):
+                    work = admin.ok('GET', '/rest/v1/item_work_orders?inventory_item_id=eq.' + item)[0]
+                    self.denied(admin, 'POST', '/rest/v1/rpc/admin_advance_item_work_order', {'p_work_order_id': work['id'], 'p_action': 'complete', 'p_actual_cost_yer': 1000})
+                    admin.rpc('admin_advance_item_work_order', {'p_work_order_id': work['id'], 'p_action': 'start'})
+                    self.assertEqual(admin.rpc('admin_advance_item_work_order', {'p_work_order_id': work['id'], 'p_action': 'complete', 'p_actual_cost_yer': 1000}), 'ready_for_distribution')
+                if grade == 'D':
+                    recycling = admin.ok('GET', '/rest/v1/item_recycling_records?inventory_item_id=eq.' + item)[0]
+                    admin.rpc('admin_confirm_item_recycling', {'p_recycling_id': recycling['id'], 'p_material_type': 'metal', 'p_weight_kg': 1, 'p_proceeds_yer': 100})
+                    self.assertEqual(admin.ok('GET', '/rest/v1/inventory_items?id=eq.' + item)[0]['status'], 'recycled')
+
+    def test_account_deletion_request_is_idempotent(self):
+        user = self.clients['donor']
+        user.rpc('request_account_deletion')
+        user.rpc('request_account_deletion')
+        rows = user.ok('GET', '/rest/v1/account_deletion_requests?user_id=eq.' + self.user('donor')['id'])
+        self.assertEqual(len(rows), 1)
+
+    def test_edge_staff_creation_rejects_regular_user(self):
+        self.denied(self.clients['donor'], 'POST', '/functions/v1/admin-create-staff', {'email': 'test-only-denied@example.test', 'password': 'TestOnly!Password9', 'role': 'courier', 'full_name': 'TEST_ONLY', 'area_ids': [self.data['area_id']]})
+
+    def test_staff_password_change_flow(self):
+        temporary = self.clients['temporary']
+        password = 'ChangedTestOnly!9a' + secrets.token_hex(12)
+        temporary.ok('POST', '/functions/v1/staff-change-password', {'password': password})
+        row = self.root.ok('GET', '/rest/v1/profiles?id=eq.' + self.user('temporary')['id'])[0]
+        self.assertFalse(row['force_password_change'])
+        # Restore only this TEST_ONLY account's flag for the separate enforcement test.
+        self.root.ok('PATCH', '/rest/v1/profiles?id=eq.' + row['id'], {'force_password_change': True})
 
 
 class XMLResult(unittest.TextTestResult):
