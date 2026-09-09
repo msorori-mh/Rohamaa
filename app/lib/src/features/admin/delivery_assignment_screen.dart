@@ -4,9 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/admin_repository.dart';
 
 class DeliveryAssignmentScreen extends StatefulWidget {
-  const DeliveryAssignmentScreen({super.key, required this.matchId});
+  const DeliveryAssignmentScreen({super.key, this.matchId, this.deliveryId})
+      : assert((matchId == null) != (deliveryId == null));
 
-  final String matchId;
+  final String? matchId;
+  final String? deliveryId;
 
   @override
   State<DeliveryAssignmentScreen> createState() => _DeliveryAssignmentScreenState();
@@ -55,17 +57,34 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
     }
     setState(() => _saving = true);
     try {
-      final result = await AdminRepository(Supabase.instance.client).createDelivery(
-        matchId: widget.matchId,
-        courierId: _courierId!,
-        vehicleId: _vehicleId,
+      final repo = AdminRepository(Supabase.instance.client);
+      if (widget.deliveryId != null) {
+        await repo.reassignDelivery(
+          deliveryId: widget.deliveryId!,
+          courierId: _courierId!,
+          vehicleId: _vehicleId,
+        );
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('تم إسناد المهمة من جديد'),
+            content: const Text('وصلت المهمة إلى الموصل الجديد، وسيقبلها أو يعتذر عنها من حسابه.'),
+            actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
+          ),
+        );
+        if (mounted) Navigator.pop(context, true);
+        return;
+      }
+      final result = await repo.createDelivery(
+        matchId: widget.matchId!, courierId: _courierId!, vehicleId: _vehicleId,
       );
       if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('تم إنشاء مهمة التوصيل'),
-          content: Text('رقم العملية: ${result['public_code']}\n\nسيولد المتبرع والمستفيد رموز PIN من حسابيهما عند وقت الاستلام والتسليم.'),
+          content: Text('رقم العملية: ${result['public_code']}\n\nوصلت المهمة إلى الموصل، وسيقبلها أو يعتذر عنها. بعد القبول تظهر له بيانات الاستلام اللازمة.'),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
         ),
       );
@@ -81,7 +100,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('إسناد التوصيل')),
+      appBar: AppBar(title: Text(widget.deliveryId == null ? 'إسناد التوصيل' : 'إعادة إسناد التوصيل')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -107,7 +126,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: _saving || _courierId == null ? null : _assign,
-                  child: Text(_saving ? 'جارٍ الإسناد...' : 'إنشاء مهمة التوصيل'),
+                  child: Text(_saving ? 'جارٍ الإسناد...' : widget.deliveryId == null ? 'إرسال المهمة للموصل' : 'إعادة إسناد المهمة'),
                 ),
               ],
             ),
