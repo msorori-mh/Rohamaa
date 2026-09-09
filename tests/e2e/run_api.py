@@ -369,7 +369,9 @@ if __name__ == '__main__':
     else:
         started = time.time()
         result = unittest.TextTestRunner(verbosity=2, resultclass=XMLResult).run(unittest.defaultTestLoader.loadTestsFromTestCase(EndToEnd))
-        suite = ET.Element('testsuite', name='localhost-auth-rest-storage', tests=str(result.testsRun), failures=str(len(result.failures)), errors=str(len(result.errors)), time=str(round(time.time() - started, 3)))
+        suite = ET.Element('testsuite', name='localhost-auth-rest-storage', tests=str(len(result.records)), failures=str(len(result.failures)), errors=str(len(result.errors)), time=str(round(time.time() - started, 3)))
+        properties = ET.SubElement(suite, 'properties')
+        ET.SubElement(properties, 'property', name='test_methods', value=str(result.testsRun))
         for name, outcome, detail in result.records:
             case = ET.SubElement(suite, 'testcase', name=name)
             if outcome != 'pass':
