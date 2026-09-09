@@ -102,6 +102,14 @@ jobs:
           set -o pipefail
           flutter create --platforms=linux --project-name ruhamaa .
           xvfb-run -a flutter test integration_test/live_app_test.dart -d linux --dart-define-from-file="$RUNNER_TEMP/ui-defines.json" 2>&1 | tee ../test-results/ui.log
+      - name: Save backend and Linux evidence before emulator
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-core-results
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
       - uses: actions/setup-java@v5
         if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
         with:
@@ -115,6 +123,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run Android integration tests
         id: android
+        timeout-minutes: 25
         if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
         continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
