@@ -3,15 +3,17 @@
 The `Isolated E2E and Security` workflow runs against **localhost only**. It does
 not use project secrets, a hosted Supabase project, or production user data.
 
-1. Initialize a temporary Supabase configuration and replay every migration.
+1. Initialize a temporary Supabase configuration and replay through 0053.
 2. Start Auth, REST, Storage and the repository's Edge Functions.
 3. Provision eight synthetic users through the local Auth admin API; assign
-   roles/addresses as fixture setup. Subsequent requests use real user JWTs.
+   roles/addresses as fixture setup. Then replay every remaining migration,
+   including the data-dependent 0054/0056 verifications. None are omitted.
+   Subsequent requests use real user JWTs.
 4. Run API business workflows, isolation tests and security rejection tests.
 5. Install Flutter, analyze, run existing tests and query OSV for resolved Pub
    package versions. This is not a native/Gradle vulnerability scan.
-6. Build the complete Flutter application for Linux and run integration tests
-   with the same local backend. Test-only credentials are injected into this
+6. Build the complete Flutter application for Linux and an Android API 35
+   emulator and run integration tests with the same local backend. Test-only credentials are injected into this
    disposable test build, never a distributed APK.
 7. Upload test logs/results and the resolved dependency lock. Credential files
    are excluded; destroy the local stack and remove credentials in cleanup.
@@ -35,6 +37,6 @@ mobile offline recovery, or full accessibility. External identity flows and
 hardware still require a separate device test lane. Screen loading checks are
 distinguished from the contribution UI write flow and multi-role API workflows.
 
-The historical `0008` policy replacement correction enables clean migration
-replay. It does not apply any change to a deployed project or modify migration
+Historical replay corrections cover the duplicate policy in `0008`, the
+new enum comparison in `0019`, and the premature RPC grant in `0024`. It does not apply any change to a deployed project or modify migration
 history there. CI records any further replay failure as a real failure.

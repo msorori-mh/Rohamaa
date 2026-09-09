@@ -108,6 +108,10 @@ void main() {
       final tool = find.text(entry.key);
       await tester.scrollUntilVisible(tool, 400,
           scrollable: find.byType(Scrollable).first, maxScrolls: 100);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(tool);
+      await tester.pumpAndSettle();
+      expect(tool.hitTestable(), findsOneWidget);
       await tester.tap(tool);
       await settle(tester);
       expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == entry.value), findsOneWidget);

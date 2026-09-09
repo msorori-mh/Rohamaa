@@ -23,6 +23,10 @@ if [[ -z "$test_device" || "$test_device" == *$'\n'* ]]; then
   exit 1
 fi
 adb -s "$test_device" reverse tcp:54321 tcp:54321
+adb -s "$test_device" logcat -c
+adb -s "$test_device" logcat '*:E' flutter:I > test-results/android-device.log 2>&1 &
+logcat_pid=$!
+trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 cd app
-flutter test integration_test/live_app_test.dart -d "$test_device" \
+timeout --signal=INT --kill-after=30s 15m flutter test integration_test/live_app_test.dart -d "$test_device" \
   --dart-define-from-file="$RUNNER_TEMP/ui-defines.json" 2>&1 | tee ../test-results/android.log

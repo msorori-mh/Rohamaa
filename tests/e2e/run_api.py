@@ -169,7 +169,9 @@ class EndToEnd(unittest.TestCase):
         self.denied(self.clients['recipient'], 'POST', '/rest/v1/rpc/admin_verify_contribution', args)
         self.clients['admin'].rpc('admin_verify_contribution', args)
         before = self.root.ok('GET', '/rest/v1/audit_logs?entity_id=eq.' + row['id'])
-        self.clients['admin'].rpc('admin_verify_contribution', args)
+        status, body = self.clients['admin'].request('POST', '/rest/v1/rpc/admin_verify_contribution', args)
+        self.assertEqual(status, 400)
+        self.assertEqual(body.get('message'), 'contribution is no longer pending')
         after = self.root.ok('GET', '/rest/v1/audit_logs?entity_id=eq.' + row['id'])
         self.assertEqual(len(after), len(before))
         self.assertEqual(self.clients['donor'].ok('GET', '/rest/v1/contributions?id=eq.' + row['id'])[0]['status'], 'verified')
@@ -238,7 +240,7 @@ class EndToEnd(unittest.TestCase):
         self.clients['donor'].rpc('user_respond_service_match', {'p_match_id': match['id'], 'p_accept': True})
         self.assertEqual(self.clients['recipient'].rpc('user_respond_service_match', {'p_match_id': match['id'], 'p_accept': True}), 'accepted')
 
-    def test_partner_registration_and_unapproved_offer_rejection(self):
+    def test_partner_registration_and_owner_isolation(self):
         partner = self.clients['donor'].rpc('user_register_service_partner', {'p_display_name': 'TEST_ONLY repair shop', 'p_partner_kind': 'repair_shop', 'p_description': 'TEST_ONLY', 'p_contact_phone': '777000001', 'p_monthly_case_capacity': 2, 'p_service_area_id': self.data['area_id'], 'p_terms_version': 'v1'})
         self.assertTrue(partner)
         rows = self.clients['recipient'].ok('GET', '/rest/v1/service_partners?id=eq.' + partner)
