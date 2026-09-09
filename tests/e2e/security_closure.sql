@@ -25,7 +25,8 @@ grant execute on function public.is_admin() to authenticated;
 create or replace function public.is_courier() returns boolean
 language sql stable security definer set search_path=public as $$
   select exists(select 1 from public.profiles where id=(select auth.uid())
-    and role::text='courier' and not is_suspended and not force_password_change);
+    and role::text='courier' and not is_suspended and not force_password_change
+    and exists(select 1 from public.couriers c where c.user_id=(select auth.uid()) and c.active));
 $$;
 revoke all on function public.is_courier() from public,anon;
 grant execute on function public.is_courier() to authenticated;
@@ -198,4 +199,36 @@ begin
   return true;
 end;
 $$;
+
+
+-- Match the UI: work must start before it can be completed.
+create or replace function public.admin_advance_item_work_order(
+  p_work_order_id uuid,p_action text,p_actual_cost_yer integer default null,p_note text default null
+) returns text
+language plpgsql security invoker set search_path=public as $$
+declare v_order public.item_work_orders%rowtype; v_item public.inventory_items%rowtype; v_status text;
+begin
+  if not public.is_admin() then raise exception 'admin access required'; end if;
+  if p_actual_cost_yer is not null and p_actual_cost_yer<0 then raise exception 'invalid actual cost'; end if;
+  select * into v_order from public.item_work_orders where id=p_work_order_id for update;
+  if v_order.id is null then raise exception 'work order not found'; end if;
+  select * into v_item from public.inventory_items where id=v_order.inventory_item_id for update;
+  if p_action='start' then
+    if v_order.status<>'queued' then raise exception 'work order is not queued'; end if;
+    v_status:=case when v_order.work_type='clean' then 'cleaning' else 'repairing' end;
+    update public.item_work_orders set status='in_progress',started_at=now(),notes=coalesce(nullif(trim(coalesce(p_note,'')),''),notes),updated_at=now() where id=p_work_order_id;
+    update public.inventory_items set status=v_status,updated_at=now() where id=v_item.id;
+  elsif p_action='complete' then
+    if v_order.status<>'in_progress' then raise exception 'work order cannot be completed'; end if;
+    v_status:='ready_for_distribution';
+    update public.item_work_orders set status='completed',actual_cost_yer=p_actual_cost_yer,completed_at=now(),notes=coalesce(nullif(trim(coalesce(p_note,'')),''),notes),updated_at=now() where id=p_work_order_id;
+    update public.inventory_items set status=v_status,ready_at=now(),updated_at=now() where id=v_item.id;
+    update public.donations set status='available',updated_at=now() where id=v_item.donation_id;
+  else
+    raise exception 'action must be start or complete';
+  end if;
+  insert into public.inventory_events(inventory_item_id,actor_id,event_type,from_status,to_status,metadata)
+  values(v_item.id,auth.uid(),'work_order_'||p_action,v_item.status,v_status,jsonb_build_object('work_order_id',p_work_order_id,'actual_cost_yer',p_actual_cost_yer));
+  return v_status;
+end $$;
 
