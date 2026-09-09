@@ -14,7 +14,7 @@ concurrency:
 jobs:
   local-stack:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v5
       - name: Set disposable paths
@@ -71,8 +71,14 @@ jobs:
         run: |
           set -o pipefail
           flutter pub get
+          flutter --version --machine > ../test-results/flutter-version.json
           flutter analyze 2>&1 | tee ../test-results/analyze.log
           flutter test test 2>&1 | tee ../test-results/unit.log
+      - name: Check resolved Dart dependencies against OSV
+        id: dependencies
+        if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
+        continue-on-error: true
+        run: python3 tests/e2e/check_dependencies.py
       - name: Run full app against real local backend on Linux
         id: ui
         if: ${{ !cancelled() && steps.fixtures.outcome == 'success' }}
@@ -108,10 +114,12 @@ jobs:
           FIXTURES: ${{ steps.fixtures.outcome }}
           API: ${{ steps.api.outcome }}
           UNIT: ${{ steps.unit.outcome }}
+          DEPENDENCIES: ${{ steps.dependencies.outcome }}
           UI: ${{ steps.ui.outcome }}
         run: |
           test "$BACKEND" = success
           test "$FIXTURES" = success
           test "$API" = success
           test "$UNIT" = success
+          test "$DEPENDENCIES" = success
           test "$UI" = success
