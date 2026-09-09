@@ -173,6 +173,11 @@ class EndToEnd(unittest.TestCase):
                 response, body = self.clients[owner].request('POST', '/rest/v1/' + table, {'public_code': self.code(), 'user_id': self.user(owner)['id'], 'category': 'furniture', 'item_type': 'TEST_ONLY', 'status': status})
                 self.assertIn(response, (400, 401, 403), f'Client controlled initial status: {response}')
 
+    def test_owner_cannot_update_workflow_after_inventory_grant(self):
+        row = self.create_item('donations', 'donor')
+        self.denied(self.clients['donor'], 'PATCH', '/rest/v1/donations?id=eq.' + row['id'], {'status': 'delivered'})
+        self.assertEqual(self.clients['donor'].ok('GET', '/rest/v1/donations?id=eq.' + row['id'])[0]['status'], 'submitted')
+
     def test_contribution_creation_and_idempotent_admin_verification(self):
         row = self.clients['donor'].ok('POST', '/rest/v1/contributions', {'public_code': self.code(), 'user_id': self.user('donor')['id'], 'amount_yer': 1000, 'payment_method': 'cash_to_courier'})[0]
         args = {'p_contribution_id': row['id'], 'p_verified': True, 'p_note': 'TEST_ONLY'}
@@ -225,6 +230,21 @@ class EndToEnd(unittest.TestCase):
     def test_courier_cannot_read_pin_hash_columns(self):
         task, _, _ = self.delivery(isolated_fixture=True)
         self.denied(self.clients['courier'], 'GET', '/rest/v1/deliveries?select=pickup_pin_hash,delivery_pin_hash&id=eq.' + task)
+
+    def test_pin_attempt_limit_and_expiry(self):
+        task, _, _ = self.delivery()
+        args = {'p_delivery_id': task}
+        courier = self.clients['courier']
+        courier.rpc('courier_respond_delivery', {**args, 'p_accept': True})
+        pin = self.clients['donor'].rpc('user_issue_handoff_pin', {**args, 'p_kind': 'pickup'})
+        wrong = '0000' if pin != '0000' else '0001'
+        for _ in range(5):
+            self.assertFalse(courier.rpc('verify_delivery_pin', {**args, 'p_pin': wrong, 'p_kind': 'pickup'}))
+        self.assertFalse(courier.rpc('verify_delivery_pin', {**args, 'p_pin': pin, 'p_kind': 'pickup'}))
+        pin = self.clients['donor'].rpc('user_issue_handoff_pin', {**args, 'p_kind': 'pickup'})
+        self.root.ok('PATCH', '/rest/v1/deliveries?id=eq.' + task, {'pickup_pin_expires_at': '2000-01-01T00:00:00Z'})
+        self.assertFalse(courier.rpc('verify_delivery_pin', {**args, 'p_pin': pin, 'p_kind': 'pickup'}))
+        self.assertEqual(self.root.ok('GET', '/rest/v1/deliveries?id=eq.' + task)[0]['status'], 'heading_to_pickup')
 
     def test_courier_decline_and_reassignment(self):
         task, _, _ = self.delivery(isolated_fixture=True)
