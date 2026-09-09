@@ -15,11 +15,12 @@ jobs:
   local-stack:
     runs-on: ubuntu-latest
     timeout-minutes: 55
-    env:
-      E2E_STATUS_FILE: ${{ runner.temp }}/supabase-status.json
-      E2E_RUNTIME_FILE: ${{ runner.temp }}/e2e-runtime.json
     steps:
       - uses: actions/checkout@v5
+      - name: Set disposable paths
+        run: |
+          echo "E2E_STATUS_FILE=$RUNNER_TEMP/supabase-status.json" >> "$GITHUB_ENV"
+          echo "E2E_RUNTIME_FILE=$RUNNER_TEMP/e2e-runtime.json" >> "$GITHUB_ENV"
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -33,6 +34,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ruhamaa-e2e"
           cd "$RUNNER_TEMP/ruhamaa-e2e"
           supabase init
+          mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE"/supabase/migrations/*.sql supabase/migrations/
           cp "$GITHUB_WORKSPACE/supabase/seed.sql" supabase/seed.sql
           supabase start
