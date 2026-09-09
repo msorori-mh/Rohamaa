@@ -110,11 +110,21 @@ class EndToEnd(unittest.TestCase):
         payload.update(extra)
         return self.clients[owner].ok('POST', '/rest/v1/' + table, payload)[0]
 
-    def delivery(self, courier='courier'):
+    def delivery(self, courier='courier', isolated_fixture=False):
         donation = self.create_item('donations', 'donor')
         need = self.create_item('needs', 'recipient')
         match = self.clients['admin'].rpc('admin_approve_match', {'p_donation_id': donation['id'], 'p_need_id': need['id']})
         self.clients['recipient'].rpc('user_respond_match_offer', {'p_match_id': match, 'p_accept': True})
+        if isolated_fixture:
+            # Separate authorization/transition coverage from the creation RPC.
+            # The complete E2E and notification tests still require real creation.
+            task = self.root.ok('POST', '/rest/v1/deliveries', {
+                'public_code': self.code(), 'match_id': match,
+                'courier_id': self.user(courier)['id'], 'status': 'assigned',
+                'pickup_pin_hash': 'TEST_ONLY_NON_SECRET_HASH',
+                'delivery_pin_hash': 'TEST_ONLY_NON_SECRET_HASH',
+            })[0]
+            return task['id'], donation['id'], need['id']
         task = self.clients['admin'].rpc('admin_create_delivery', {'p_match_id': match, 'p_courier_id': self.user(courier)['id']})[0]
         return task['delivery_id'], donation['id'], need['id']
 
@@ -213,11 +223,11 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(state, 'heading_to_pickup', f'NULL changed state; response={code}/{result}')
 
     def test_courier_cannot_read_pin_hash_columns(self):
-        task, _, _ = self.delivery()
+        task, _, _ = self.delivery(isolated_fixture=True)
         self.denied(self.clients['courier'], 'GET', '/rest/v1/deliveries?select=pickup_pin_hash,delivery_pin_hash&id=eq.' + task)
 
     def test_courier_decline_and_reassignment(self):
-        task, _, _ = self.delivery()
+        task, _, _ = self.delivery(isolated_fixture=True)
         args = {'p_delivery_id': task}
         result = self.clients['courier'].rpc('courier_respond_delivery', {**args, 'p_accept': False, 'p_reason': 'unavailable'})
         self.assertEqual(result, 'rescheduled')
@@ -226,7 +236,7 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(self.clients['courier2'].rpc('courier_respond_delivery', {**args, 'p_accept': True}), 'heading_to_pickup')
 
     def test_temporary_password_cannot_accept_delivery(self):
-        task, _, _ = self.delivery('temporary')
+        task, _, _ = self.delivery('temporary', isolated_fixture=True)
         self.denied(self.clients['temporary'], 'POST', '/rest/v1/rpc/courier_respond_delivery', {'p_delivery_id': task, 'p_accept': True})
 
     def test_suspended_account_cannot_create_need(self):
@@ -270,7 +280,7 @@ class EndToEnd(unittest.TestCase):
                 self.assertIsInstance(self.clients['admin'].rpc(rpc), list)
 
     def test_concurrent_courier_acceptance_has_one_winner(self):
-        task, _, _ = self.delivery()
+        task, _, _ = self.delivery(isolated_fixture=True)
         def accept():
             return self.clients['courier'].request('POST', '/rest/v1/rpc/courier_respond_delivery', {'p_delivery_id': task, 'p_accept': True})[0]
         with ThreadPoolExecutor(max_workers=2) as pool:
