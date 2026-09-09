@@ -37,8 +37,12 @@ jobs:
           mkdir -p supabase/migrations
           cp "$GITHUB_WORKSPACE"/supabase/migrations/*.sql supabase/migrations/
           cp "$GITHUB_WORKSPACE/supabase/seed.sql" supabase/seed.sql
+          cp -R "$GITHUB_WORKSPACE/supabase/functions" supabase/functions
+          cat "$GITHUB_WORKSPACE/supabase/config.toml" >> supabase/config.toml
           supabase start
           supabase status -o json > "$E2E_STATUS_FILE"
+          supabase functions serve > "$RUNNER_TEMP/e2e-edge-runtime.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/e2e-edge-runtime.pid"
       - name: Provision isolated roles and fixtures
         id: fixtures
         run: python3 tests/e2e/run_api.py --bootstrap
@@ -89,6 +93,9 @@ jobs:
       - name: Destroy disposable backend and credentials
         if: always()
         run: |
+          if [ -f "$RUNNER_TEMP/e2e-edge-runtime.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/e2e-edge-runtime.pid")" || true
+          fi
           if [ -d "$RUNNER_TEMP/ruhamaa-e2e/supabase" ]; then
             cd "$RUNNER_TEMP/ruhamaa-e2e"
             supabase stop --no-backup
