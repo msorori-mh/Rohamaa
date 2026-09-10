@@ -66,7 +66,9 @@ void main() {
   Future<void> refreshIfAvailable(WidgetTester tester) async {
     final refresh = find.byType(RefreshIndicator);
     if (refresh.evaluate().isNotEmpty) {
-      await tester.state<RefreshIndicatorState>(refresh.first).show();
+      final finished = tester.state<RefreshIndicatorState>(refresh.first).show();
+      await tester.pumpAndSettle();
+      await finished;
       await settle(tester);
     }
   }
