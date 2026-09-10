@@ -1,0 +1,38 @@
+test_account_deletion_request_is_idempotent (__main__.EndToEnd.test_account_deletion_request_is_idempotent) ... ok
+test_address_read_and_update_are_owner_scoped (__main__.EndToEnd.test_address_read_and_update_are_owner_scoped) ... ok
+test_admin_queues_are_denied_to_regular_users (__main__.EndToEnd.test_admin_queues_are_denied_to_regular_users) ... ok
+test_auth_sessions_are_real_and_owned (__main__.EndToEnd.test_auth_sessions_are_real_and_owned) ... ok
+test_cannot_insert_item_owned_by_another_user (__main__.EndToEnd.test_cannot_insert_item_owned_by_another_user) ... ok
+test_complete_delivery_lifecycle_and_privacy (__main__.EndToEnd.test_complete_delivery_lifecycle_and_privacy) ... ok
+test_concurrent_courier_acceptance_has_one_winner (__main__.EndToEnd.test_concurrent_courier_acceptance_has_one_winner) ... ok
+test_contribution_cannot_be_created_as_verified (__main__.EndToEnd.test_contribution_cannot_be_created_as_verified) ... ok
+test_contribution_creation_and_idempotent_admin_verification (__main__.EndToEnd.test_contribution_creation_and_idempotent_admin_verification) ... ok
+test_contribution_invalid_amount_is_rejected (__main__.EndToEnd.test_contribution_invalid_amount_is_rejected) ... ok
+test_courier_cannot_read_pin_hash_columns (__main__.EndToEnd.test_courier_cannot_read_pin_hash_columns) ... ok
+test_courier_decline_and_reassignment (__main__.EndToEnd.test_courier_decline_and_reassignment) ... ok
+test_donation_and_need_create_read_cancel (__main__.EndToEnd.test_donation_and_need_create_read_cancel) ... ok
+test_edge_staff_creation_rejects_regular_user (__main__.EndToEnd.test_edge_staff_creation_rejects_regular_user) ... ok
+test_inactive_courier_cannot_accept_delivery (__main__.EndToEnd.test_inactive_courier_cannot_accept_delivery) ... ok
+test_inventory_grade_routes_and_work_orders (__main__.EndToEnd.test_inventory_grade_routes_and_work_orders) ... ok
+test_item_initial_status_is_server_controlled (__main__.EndToEnd.test_item_initial_status_is_server_controlled) ... ok
+test_notifications_are_owner_scoped (__main__.EndToEnd.test_notifications_are_owner_scoped) ... ok
+test_null_pin_does_not_change_delivery_state (__main__.EndToEnd.test_null_pin_does_not_change_delivery_state) ... ok
+test_owner_cannot_update_workflow_after_inventory_grant (__main__.EndToEnd.test_owner_cannot_update_workflow_after_inventory_grant) ... ok
+test_partner_registration_and_owner_isolation (__main__.EndToEnd.test_partner_registration_and_owner_isolation) ... ok
+test_pin_attempt_limit_and_expiry (__main__.EndToEnd.test_pin_attempt_limit_and_expiry) ... ok
+test_profiles_cannot_be_read_by_another_user (__main__.EndToEnd.test_profiles_cannot_be_read_by_another_user) ... ok
+test_reviewed_need_publish_hide_republish (__main__.EndToEnd.test_reviewed_need_publish_hide_republish) ... ok
+test_role_escalation_is_denied (__main__.EndToEnd.test_role_escalation_is_denied) ... ok
+test_service_offer_request_matching_and_consent (__main__.EndToEnd.test_service_offer_request_matching_and_consent) ... ok
+test_staff_password_change_flow (__main__.EndToEnd.test_staff_password_change_flow) ... ok
+test_storage_accepts_owner_image (__main__.EndToEnd.test_storage_accepts_owner_image) ... ok
+test_storage_rejects_non_image_upload (__main__.EndToEnd.test_storage_rejects_non_image_upload) ... ok
+test_storage_rejects_other_user_path (__main__.EndToEnd.test_storage_rejects_other_user_path) ... ok
+test_storage_rejects_oversized_image (__main__.EndToEnd.test_storage_rejects_oversized_image) ... ok
+test_suspended_account_cannot_create_need (__main__.EndToEnd.test_suspended_account_cannot_create_need) ... ok
+test_temporary_password_cannot_accept_delivery (__main__.EndToEnd.test_temporary_password_cannot_accept_delivery) ... ok
+
+----------------------------------------------------------------------
+Ran 33 tests in 3.610s
+
+OK

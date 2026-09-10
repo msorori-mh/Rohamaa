@@ -1,0 +1,147 @@
+
+Building Linux application...                                   
+✓ Built build/linux/x64/debug/bundle/ruhamaa
+::group::✅ (setUpAll)
+supabase.supabase_flutter: INFO: ***** Supabase init completed ***** 
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+::group::✅ live user route /home
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /offers
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /handoffs
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /account
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /onboarding
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /donate
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /need
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /verified-needs
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /offer-service
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /request-service
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /my-services
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /partners
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live user route /legal
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live admin operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens RecoveryInventoryScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens NeedDiscoveryAdminScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ItemMatchingV2Screen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ServiceMatchingScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens AcceptedMatchesScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens DeliveryOperationsScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens RiskManagementScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ServiceIncidentManagementScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens PartnerManagementScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ContributionReviewScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ReportsScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens ServiceAreasScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens CreateStaffScreen from operations center
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin opens UserManagementScreen from operations center
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live courier tasks
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ live supervisor dashboard
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ ordinary user cannot open admin screen
+::endgroup::
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ contribution UI persists a pending contribution
+::endgroup::
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+supabase.auth: INFO: Signing out user with scope: local 
+Ruhamaa auth event: AuthChangeEvent.signedIn; session=true
+::group::✅ Passing tests
+✅ admin assigns and courier completes handoff through UI
+::endgroup::
+
+🎉 33 tests passed.

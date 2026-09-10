@@ -1,0 +1,26 @@
+
+::group::✅ Passing tests
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_category_catalog_test.dart: Category V2 root keys are unique and populated
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_category_catalog_test.dart: Category V2 group and item keys are unique inside taxonomy
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_category_catalog_test.dart: legacy categories map to V2 roots
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_category_catalog_test.dart: key pilot examples are represented
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/visual_theme_test.dart: visual system uses the bundled Arabic family and elevated soft cards
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/visual_theme_test.dart: navigation differentiates selected items without a heavy pill
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/visual_theme_test.dart: hero and page gradients retain the Ruhamaa green identity
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/operation_status_presenter_test.dart: OperationStatusPresenter marks an offered match as requiring a user decision
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/operation_status_presenter_test.dart: OperationStatusPresenter explains delivery failures without exposing private details
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/operation_status_presenter_test.dart: OperationStatusPresenter gives fulfilled needs a completed outcome
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/widget_test.dart: renders Ruhamaa Arabic RTL smoke widget
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/widget_test.dart: account sign-out action stays visible on a compact phone
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/pilot_rules_test.dart: PilotRules accepts only configured contribution amounts
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/pilot_rules_test.dart: PilotRules handoff PIN must be exactly four digits
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/pilot_rules_test.dart: PilotRules donation image limit is four
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/widget_test.dart: account sign-out requires confirmation and invokes handler
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/delivery_dispatch_rules_test.dart: DeliveryDispatchRules new assignment requires a courier response before pickup
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/delivery_dispatch_rules_test.dart: DeliveryDispatchRules pickup and dropoff actions follow the guarded sequence
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/delivery_dispatch_rules_test.dart: DeliveryDispatchRules failed and rescheduled tasks wait for admin
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_recovery_rules_test.dart: ItemRecoveryRules keeps the A-D operational meanings explicit
+✅ /home/runner/work/Rohamaa/Rohamaa/app/test/item_recovery_rules_test.dart: ItemRecoveryRules only active processing states expose an action
+::endgroup::
+
+🎉 21 tests passed.

@@ -1,0 +1,17 @@
+{
+  "tested_sha": "83ae3db29c0a5301143aec3f315e33d17f41c12a",
+  "workflow_run": 34422822100,
+  "artifact_id": 10131952462,
+  "original_zip_sha256": "df10a1c715517063488409d88d24a536f6e8ba140a1cd3094a62e5fc174413df",
+  "files": {
+    "api.xml": "02fd719ee3316a974025ef9d9b68a25617787e670ec1407916e7adec07524d47",
+    "api.log": "ea3ac3880e7d476a99ae1c1356ebbebfcfa6050be69e95cbcb0bf6291bc3cb57",
+    "ui.log": "719b001e774808e690b75ec59b4396d7d3898a21ee1e37775667fa352cf517d6",
+    "android.log": "96a4e64a0717f03497535100da1d4a270ddc295bdc9f6c9db748c6949ecd86ef",
+    "analyze.log": "68009f69faea3d5ec242fd620a021faf0a4eb2ef0289c50a9ba287d7c53e4a73",
+    "unit.log": "07f1c81080dbaf58541a2f57b8f37fdf6aa48172fdca7bf09af7bfc1045ef11d",
+    "dependencies.json": "189dc0b1e00114893888efe6c20f326aad95685a9b7de7b7637666c662cde13e",
+    "flutter-version.json": "8bf682bc96c39585ccbb91b770a3f58f550900972f3af98c4df219a38d31a931"
+  },
+  "note": "Selected verbatim text evidence extracted from original artifact; device log/build output/lockfile omitted. No runtime credentials or APK included."
+}
