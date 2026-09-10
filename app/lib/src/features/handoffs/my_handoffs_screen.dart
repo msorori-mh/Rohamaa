@@ -40,7 +40,7 @@ class _OperationsListState extends State<_OperationsList> {
   late Future<List<OperationItem>> _future;
   OperationsRepository get _repo => OperationsRepository(Supabase.instance.client);
   @override void initState() { super.initState(); _reload(); }
-  void _reload() => _future = _repo.myOperations();
+  void _reload() { _future = _repo.myOperations(); }
 
   IconData _icon(String kind) => switch (kind) {
     'donation' => Icons.volunteer_activism_outlined,
@@ -107,7 +107,7 @@ class _NotificationsListState extends State<_NotificationsList> {
   late Future<List<UserNotificationItem>> _future;
   OperationsRepository get _repo => OperationsRepository(Supabase.instance.client);
   @override void initState() { super.initState(); _reload(); }
-  void _reload() => _future = _repo.myNotifications();
+  void _reload() { _future = _repo.myNotifications(); }
   Future<void> _open(UserNotificationItem item) async {
     if (!item.isRead) await _repo.markRead(item.id);
     if (!mounted) return;
@@ -164,7 +164,7 @@ class _HandoffsListState extends State<_HandoffsList> {
   late Future<List<UserHandoff>> _future;
   HandoffRepository get _repo => HandoffRepository(Supabase.instance.client);
   @override void initState() { super.initState(); _reload(); }
-  void _reload() => _future = _repo.myHandoffs();
+  void _reload() { _future = _repo.myHandoffs(); }
   bool _pinAvailable(UserHandoff row) => row.kind == 'pickup' ? ['assigned','heading_to_pickup','rescheduled'].contains(row.status) : ['picked_up','heading_to_recipient','rescheduled'].contains(row.status);
   Future<void> _showPin(UserHandoff row) async {
     try {

@@ -222,7 +222,7 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
 
   AdminRepository get _repo => AdminRepository(Supabase.instance.client);
 
-  void _load() => _future = _repo.pendingContributions();
+  void _load() { _future = _repo.pendingContributions(); }
 
   Future<void> _verify(Map<String, dynamic> contribution, bool verified) async {
     final id = '${contribution['id']}';

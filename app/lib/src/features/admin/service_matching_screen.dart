@@ -65,7 +65,7 @@ class _PendingOffersTabState extends State<_PendingOffersTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.pendingOffers();
+  void _reload() { _future = _repo.pendingOffers(); }
 
   Future<void> _decide(String id, bool approve) async {
     try {
@@ -210,7 +210,7 @@ class _OpenRequestsTabState extends State<_OpenRequestsTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.openRequests();
+  void _reload() { _future = _repo.openRequests(); }
 
   Future<void> _openCandidates(Map<String, dynamic> request) async {
     try {
@@ -334,7 +334,7 @@ class _AcceptedServicesTabState extends State<_AcceptedServicesTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.acceptedMatches();
+  void _reload() { _future = _repo.acceptedMatches(); }
 
   Future<void> _schedule(Map<String, dynamic> row) async {
     final now = DateTime.now();

@@ -201,7 +201,7 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
     _reload();
   }
 
-  void _reload() => _future = _repo.serviceHistory();
+  void _reload() { _future = _repo.serviceHistory(); }
 
   String _status(String value) {
     switch (value) {

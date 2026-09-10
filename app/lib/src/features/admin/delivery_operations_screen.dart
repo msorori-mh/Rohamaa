@@ -21,7 +21,7 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
     _reload();
   }
 
-  void _reload() => _future = AdminRepository(Supabase.instance.client).deliveryDispatchQueue();
+  void _reload() { _future = AdminRepository(Supabase.instance.client).deliveryDispatchQueue(); }
 
   Future<void> _reassign(String deliveryId) async {
     final changed = await Navigator.push<bool>(

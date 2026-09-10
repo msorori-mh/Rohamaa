@@ -41,7 +41,7 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
     if (channel != null) Supabase.instance.client.removeChannel(channel);
     super.dispose();
   }
-  void _reload() => _future = DeliveryRepository(Supabase.instance.client).myTasks();
+  void _reload() { _future = DeliveryRepository(Supabase.instance.client).myTasks(); }
   Future<void> _openTask(DeliveryTask task) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => CourierTaskScreen(task: task)));
     if (mounted) setState(_reload);
@@ -79,7 +79,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   bool _busy = false;
   DeliveryRepository get _repo => DeliveryRepository(Supabase.instance.client);
   @override void initState() { super.initState(); _reload(); }
-  void _reload() => _details = _repo.details(widget.task.id);
+  void _reload() { _details = _repo.details(widget.task.id); }
 
   Future<Position?> _position() async {
     try {

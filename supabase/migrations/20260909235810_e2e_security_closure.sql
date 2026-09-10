@@ -68,6 +68,7 @@ create policy admin_donations_recovery_update on public.donations for update to 
 create or replace function public.guard_donation_workflow_update() returns trigger
 language plpgsql security invoker set search_path=public as $$
 begin
+  if current_user='authenticated' then new.updated_at:=now(); end if;
   if current_user='authenticated' and new.status is distinct from old.status then
     if not public.is_admin() then raise exception 'workflow state is server controlled'; end if;
     if not exists(select 1 from public.inventory_items i where i.donation_id=old.id and
@@ -231,4 +232,3 @@ begin
   values(v_item.id,auth.uid(),'work_order_'||p_action,v_item.status,v_status,jsonb_build_object('work_order_id',p_work_order_id,'actual_cost_yer',p_actual_cost_yer));
   return v_status;
 end $$;
-

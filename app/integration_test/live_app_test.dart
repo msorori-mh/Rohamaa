@@ -42,7 +42,8 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(CircularProgressIndicator), findsNothing,
         reason: 'Loading did not finish against the live local backend');
-    expect(find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith('تعذر')), findsNothing,
+    // This label is an available reporting action, not a load-error message.
+    expect(find.byWidgetPredicate((w) => w is Text && (w.data ?? '').startsWith('تعذر') && w.data != 'تعذر إكمال المهمة'), findsNothing,
         reason: 'An error UI is not a successful screen load');
   }
 
@@ -60,6 +61,14 @@ void main() {
     final context = tester.element(find.byType(Scaffold).first);
     GoRouter.of(context).go(path);
     await settle(tester);
+  }
+
+  Future<void> refreshIfAvailable(WidgetTester tester) async {
+    final refresh = find.byType(RefreshIndicator);
+    if (refresh.evaluate().isNotEmpty) {
+      await tester.state<RefreshIndicatorState>(refresh.first).show();
+      await settle(tester);
+    }
   }
 
   const userRoutes = <String, String>{
@@ -82,6 +91,7 @@ void main() {
       await login(tester, donorEmail, donorPassword);
       await route(tester, entry.key);
       expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == entry.value), findsOneWidget);
+      await refreshIfAvailable(tester);
     });
   }
 
@@ -118,6 +128,7 @@ void main() {
       await tester.tap(tool);
       await settle(tester);
       expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == entry.value), findsOneWidget);
+      await refreshIfAvailable(tester);
     });
   }
   testWidgets('live courier tasks', (tester) async {

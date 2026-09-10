@@ -178,6 +178,9 @@ class EndToEnd(unittest.TestCase):
         row = self.create_item('donations', 'donor')
         self.denied(self.clients['donor'], 'PATCH', '/rest/v1/donations?id=eq.' + row['id'], {'status': 'delivered'})
         self.assertEqual(self.clients['donor'].ok('GET', '/rest/v1/donations?id=eq.' + row['id'])[0]['status'], 'submitted')
+        updated = self.clients['donor'].ok('PATCH', '/rest/v1/donations?id=eq.' + row['id'], {'description': 'TEST_ONLY updated', 'updated_at': '2000-01-01T00:00:00Z'})[0]
+        self.assertEqual(updated['description'], 'TEST_ONLY updated')
+        self.assertFalse(updated['updated_at'].startswith('2000-01-01'))
 
     def test_contribution_creation_and_idempotent_admin_verification(self):
         row = self.clients['donor'].ok('POST', '/rest/v1/contributions', {'public_code': self.code(), 'user_id': self.user('donor')['id'], 'amount_yer': 1000, 'payment_method': 'cash_to_courier'})[0]
