@@ -51,7 +51,7 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
     _reload();
   }
 
-  void _reload() => _future = _repo.myPartners();
+  void _reload() { _future = _repo.myPartners(); }
 
   String _statusLabel(String status) {
     switch (status) {

@@ -19,7 +19,7 @@ class _RecoveryInventoryScreenState extends State<RecoveryInventoryScreen> {
   late Future<_RecoveryData> _future;
   RecoveryRepository get _repo=>RecoveryRepository(Supabase.instance.client);
   @override void initState(){super.initState();_reload();}
-  void _reload()=>_future=_load();
+  void _reload() { _future=_load(); }
   Future<_RecoveryData> _load() async {
     final values=await Future.wait<dynamic>([_repo.summary(),_repo.warehouses(),_repo.intakeCandidates(),_repo.queue()]);
     return _RecoveryData(values[0] as RecoverySummary,values[1] as List<WarehouseItem>,values[2] as List<IntakeCandidate>,values[3] as List<InventoryQueueItem>);

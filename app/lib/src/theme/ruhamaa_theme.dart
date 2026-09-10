@@ -73,7 +73,7 @@ abstract final class RuhamaaTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(64, 52),
           backgroundColor: RuhamaaColors.primary,
           foregroundColor: Colors.white,
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -84,7 +84,7 @@ abstract final class RuhamaaTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
+          minimumSize: const Size(64, 50),
           foregroundColor: RuhamaaColors.primary,
           side: const BorderSide(color: RuhamaaColors.primary),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

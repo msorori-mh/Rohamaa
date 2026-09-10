@@ -22,7 +22,7 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
     _reload();
   }
 
-  void _reload() => _future = _repo.adminPartners();
+  void _reload() { _future = _repo.adminPartners(); }
 
   String _statusLabel(String value) {
     switch (value) {

@@ -41,7 +41,7 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
     if (channel != null) Supabase.instance.client.removeChannel(channel);
     super.dispose();
   }
-  void _reload() => _future = DeliveryRepository(Supabase.instance.client).myTasks();
+  void _reload() { _future = DeliveryRepository(Supabase.instance.client).myTasks(); }
   Future<void> _openTask(DeliveryTask task) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => CourierTaskScreen(task: task)));
     if (mounted) setState(_reload);
@@ -79,13 +79,19 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   bool _busy = false;
   DeliveryRepository get _repo => DeliveryRepository(Supabase.instance.client);
   @override void initState() { super.initState(); _reload(); }
-  void _reload() => _details = _repo.details(widget.task.id);
+  void _reload() { _details = _repo.details(widget.task.id); }
 
   Future<Position?> _position() async {
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
-    return Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
+      return await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Location is optional evidence; unavailable GPS must not block handoff.
+      return null;
+    }
   }
 
   Future<void> _accept(CourierTaskDetails details) => _run(
@@ -111,20 +117,19 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   }
 
   Future<void> _verifyPin(CourierTaskDetails details, {required bool pickup}) async {
-    final controller = TextEditingController();
+    var enteredPin = '';
     final pin = await showDialog<String>(context: context, builder: (context) => AlertDialog(
       title: Text(pickup ? 'رمز الاستلام' : 'رمز التسليم'),
-      content: TextField(controller: controller, keyboardType: TextInputType.number, maxLength: 4, decoration: const InputDecoration(labelText: 'أدخل الرمز المكوّن من 4 أرقام')),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('تحقق'))],
+      content: TextField(onChanged: (value) => enteredPin = value, keyboardType: TextInputType.number, maxLength: 4, decoration: const InputDecoration(labelText: 'أدخل الرمز المكوّن من 4 أرقام')),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, enteredPin.trim()), child: const Text('تحقق'))],
     ));
-    controller.dispose();
     if (pin == null || !RegExp(r'^\d{4}$').hasMatch(pin) || !mounted) return;
     setState(() => _busy = true);
     try {
       final position = await _position();
       final valid = await _repo.verifyPin(deliveryId: details.deliveryId, pin: pin, kind: pickup ? 'pickup' : 'delivery', latitude: position?.latitude, longitude: position?.longitude);
       if (!mounted) return;
-      if (!valid) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح. اطلب رمزًا جديدًا وحاول مرة أخرى.'))); return; }
+      if (!valid) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح أو انتهت صلاحيته أو محاولاته. اطلب رمزًا جديدًا.'))); return; }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pickup ? 'تم تأكيد الاستلام.' : 'تم تأكيد التسليم واكتملت المهمة.')));
       if (pickup) { setState(_reload); } else { Navigator.pop(context); }
     } catch (error) {
@@ -136,7 +141,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   Future<void> _startDropoff(CourierTaskDetails details) => _run(() => _repo.startDropoff(details.deliveryId), success: 'تم بدء مرحلة التسليم.');
 
   Future<void> _reportProblem(CourierTaskDetails details) async {
-    var party = 'other'; var reason = 'other'; final note = TextEditingController();
+    var party = 'other'; var reason = 'other'; var note = '';
     final confirmed = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
       title: const Text('تعذر إكمال المهمة'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -150,14 +155,13 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
           DropdownMenuItem(value: 'item_rejected', child: Text('لم يتم قبول التبرع')), DropdownMenuItem(value: 'vehicle_issue', child: Text('مشكلة في وسيلة النقل')),
           DropdownMenuItem(value: 'weather', child: Text('حالة الطقس')), DropdownMenuItem(value: 'other', child: Text('سبب آخر')),
         ], onChanged: (value) => setDialogState(() => reason = value ?? reason)), const SizedBox(height: 12),
-        TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظة مختصرة — اختيارية')),
+        TextField(onChanged: (value) => note = value, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظة مختصرة — اختيارية')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إرسال للفريق'))],
     )));
-    if (confirmed != true || !mounted) { note.dispose(); return; }
+    if (confirmed != true || !mounted) return;
     final position = await _position();
-    await _run(() => _repo.reportFailure(deliveryId: details.deliveryId, party: party, reasonCode: reason, note: note.text.trim().isEmpty ? null : note.text.trim(), latitude: position?.latitude, longitude: position?.longitude), success: 'وصل البلاغ إلى الفريق لإعادة التنسيق.', closeAfter: true);
-    note.dispose();
+    await _run(() => _repo.reportFailure(deliveryId: details.deliveryId, party: party, reasonCode: reason, note: note.trim().isEmpty ? null : note.trim(), latitude: position?.latitude, longitude: position?.longitude), success: 'وصل البلاغ إلى الفريق لإعادة التنسيق.', closeAfter: true);
   }
 
   Future<void> _run(Future<Object?> Function() action, {required String success, bool closeAfter = false}) async {

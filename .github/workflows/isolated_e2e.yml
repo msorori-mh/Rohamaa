@@ -1,0 +1,177 @@
+name: Isolated E2E and Security
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: isolated-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set disposable paths
+        run: |
+          echo "E2E_STATUS_FILE=$RUNNER_TEMP/supabase-status.json" >> "$GITHUB_ENV"
+          echo "E2E_RUNTIME_FILE=$RUNNER_TEMP/e2e-runtime.json" >> "$GITHUB_ENV"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - name: Start disposable Supabase from committed migrations
+        id: backend
+        run: |
+          set -euo pipefail
+          supabase --version
+          supabase init --help
+          supabase start --help
+          mkdir -p "$RUNNER_TEMP/ruhamaa-e2e"
+          cd "$RUNNER_TEMP/ruhamaa-e2e"
+          supabase init
+          mkdir -p supabase/migrations
+          # 0054 and 0056 are data-dependent verification migrations. Provision
+          # their required synthetic roles before applying them; omit none.
+          for migration in "$GITHUB_WORKSPACE"/supabase/migrations/*.sql; do
+            filename=${migration##*/}
+            version=${filename%%_*}
+            if [ "$version" -lt 54 ]; then cp "$migration" supabase/migrations/; fi
+          done
+          cp "$GITHUB_WORKSPACE/supabase/seed.sql" supabase/seed.sql
+          cp -R "$GITHUB_WORKSPACE/supabase/functions" supabase/functions
+          cat "$GITHUB_WORKSPACE/supabase/config.toml" >> supabase/config.toml
+          supabase start --exclude studio,imgproxy,postgres-meta,logflare,vector,supavisor
+          supabase status -o json > "$E2E_STATUS_FILE"
+          supabase functions serve > "$RUNNER_TEMP/e2e-edge-runtime.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/e2e-edge-runtime.pid"
+      - name: Provision isolated roles and fixtures
+        id: fixtures
+        run: python3 tests/e2e/run_api.py --bootstrap
+      - name: Apply remaining migrations and all post-deploy verifications
+        id: schema
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/ruhamaa-e2e"
+          cp "$GITHUB_WORKSPACE"/supabase/migrations/*.sql supabase/migrations/
+          supabase migration up --help
+          supabase migration up --local
+      - name: Run real Auth REST Storage and security tests
+        id: api
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p test-results
+          python3 tests/e2e/run_api.py 2>&1 | tee test-results/api.log
+      - uses: subosito/flutter-action@v2
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        with:
+          channel: stable
+          cache: true
+      - name: Install desktop test runtime
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
+      - name: Analyze and existing tests
+        id: unit
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: |
+          set -o pipefail
+          flutter pub get
+          flutter --version --machine > ../test-results/flutter-version.json
+          flutter analyze 2>&1 | tee ../test-results/analyze.log
+          flutter test test 2>&1 | tee ../test-results/unit.log
+      - name: Check resolved Dart dependencies against OSV
+        id: dependencies
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        continue-on-error: true
+        run: python3 tests/e2e/check_dependencies.py
+      - name: Run full app against real local backend on Linux
+        id: ui
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        continue-on-error: true
+        working-directory: app
+        run: |
+          set -o pipefail
+          flutter create --platforms=linux --project-name ruhamaa .
+          xvfb-run -a flutter test integration_test/live_app_test.dart -d linux --dart-define-from-file="$RUNNER_TEMP/ui-defines.json" 2>&1 | tee ../test-results/ui.log
+      - name: Save backend and Linux evidence before emulator
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-core-results
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/setup-java@v5
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Enable Android emulator acceleration
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run Android integration tests
+        id: android
+        timeout-minutes: 25
+        if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash tests/e2e/run_android.sh
+      - name: Upload test evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-e2e-results
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Destroy disposable backend and credentials
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/e2e-edge-runtime.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/e2e-edge-runtime.pid")" || true
+          fi
+          if [ -d "$RUNNER_TEMP/ruhamaa-e2e/supabase" ]; then
+            cd "$RUNNER_TEMP/ruhamaa-e2e"
+            supabase stop --no-backup
+          fi
+          rm -f "$E2E_STATUS_FILE" "$E2E_RUNTIME_FILE" "$RUNNER_TEMP/ui-defines.json"
+      - name: Enforce all executed gates
+        if: always()
+        env:
+          BACKEND: ${{ steps.backend.outcome }}
+          FIXTURES: ${{ steps.fixtures.outcome }}
+          SCHEMA: ${{ steps.schema.outcome }}
+          API: ${{ steps.api.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          DEPENDENCIES: ${{ steps.dependencies.outcome }}
+          UI: ${{ steps.ui.outcome }}
+          ANDROID: ${{ steps.android.outcome }}
+        run: |
+          test "$BACKEND" = success
+          test "$FIXTURES" = success
+          test "$SCHEMA" = success
+          test "$API" = success
+          test "$UNIT" = success
+          test "$DEPENDENCIES" = success
+          test "$UI" = success
+          test "$ANDROID" = success

@@ -22,7 +22,7 @@ class _ItemMatchingV2ScreenState extends State<ItemMatchingV2Screen> {
     _reload();
   }
 
-  void _reload() => _future = AdminRepository(Supabase.instance.client).donationsQueue();
+  void _reload() { _future = AdminRepository(Supabase.instance.client).donationsQueue(); }
 
   @override
   Widget build(BuildContext context) {
