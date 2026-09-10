@@ -82,10 +82,16 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   void _reload() => _details = _repo.details(widget.task.id);
 
   Future<Position?> _position() async {
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
-    return Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return null;
+      return await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high))
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Location is optional evidence; unavailable GPS must not block handoff.
+      return null;
+    }
   }
 
   Future<void> _accept(CourierTaskDetails details) => _run(
@@ -124,7 +130,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
       final position = await _position();
       final valid = await _repo.verifyPin(deliveryId: details.deliveryId, pin: pin, kind: pickup ? 'pickup' : 'delivery', latitude: position?.latitude, longitude: position?.longitude);
       if (!mounted) return;
-      if (!valid) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح. اطلب رمزًا جديدًا وحاول مرة أخرى.'))); return; }
+      if (!valid) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح أو انتهت صلاحيته أو محاولاته. اطلب رمزًا جديدًا.'))); return; }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pickup ? 'تم تأكيد الاستلام.' : 'تم تأكيد التسليم واكتملت المهمة.')));
       if (pickup) { setState(_reload); } else { Navigator.pop(context); }
     } catch (error) {

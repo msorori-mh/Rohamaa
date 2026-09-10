@@ -175,7 +175,7 @@ class _HandoffsListState extends State<_HandoffsList> {
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('أعطِ هذا الرمز لموصل رحماء فقط عند وصوله إليك.', textAlign: TextAlign.center), const SizedBox(height: 18),
           SelectableText(pin, style: Theme.of(context).textTheme.displayMedium?.copyWith(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, letterSpacing: 10)),
-          const SizedBox(height: 10), const Text('عند توليد رمز جديد يصبح السابق غير صالح.', textAlign: TextAlign.center, style: TextStyle(color: RuhamaaColors.textMuted)),
+          const SizedBox(height: 10), const Text('الرمز صالح لمدة 10 دقائق ولخمس محاولات. عند توليد رمز جديد يصبح السابق غير صالح.', textAlign: TextAlign.center, style: TextStyle(color: RuhamaaColors.textMuted)),
         ]), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
       ));
     } catch (_) {

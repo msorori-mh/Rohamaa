@@ -24,21 +24,6 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.117.0
-      - name: Generate forward migration with CLI
-        run: |
-          set -euo pipefail
-          supabase migration --help
-          supabase migration new --help
-          supabase migration new e2e_security_closure
-          candidate=$(find supabase/migrations -maxdepth 1 -name '*_e2e_security_closure.sql')
-          test -n "$candidate"
-          cp tests/e2e/security_closure.sql "$candidate"
-      - name: Preserve CLI generated migration
-        uses: actions/upload-artifact@v4
-        with:
-          name: security-migration-candidate
-          path: supabase/migrations/*_e2e_security_closure.sql
-          retention-days: 7
       - name: Start disposable Supabase from committed migrations
         id: backend
         run: |

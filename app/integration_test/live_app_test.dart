@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ruhamaa/src/app.dart';
 import 'package:ruhamaa/src/features/contributions/contribution_screen.dart';
+import 'package:ruhamaa/src/features/admin/delivery_assignment_screen.dart';
 
 // Real app, real localhost Auth/REST. External Google consent and hardware are
 // deliberately outside this desktop suite; no production URL can be supplied.
@@ -15,6 +16,8 @@ void main() {
   const anon = String.fromEnvironment('SUPABASE_ANON_KEY');
   const donorEmail = String.fromEnvironment('DONOR_EMAIL');
   const donorPassword = String.fromEnvironment('DONOR_PASSWORD');
+  const recipientEmail = String.fromEnvironment('RECIPIENT_EMAIL');
+  const recipientPassword = String.fromEnvironment('RECIPIENT_PASSWORD');
   const adminEmail = String.fromEnvironment('ADMIN_EMAIL');
   const adminPassword = String.fromEnvironment('ADMIN_PASSWORD');
   const courierEmail = String.fromEnvironment('COURIER_EMAIL');
@@ -148,5 +151,73 @@ void main() {
     final added = after.where((r) => !previous.contains(r['id'])).toList();
     expect(added, hasLength(1));
     expect(added.single['status'], 'pending');
+  });
+
+  testWidgets('admin assigns and courier completes handoff through UI', (tester) async {
+    final donor = SupabaseClient(url, anon);
+    final recipient = SupabaseClient(url, anon);
+    try {
+      await donor.auth.signInWithPassword(email: donorEmail, password: donorPassword);
+      await recipient.auth.signInWithPassword(email: recipientEmail, password: recipientPassword);
+      final donorAddress = await donor.from('addresses').select('id').eq('user_id', donor.auth.currentUser!.id).limit(1).single();
+      final recipientAddress = await recipient.from('addresses').select('id').eq('user_id', recipient.auth.currentUser!.id).limit(1).single();
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      final donation = await donor.from('donations').insert({'public_code': 'TEST_UI_D_$suffix', 'user_id': donor.auth.currentUser!.id, 'category': 'furniture', 'item_type': 'TEST_ONLY UI chair', 'address_id': donorAddress['id']}).select('id').single();
+      final need = await recipient.from('needs').insert({'public_code': 'TEST_UI_N_$suffix', 'user_id': recipient.auth.currentUser!.id, 'category': 'furniture', 'item_type': 'TEST_ONLY UI chair', 'address_id': recipientAddress['id']}).select('id').single();
+      await login(tester, adminEmail, adminPassword);
+      final admin = Supabase.instance.client;
+      final match = await admin.rpc('admin_approve_match', params: {'p_donation_id': donation['id'], 'p_need_id': need['id']});
+      await recipient.rpc('user_respond_match_offer', params: {'p_match_id': match, 'p_accept': true});
+      final context = tester.element(find.byType(Scaffold).first);
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DeliveryAssignmentScreen(matchId: match as String)));
+      await settle(tester);
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('TEST_ONLY courier').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('إرسال المهمة للموصل'));
+      await settle(tester);
+      expect(find.text('تم إنشاء مهمة التوصيل'), findsOneWidget);
+      final task = await admin.from('deliveries').select('id,public_code,status').eq('match_id', match).single();
+      await tester.tap(find.text('تم'));
+      await settle(tester);
+      await login(tester, courierEmail, courierPassword);
+      final card = find.text(task['public_code'] as String);
+      await tester.scrollUntilVisible(card, 300, scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      await tester.tap(card);
+      await settle(tester);
+      expect(find.text('777000001'), findsNothing);
+      await tester.tap(find.byKey(const Key('courier-accept-assignment')));
+      await settle(tester);
+      for (final kind in ['pickup', 'delivery']) {
+        if (kind == 'delivery') {
+          await tester.tap(find.text('بدء التوجه للتسليم'));
+          await settle(tester);
+        }
+        final owner = kind == 'pickup' ? donor : recipient;
+        final pin = await owner.rpc('user_issue_handoff_pin', params: {'p_delivery_id': task['id'], 'p_kind': kind});
+        final action = find.text(kind == 'pickup' ? 'تأكيد الاستلام بالرمز' : 'تأكيد التسليم بالرمز');
+        await tester.ensureVisible(action);
+        await tester.pumpAndSettle();
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), pin as String);
+        await tester.tap(find.text('تحقق'));
+        for (var wait = 0; wait < 120; wait++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          final finished = kind == 'pickup'
+              ? find.text('بدء التوجه للتسليم').evaluate().isNotEmpty
+              : find.byWidgetPredicate((w) => w.runtimeType.toString() == 'CourierTaskScreen').evaluate().isEmpty;
+          if (finished) break;
+        }
+        await settle(tester);
+      }
+      final finalNeed = await recipient.from('needs').select('status').eq('id', need['id']).single();
+      expect(finalNeed['status'], 'fulfilled');
+    } finally {
+      await donor.dispose();
+      await recipient.dispose();
+    }
   });
 }

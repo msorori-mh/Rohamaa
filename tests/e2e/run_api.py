@@ -4,6 +4,7 @@ Only fixture provisioning uses service_role. Tests exercise real authenticated J
 The CI job destroys the complete disposable stack in its always() cleanup step.
 """
 import argparse
+import base64
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -259,6 +260,15 @@ class EndToEnd(unittest.TestCase):
         task, _, _ = self.delivery('temporary', isolated_fixture=True)
         self.denied(self.clients['temporary'], 'POST', '/rest/v1/rpc/courier_respond_delivery', {'p_delivery_id': task, 'p_accept': True})
 
+    def test_inactive_courier_cannot_accept_delivery(self):
+        task, _, _ = self.delivery()
+        path = '/rest/v1/couriers?user_id=eq.' + self.user('courier')['id']
+        self.root.ok('PATCH', path, {'active': False})
+        try:
+            self.denied(self.clients['courier'], 'POST', '/rest/v1/rpc/courier_respond_delivery', {'p_delivery_id': task, 'p_accept': True})
+        finally:
+            self.root.ok('PATCH', path, {'active': True})
+
     def test_suspended_account_cannot_create_need(self):
         self.denied(self.clients['suspended'], 'POST', '/rest/v1/needs', {'public_code': self.code(), 'user_id': self.user('suspended')['id'], 'category': 'furniture', 'item_type': 'TEST_ONLY'})
 
@@ -292,6 +302,17 @@ class EndToEnd(unittest.TestCase):
         path = '/storage/v1/object/donation-images/' + self.user('donor')['id'] + '/' + uuid.uuid4().hex + '.html'
         code, _ = self.clients['donor'].request('POST', path, b'<p>TEST_ONLY</p>', 'text/html')
         self.assertIn(code, (400, 401, 403), f'Unexpected non-image acceptance: {code}')
+
+    def test_storage_accepts_owner_image(self):
+        png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jN1kAAAAASUVORK5CYII=')
+        path = '/storage/v1/object/donation-images/' + self.user('donor')['id'] + '/' + self.code() + '.png'
+        code, _ = self.clients['donor'].request('POST', path, png, 'image/png')
+        self.assertIn(code, (200, 201))
+
+    def test_storage_rejects_oversized_image(self):
+        path = '/storage/v1/object/donation-images/' + self.user('donor')['id'] + '/' + self.code() + '.png'
+        code, _ = self.clients['donor'].request('POST', path, b'0' * 5242881, 'image/png')
+        self.assertIn(code, (400, 413))
 
     def test_admin_queues_are_denied_to_regular_users(self):
         for rpc in ('admin_accepted_matches_queue', 'admin_delivery_dispatch_queue', 'admin_operations_overview'):
