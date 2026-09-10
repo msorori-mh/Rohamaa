@@ -66,9 +66,18 @@ void main() {
   Future<void> refreshIfAvailable(WidgetTester tester) async {
     final refresh = find.byType(RefreshIndicator);
     if (refresh.evaluate().isNotEmpty) {
-      final finished = tester.state<RefreshIndicatorState>(refresh.first).show();
-      await tester.pumpAndSettle();
+      var completed = false;
+      Object? refreshError;
+      final finished = tester.state<RefreshIndicatorState>(refresh.first).show().then(
+        (_) { completed = true; },
+        onError: (Object error) { refreshError = error; completed = true; },
+      );
+      for (var frame = 0; frame < 150 && !completed; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(completed, isTrue, reason: 'Refresh did not complete against localhost');
       await finished;
+      expect(refreshError, isNull);
       await settle(tester);
     }
   }
