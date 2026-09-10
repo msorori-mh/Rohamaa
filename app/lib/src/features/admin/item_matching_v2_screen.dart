@@ -32,7 +32,7 @@ class _ItemMatchingV2ScreenState extends State<ItemMatchingV2Screen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل العطاءات: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل العطاءات. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) return const Center(child: Text('لا توجد عطاءات بانتظار المطابقة.'));
           return RefreshIndicator(
@@ -114,7 +114,7 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل المرشحين: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المرشحين. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) return const Center(child: Text('لا يوجد تطابق مناسب حاليًا.'));
           return ListView.separated(

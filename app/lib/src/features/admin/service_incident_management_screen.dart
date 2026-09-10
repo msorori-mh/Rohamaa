@@ -78,7 +78,7 @@ class _ServiceIncidentManagementScreenState extends State<ServiceIncidentManagem
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل البلاغات: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل البلاغات. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) {
             return const Center(

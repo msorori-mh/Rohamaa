@@ -26,14 +26,14 @@ class ServiceHomeSection extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         const Text(
-          'قد تحتاج شيئًا اليوم، وفي الوقت نفسه تستطيع تقديم جزء من وقتك أو مهارتك لشخص آخر.',
+          'اطلب خدمة تحتاجها، أو تبرّع بوقتك ومهارتك.',
           style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
         ),
         const SizedBox(height: 12),
         _ServiceActionCard(
           icon: Icons.handyman_outlined,
-          title: 'أقدّم وقتي أو مهارتي كفرد',
-          subtitle: 'سباكة، كهرباء، خياطة، صيانة أو مهارة أخرى من وقتك الشخصي.',
+          title: 'تبرّع بوقتك أو مهارتك',
+          subtitle: 'قدّم خدمة تستطيع تنفيذها مجانًا.',
           background: RuhamaaColors.softGreen,
           accent: RuhamaaColors.primary,
           onTap: () => context.push('/offer-service'),
@@ -41,8 +41,8 @@ class ServiceHomeSection extends StatelessWidget {
         const SizedBox(height: 10),
         _ServiceActionCard(
           icon: Icons.storefront_outlined,
-          title: 'شركاء رحماء',
-          subtitle: 'للمحلات والورش والصالونات والجهات التي تريد تقديم خدمات مجانية بعد التحقق.',
+          title: 'شارك من خلال نشاطك',
+          subtitle: 'للمحلات والورش والجهات التي تقدم خدمات مجانية.',
           background: RuhamaaColors.warmSurface,
           accent: RuhamaaColors.primary,
           onTap: () => context.push('/partners'),
@@ -50,8 +50,8 @@ class ServiceHomeSection extends StatelessWidget {
         const SizedBox(height: 10),
         _ServiceActionCard(
           icon: Icons.support_agent_rounded,
-          title: 'أحتاج خدمة',
-          subtitle: 'سجّل احتياجك بخصوصية، وسيبحث رحماء عن فرد أو شريك موثّق مناسب.',
+          title: 'اطلب خدمة',
+          subtitle: 'أخبرنا بالخدمة وسنبحث عن شخص مناسب.',
           background: RuhamaaColors.warmGoldSoft,
           accent: RuhamaaColors.warmGold,
           onTap: () => context.push('/request-service'),
@@ -71,7 +71,7 @@ class ServiceHomeSection extends StatelessWidget {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'العطاء والاحتياج مستقلان: لا تحتاج أن تقدّم خدمة حتى تحصل على مساعدة، وتقديمك للخدمة أو شراكتك مع رحماء لا يرفعان أولوية طلباتك.',
+                  'طلب المساعدة لا يتطلب أن تتبرّع بشيء أو تقدم خدمة.',
                   style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45, fontSize: 12),
                 ),
               ),

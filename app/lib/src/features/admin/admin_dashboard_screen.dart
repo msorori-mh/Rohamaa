@@ -32,7 +32,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         future: _stats,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل لوحة الإدارة: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل لوحة الإدارة. حاول مجددًا.'));
           final s = snapshot.data!;
           return RefreshIndicator(
             onRefresh: () async => setState(_reload),
@@ -218,7 +218,51 @@ class ContributionReviewScreen extends StatefulWidget {
 
 class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
   late Future<List<Map<String, dynamic>>> _future;
-  void _load() => _future = AdminRepository(Supabase.instance.client).pendingContributions();
+  final Set<String> _busyIds = <String>{};
+
+  AdminRepository get _repo => AdminRepository(Supabase.instance.client);
+
+  void _load() => _future = _repo.pendingContributions();
+
+  Future<void> _verify(Map<String, dynamic> contribution, bool verified) async {
+    final id = '${contribution['id']}';
+    if (_busyIds.contains(id)) return;
+
+    if (!verified) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('تأكيد عدم الاستلام'),
+          content: const Text('هل تأكدت أن المبلغ لم يُستلم؟ سيُرفض سجل المساهمة.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('تأكيد الرفض')),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    setState(() => _busyIds.add(id));
+    try {
+      await _repo.verifyContribution(id, verified);
+      if (!mounted) return;
+      setState(() {
+        _busyIds.remove(id);
+        _load();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(verified ? 'تم اعتماد المساهمة.' : 'تم تسجيل عدم استلام المبلغ.')),
+      );
+    } catch (error) {
+      debugPrint('Contribution verification failed: $error');
+      if (!mounted) return;
+      setState(() => _busyIds.remove(id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر تحديث المساهمة. حدّث القائمة ثم حاول مجددًا.')),
+      );
+    }
+  }
 
   String _details(Map<String, dynamic> contribution) {
     final method = contribution['payment_method'];
@@ -243,6 +287,15 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
           future: _future,
           builder: (context, s) {
             if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+            if (s.hasError) {
+              return Center(
+                child: FilledButton.icon(
+                  onPressed: () => setState(_load),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('إعادة تحميل المساهمات'),
+                ),
+              );
+            }
             final rows = s.data ?? [];
             if (rows.isEmpty) return const Center(child: Text('لا توجد مساهمات بانتظار التحقق'));
             return ListView.builder(
@@ -250,16 +303,33 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
               itemCount: rows.length,
               itemBuilder: (context, i) {
                 final c = rows[i];
+                final id = '${c['id']}';
+                final busy = _busyIds.contains(id);
                 return Card(
                   child: ListTile(
                     title: Text('${c['amount_yer']} ريال'),
                     subtitle: Text(_details(c)),
-                    trailing: Wrap(
-                      children: [
-                        IconButton(tooltip: 'تم استلام المبلغ', icon: const Icon(Icons.check), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, true); setState(_load);}),
-                        IconButton(tooltip: 'لم يتم الاستلام', icon: const Icon(Icons.close), onPressed: () async {await AdminRepository(Supabase.instance.client).verifyContribution(c['id'] as String, false); setState(_load);}),
-                      ],
-                    ),
+                    trailing: busy
+                        ? const SizedBox.square(
+                            dimension: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Wrap(
+                            children: [
+                              IconButton(
+                                key: Key('verify-contribution-$id'),
+                                tooltip: 'اعتماد المبلغ المستلم',
+                                icon: const Icon(Icons.check_circle_outline_rounded),
+                                onPressed: () => _verify(c, true),
+                              ),
+                              IconButton(
+                                key: Key('reject-contribution-$id'),
+                                tooltip: 'رفض: لم يُستلم المبلغ',
+                                icon: const Icon(Icons.cancel_outlined),
+                                onPressed: () => _verify(c, false),
+                              ),
+                            ],
+                          ),
                   ),
                 );
               },

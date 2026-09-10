@@ -55,7 +55,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
     }
     if (_details.text.trim().length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أضف تفاصيل مختصرة تساعد رحماء على المطابقة.')),
+        const SnackBar(content: Text('أضف تفاصيل مختصرة تساعدنا في البحث.')),
       );
       return false;
     }
@@ -91,7 +91,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل طلب الخدمة'),
           content: const Text(
-            'سيبحث رحماء عن شخص أو جهة موثوقة لديها وقت أو مهارة مناسبة. لن تتصفح مقدمي الخدمات، ولن يُكشف طلبك للعامة. الحصول على الخدمة لا يتطلب منك تقديم خدمة مقابلة.',
+            'سنراجع طلبك ونبحث عن شخص أو جهة مناسبة. لن يظهر طلبك للعامة.',
           ),
           actions: [
             FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم')),
@@ -99,10 +99,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         ),
       );
       if (mounted) Navigator.pop(context);
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذر تسجيل طلب الخدمة: $e')),
+          const SnackBar(content: Text('تعذر إرسال طلب الخدمة. تحقق من اتصالك وحاول مرة أخرى.')),
         );
       }
     } finally {
@@ -113,7 +113,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('أحتاج خدمة')),
+      appBar: AppBar(title: const Text('اطلب خدمة')),
       body: Column(
         children: [
           Padding(
@@ -156,7 +156,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
                         _saving
                             ? 'جارٍ الحفظ...'
                             : _step == 2
-                                ? 'سجّل احتياجي للخدمة'
+                                ? 'إرسال طلب الخدمة'
                                 : 'التالي',
                       ),
                     ),
@@ -176,7 +176,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
       children: [
         const _InfoBox(
           icon: Icons.lock_outline_rounded,
-          text: 'سجّل الخدمة التي تحتاجها فقط. لا توجد قائمة سباكين أو كهربائيين أو محلات للتصفح؛ رحماء يراجع ويطابق الاحتياج بخصوصية.',
+          text: 'اختر الخدمة التي تحتاجها، وسنبحث عن شخص مناسب بخصوصية.',
           warm: false,
         ),
         const SizedBox(height: 18),
@@ -241,7 +241,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        const _SectionTitle('تفاصيل تساعد في العثور على الشخص المناسب'),
+        const _SectionTitle('صف الخدمة المطلوبة'),
         const SizedBox(height: 10),
         TextField(
           controller: _title,
@@ -321,13 +321,13 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         const SizedBox(height: 12),
         const _InfoBox(
           icon: Icons.favorite_outline_rounded,
-          text: 'طلبك للخدمة مستقل تمامًا عن أي شيء تقدمه للآخرين. لا يلزم أن تكون قد تبرعت أو قدمت ساعات حتى تحصل على المساعدة.',
+          text: 'لا يشترط أن تتبرع أو تقدم خدمة حتى تطلب المساعدة.',
           warm: true,
         ),
         const SizedBox(height: 12),
         const _InfoBox(
           icon: Icons.privacy_tip_outlined,
-          text: 'إذا كانت الخدمة تتطلب حضور مقدمها إلى موقعك، يحصل فقط على المعلومات الضرورية لتنفيذ الموعد بعد اعتماد المطابقة، ولا يرى سجل احتياجاتك الأخرى.',
+          text: 'بعد موافقة الطرفين، نشارك المعلومات الضرورية لتنفيذ الموعد فقط.',
           warm: false,
         ),
       ],
