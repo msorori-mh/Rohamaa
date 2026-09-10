@@ -117,13 +117,12 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   }
 
   Future<void> _verifyPin(CourierTaskDetails details, {required bool pickup}) async {
-    final controller = TextEditingController();
+    var enteredPin = '';
     final pin = await showDialog<String>(context: context, builder: (context) => AlertDialog(
       title: Text(pickup ? 'رمز الاستلام' : 'رمز التسليم'),
-      content: TextField(controller: controller, keyboardType: TextInputType.number, maxLength: 4, decoration: const InputDecoration(labelText: 'أدخل الرمز المكوّن من 4 أرقام')),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('تحقق'))],
+      content: TextField(onChanged: (value) => enteredPin = value, keyboardType: TextInputType.number, maxLength: 4, decoration: const InputDecoration(labelText: 'أدخل الرمز المكوّن من 4 أرقام')),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, enteredPin.trim()), child: const Text('تحقق'))],
     ));
-    controller.dispose();
     if (pin == null || !RegExp(r'^\d{4}$').hasMatch(pin) || !mounted) return;
     setState(() => _busy = true);
     try {
@@ -142,7 +141,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   Future<void> _startDropoff(CourierTaskDetails details) => _run(() => _repo.startDropoff(details.deliveryId), success: 'تم بدء مرحلة التسليم.');
 
   Future<void> _reportProblem(CourierTaskDetails details) async {
-    var party = 'other'; var reason = 'other'; final note = TextEditingController();
+    var party = 'other'; var reason = 'other'; var note = '';
     final confirmed = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
       title: const Text('تعذر إكمال المهمة'),
       content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -156,14 +155,13 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
           DropdownMenuItem(value: 'item_rejected', child: Text('لم يتم قبول التبرع')), DropdownMenuItem(value: 'vehicle_issue', child: Text('مشكلة في وسيلة النقل')),
           DropdownMenuItem(value: 'weather', child: Text('حالة الطقس')), DropdownMenuItem(value: 'other', child: Text('سبب آخر')),
         ], onChanged: (value) => setDialogState(() => reason = value ?? reason)), const SizedBox(height: 12),
-        TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظة مختصرة — اختيارية')),
+        TextField(onChanged: (value) => note = value, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظة مختصرة — اختيارية')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إرسال للفريق'))],
     )));
-    if (confirmed != true || !mounted) { note.dispose(); return; }
+    if (confirmed != true || !mounted) return;
     final position = await _position();
-    await _run(() => _repo.reportFailure(deliveryId: details.deliveryId, party: party, reasonCode: reason, note: note.text.trim().isEmpty ? null : note.text.trim(), latitude: position?.latitude, longitude: position?.longitude), success: 'وصل البلاغ إلى الفريق لإعادة التنسيق.', closeAfter: true);
-    note.dispose();
+    await _run(() => _repo.reportFailure(deliveryId: details.deliveryId, party: party, reasonCode: reason, note: note.trim().isEmpty ? null : note.trim(), latitude: position?.latitude, longitude: position?.longitude), success: 'وصل البلاغ إلى الفريق لإعادة التنسيق.', closeAfter: true);
   }
 
   Future<void> _run(Future<Object?> Function() action, {required String success, bool closeAfter = false}) async {
