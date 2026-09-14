@@ -24,6 +24,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -36,3 +37,13 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify public domain matches this deployment
+        run: python3 tests/site/check_deployed.py
+      - name: Save public verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-deployment-verification
+          path: deployment-results.json
+          if-no-files-found: warn
+          retention-days: 30
