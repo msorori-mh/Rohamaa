@@ -26,6 +26,10 @@ const fs = require('node:fs');
     }
     await page.setViewportSize({width:390,height:844});
     await page.goto('http://127.0.0.1:8765/');
+    for (const link of await page.locator('.way-card > a').all()) {
+      assert.equal(await link.getAttribute('href'),'#journey');
+      await link.click(); assert.equal(new URL(page.url()).hash,'#journey');
+    }
     const menu=page.getByRole('button',{name:'القائمة'});
     assert.equal(await page.locator('#main-nav').isVisible(),false);
     await menu.click(); assert.equal(await menu.getAttribute('aria-expanded'),'true'); assert(await page.locator('#main-nav').isVisible());
