@@ -1,0 +1,42 @@
+name: Website checks
+on:
+  pull_request:
+    paths: ['site/**', 'tests/site/**', '.github/workflows/website_checks.yml']
+  push:
+    branches: [main]
+    paths: ['site/**', 'tests/site/**', '.github/workflows/website_checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Validate static pages
+        run: python3 tests/site/check_static.py
+      - name: Install browser test tool
+        run: |
+          npm install --no-save --package-lock=false playwright@1.62.1
+          npx playwright install --with-deps chromium
+      - name: Check responsive pages and interactions
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory site > /tmp/ruhamaa-site.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8765/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/site/browser.cjs
+      - name: Save screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-review
+          path: site-results/
+          retention-days: 14
