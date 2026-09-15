@@ -25,26 +25,16 @@ jobs:
       - uses: actions/checkout@v5
       - name: Check branding and compatibility boundaries
         run: python3 tools/branding/check_identity.py
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.117.0
-      - name: Generate forward migration using CLI
-        run: |
-          mkdir -p "$RUNNER_TEMP/ataa-identity"
-          cd "$RUNNER_TEMP/ataa-identity"
-          supabase init
-          supabase migration new ataa_display_identity
-          cp "$GITHUB_WORKSPACE/tools/branding/ataa_notifications.sql" supabase/migrations/*_ataa_display_identity.sql
       - name: Verify migration twice on disposable PostgreSQL
         run: |
           psql postgresql://postgres:isolated-brand-test@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 \
             -f tools/branding/notification_fixture.sql \
-            -f "$RUNNER_TEMP"/ataa-identity/supabase/migrations/*_ataa_display_identity.sql \
-            -f "$RUNNER_TEMP"/ataa-identity/supabase/migrations/*_ataa_display_identity.sql \
+            -f supabase/migrations/20260915151416_ataa_display_identity.sql \
+            -f supabase/migrations/20260915151416_ataa_display_identity.sql \
             -f tools/branding/verify_notification_migration.sql
-      - name: Save generated migration
+      - name: Save tested migration
         uses: actions/upload-artifact@v4
         with:
           name: ataa-identity-migration
-          path: ${{ runner.temp }}/ataa-identity/supabase/migrations/*_ataa_display_identity.sql
+          path: supabase/migrations/20260915151416_ataa_display_identity.sql
           retention-days: 14
