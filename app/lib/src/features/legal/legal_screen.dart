@@ -70,7 +70,7 @@ class _LegalScreenState extends State<LegalScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'رحماء يقلل كشف البيانات إلى الحد اللازم للمطابقة والتشغيل. في عمليات الأشياء لا يعرف المتبرع والمستفيد هوية بعضهما، وفي الخدمات الحضورية لا تُشارك معلومات التنفيذ الضرورية إلا بعد الموافقة والتنسيق.',
+            'عطاء يقلل كشف البيانات إلى الحد اللازم للمطابقة والتشغيل. في عمليات الأشياء لا يعرف المتبرع والمستفيد هوية بعضهما، وفي الخدمات الحضورية لا تُشارك معلومات التنفيذ الضرورية إلا بعد الموافقة والتنسيق.',
           ),
           const SizedBox(height: 18),
           Card(
@@ -87,7 +87,7 @@ class _LegalScreenState extends State<LegalScreen> {
                 ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('شروط الاستخدام'),
-                  subtitle: const Text('قواعد الأشياء والمطابقة والتوصيل والوقت والمهارات وشركاء رحماء.'),
+                  subtitle: const Text('قواعد الأشياء والمطابقة والتوصيل والوقت والمهارات وشركاء عطاء.'),
                   trailing: const Icon(Icons.open_in_new),
                   onTap: () => _open(_terms),
                 ),

@@ -183,7 +183,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.warmGoldSoft,
           iconColor: RuhamaaColors.warmGold,
-          text: 'اختر ما تحتاجه بدقة. أنت لا تتصفح تبرعات الناس؛ رحماء يستخدم هذه التفاصيل للبحث عن الشيء الأنسب لك بخصوصية.',
+          text: 'اختر ما تحتاجه بدقة. أنت لا تتصفح تبرعات الناس؛ عطاء يستخدم هذه التفاصيل للبحث عن الشيء الأنسب لك بخصوصية.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -266,9 +266,9 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           controller: _privateDetails,
           maxLines: 4,
           decoration: const InputDecoration(
-            labelText: 'تفاصيل خاصة تساعد رحماء',
+            labelText: 'تفاصيل خاصة تساعد عطاء',
             hintText: 'أي معلومات مهمة لفهم المطلوب أو شروط الملاءمة',
-            helperText: 'هذه التفاصيل خاصة بفريق رحماء ولا تظهر للمتبرعين كما كتبتها.',
+            helperText: 'هذه التفاصيل خاصة بفريق عطاء ولا تظهر للمتبرعين كما كتبتها.',
           ),
           validator: (value) => value == null || value.trim().length < 8 ? 'أضف تفاصيل مختصرة تساعدنا في المطابقة' : null,
         ),
@@ -277,7 +277,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.lock_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'إذا قرر فريق رحماء عرض احتياجك لتحفيز العطاء، سيكتب بطاقة محايدة منفصلة لا تحتوي اسمك أو رقمك أو عنوانك أو قصتك الخاصة.',
+          text: 'إذا قرر فريق عطاء عرض احتياجك لتحفيز العطاء، سيكتب بطاقة محايدة منفصلة لا تحتوي اسمك أو رقمك أو عنوانك أو قصتك الخاصة.',
         ),
         const SizedBox(height: 26),
         Row(

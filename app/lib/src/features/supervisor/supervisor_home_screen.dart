@@ -11,7 +11,7 @@ class SupervisorHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إشراف رحماء'),
+        title: const Text('إشراف عطاء'),
         actions: [
           IconButton(
             tooltip: 'تغيير كلمة المرور',

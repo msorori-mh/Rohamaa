@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
                     const _SectionTitle(title: 'خدماتك السريعة', subtitle: 'كل ما تحتاجه في مكان واضح'),
                     const SizedBox(height: 12),
                     Row(children: [
-                      Expanded(child: _QuickActionCard(icon: Icons.fact_check_outlined,title: 'احتياجات موثوقة',subtitle: 'راجعها فريق رحماء',accent: RuhamaaColors.primaryBright,tint: const Color(0xFFE8F8F4),onTap:()=>context.push('/verified-needs'))),
+                      Expanded(child: _QuickActionCard(icon: Icons.fact_check_outlined,title: 'احتياجات موثوقة',subtitle: 'راجعها فريق عطاء',accent: RuhamaaColors.primaryBright,tint: const Color(0xFFE8F8F4),onTap:()=>context.push('/verified-needs'))),
                       const SizedBox(width: 12),
                       Expanded(child: _QuickActionCard(icon: Icons.local_shipping_outlined,title: 'عملياتي',subtitle: 'تابع كل خطوة',accent: RuhamaaColors.rose,tint: const Color(0xFFFFEDF3),onTap:()=>context.go('/handoffs'))),
                     ]),
@@ -71,7 +71,7 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     FutureBuilder<String>(future:AdminRepository(Supabase.instance.client).myRole(),builder:(context,snapshot){final role=snapshot.data;if(role=='admin')return _OperationsCard(icon:Icons.admin_panel_settings_outlined,title:'لوحة التشغيل',subtitle:'المطابقة والمخزون والمخاطر ومتابعة العمليات.',onTap:()=>context.push('/admin'));if(role=='courier')return _OperationsCard(icon:Icons.delivery_dining_outlined,title:'مهام التوصيل',subtitle:'الاستلام والتسليم المخصص لك فقط.',onTap:()=>context.push('/courier'));return const SizedBox.shrink();}),
                     const SizedBox(height: 26),
-                    const Text('رحماء — مأرب • النسخة التجريبية',textAlign:TextAlign.center,style:TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w500)),
+                    const Text('عطاء — مأرب • النسخة التجريبية',textAlign:TextAlign.center,style:TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w500)),
                   ],
                 ),
               ),
@@ -109,7 +109,7 @@ class _HomeHero extends StatelessWidget {
         const Spacer(),
         const Text('مساء الخير ✨',style:TextStyle(color:Color(0xFFDDF6F1),fontSize:16,fontWeight:FontWeight.w500)),
         const SizedBox(height:4),
-        Text('أهلًا بك في رحماء',style:Theme.of(context).textTheme.headlineMedium?.copyWith(color:Colors.white,fontWeight:FontWeight.w800,height:1.15)),
+        Text('أهلًا بك في عطاء',style:Theme.of(context).textTheme.headlineMedium?.copyWith(color:Colors.white,fontWeight:FontWeight.w800,height:1.15)),
         const SizedBox(height:7),
         const Text('نحفظ النعمة ونصنع الأثر.',style:TextStyle(color:Color(0xFFD8EEEB),fontSize:16,fontWeight:FontWeight.w500)),
       ]),
@@ -174,7 +174,7 @@ class _HomeActivityPulseState extends State<_HomeActivityPulse> {
       return _PulseData(
         icon: Icons.auto_awesome_rounded,
         title: 'لديك تطابق ينتظر ردك',
-        subtitle: 'وجد رحماء شيئًا مناسبًا لاحتياجك. راجعه الآن حتى نكمل الترتيب.',
+        subtitle: 'وجد عطاء شيئًا مناسبًا لاحتياجك. راجعه الآن حتى نكمل الترتيب.',
         route: '/offers',
         warm: true,
       );

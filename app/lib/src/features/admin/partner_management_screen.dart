@@ -68,7 +68,7 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
       await _repo.setPartnerStatus('${row['id']}', status, note: note);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(status == 'verified' ? 'تم اعتماد شريك رحماء.' : 'تم تحديث حالة الشريك.')),
+        SnackBar(content: Text(status == 'verified' ? 'تم اعتماد شريك عطاء.' : 'تم تحديث حالة الشريك.')),
       );
       setState(_reload);
     } catch (e) {
@@ -79,7 +79,7 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('شركاء رحماء')),
+      appBar: AppBar(title: const Text('شركاء عطاء')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {

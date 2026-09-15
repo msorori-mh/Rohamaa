@@ -3,10 +3,10 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <application
-        android:label="رحماء"
+        android:label="عطاء"
         android:name="${applicationName}"
-        android:icon="@drawable/ruhamaa_launcher"
-        android:roundIcon="@drawable/ruhamaa_launcher">
+        android:icon="@drawable/ataa_launcher"
+        android:roundIcon="@drawable/ataa_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

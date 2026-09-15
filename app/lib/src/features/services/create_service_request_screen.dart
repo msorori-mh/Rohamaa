@@ -55,7 +55,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
     }
     if (_details.text.trim().length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أضف تفاصيل مختصرة تساعد رحماء على المطابقة.')),
+        const SnackBar(content: Text('أضف تفاصيل مختصرة تساعد عطاء على المطابقة.')),
       );
       return false;
     }
@@ -91,7 +91,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل طلب الخدمة'),
           content: const Text(
-            'سيبحث رحماء عن شخص أو جهة موثوقة لديها وقت أو مهارة مناسبة. لن تتصفح مقدمي الخدمات، ولن يُكشف طلبك للعامة. الحصول على الخدمة لا يتطلب منك تقديم خدمة مقابلة.',
+            'سيبحث عطاء عن شخص أو جهة موثوقة لديها وقت أو مهارة مناسبة. لن تتصفح مقدمي الخدمات، ولن يُكشف طلبك للعامة. الحصول على الخدمة لا يتطلب منك تقديم خدمة مقابلة.',
           ),
           actions: [
             FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم')),
@@ -176,7 +176,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
       children: [
         const _InfoBox(
           icon: Icons.lock_outline_rounded,
-          text: 'سجّل الخدمة التي تحتاجها فقط. لا توجد قائمة سباكين أو كهربائيين أو محلات للتصفح؛ رحماء يراجع ويطابق الاحتياج بخصوصية.',
+          text: 'سجّل الخدمة التي تحتاجها فقط. لا توجد قائمة سباكين أو كهربائيين أو محلات للتصفح؛ عطاء يراجع ويطابق الاحتياج بخصوصية.',
           warm: false,
         ),
         const SizedBox(height: 18),
@@ -298,7 +298,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
             value: _materialsAvailable,
             onChanged: (value) => setState(() => _materialsAvailable = value),
             title: const Text('لدي المواد أو القطع المطلوبة', style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: const Text('إن لم تكن متأكدًا اترك الخيار مغلقًا، ويحدد فريق رحماء ذلك لاحقًا.'),
+            subtitle: const Text('إن لم تكن متأكدًا اترك الخيار مغلقًا، ويحدد فريق عطاء ذلك لاحقًا.'),
           ),
         ),
       ],

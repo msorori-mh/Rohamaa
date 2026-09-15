@@ -1,3 +1,5 @@
+> **تحديث الهوية:** اعتمد اسم «عطاء» (Ataa). هذه وثيقة تاريخية؛ راجع [الهوية الحالية وخطوات التوافق](ATAA_IDENTITY.md).
+
 # Ruhamaa — Current implementation status
 
 _Last reviewed against the live Marib pilot project: 7 September 2026._

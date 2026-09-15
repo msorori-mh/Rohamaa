@@ -1,11 +1,11 @@
-# Ruhamaa Visual Experience V2 — Approved Direction
+# Ataa Visual Experience V2 — Approved Direction
 
 Status: implemented baseline; Visual System V3 refines it with the approved high-depth card direction.
 
 ## Visual System V3
 
 - Bundled `Tajawal` Arabic family (400/500/700/800/900), with no runtime font download.
-- Deep Ruhamaa green hero gradient; the external reference's blue is not copied.
+- Deep Ataa green hero gradient; the external reference's blue is not copied.
 - White elevated cards with 28–30px corners and soft, low-opacity shadows.
 - Colored circular or rounded-square icon badges that identify action families.
 - Active-operation card with a clear status label, action chip and visual progress line.
@@ -22,7 +22,7 @@ Status: implemented baseline; Visual System V3 refines it with the approved high
 
 ## Experience principles
 
-Ruhamaa should feel:
+Ataa should feel:
 
 - warm, not sentimental
 - trustworthy, not bureaucratic
@@ -48,13 +48,13 @@ Shown on first app launch and persisted locally after completion or skip.
 
 Four swipeable pages:
 
-1. **Welcome to Ruhamaa**
+1. **Welcome to Ataa**
    - purpose of the service
    - donation-to-need matching with dignity
 2. **How it works**
    - add a donated item or register a need
-   - Ruhamaa reviews/matches privately
-   - Ruhamaa courier handles pickup and delivery
+   - Ataa reviews/matches privately
+   - Ataa courier handles pickup and delivery
 3. **Privacy first**
    - donor and beneficiary do not learn each other's identity
    - operations/courier see only what is needed to perform the task
@@ -62,7 +62,7 @@ Four swipeable pages:
    - optional contribution amounts: 1000 / 2000 / 3000 / 4000 / 5000 YER
    - these are optional operating contributions, not a fixed service price
    - no in-app payment or transfer
-   - cash is handed to the Ruhamaa courier
+   - cash is handed to the Ataa courier
    - inability to contribute does not prevent service or reduce need priority
 
 ## Community home
@@ -115,13 +115,13 @@ Use an Arabic visual journey:
 4. في الطريق للتسليم
 5. تم التسليم
 
-PIN copy must refer to **موصل رحماء**.
+PIN copy must refer to **موصل عطاء**.
 
 ## Contribution screen
 
 - lead with: **المساهمة اختيارية تمامًا**
 - no payment inside the app
-- cash only to the Ruhamaa courier at the relevant physical handoff
+- cash only to the Ataa courier at the relevant physical handoff
 - no contribution-based priority
 - keep amount selection visually simple
 

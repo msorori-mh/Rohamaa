@@ -1,4 +1,4 @@
-# Ruhamaa Flutter app
+# Ataa Flutter app
 
 ## Requirements
 

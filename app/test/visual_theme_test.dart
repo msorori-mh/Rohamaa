@@ -21,7 +21,7 @@ void main() {
     expect(theme.indicatorColor, Colors.transparent);
   });
 
-  test('hero and page gradients retain the Ruhamaa green identity', () {
+  test('hero and page gradients retain the Ataa green identity', () {
     expect(RuhamaaColors.heroGradient.colors.length, 3);
     expect(RuhamaaColors.pageGradient.colors.length, 3);
     expect(RuhamaaColors.heroGradient.colors.last, const Color(0xFF174D5A));

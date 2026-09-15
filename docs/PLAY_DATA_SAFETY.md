@@ -1,11 +1,11 @@
-# Google Play Data Safety source of truth — Ruhamaa
+# Google Play Data Safety source of truth — Ataa
 
 This file is an internal release checklist for completing Google Play's Data Safety form. It describes the current app behavior; the Play Console answers must still be checked against the exact wording shown by Google at submission time.
 
 ## Core declarations
 
-- Ruhamaa does **not sell personal data**.
-- Ruhamaa does **not use personal data for targeted advertising**.
+- Ataa does **not sell personal data**.
+- Ataa does **not use personal data for targeted advertising**.
 - The app does not request Gmail, Google Drive, contacts, calendar, microphone, SMS, call log, or health-data access.
 - Google is used for basic sign-in; Supabase provides authentication, database, storage and backend services.
 - Data is transmitted over HTTPS.
@@ -14,7 +14,7 @@ This file is an internal release checklist for completing Google Play's Data Saf
 
 ## Data handled by the current app
 
-| Data family | Examples in Ruhamaa | Why it is used |
+| Data family | Examples in Ataa | Why it is used |
 | --- | --- | --- |
 | Personal info | name, email, user ID, phone | authentication, contact, operational coordination |
 | Location | service area, address description, precise coordinates when needed | pickup, delivery, service coordination, handoff/failure event evidence |
@@ -30,22 +30,22 @@ This file is an internal release checklist for completing Google Play's Data Saf
 Do not answer the Play Console's “data shared” question mechanically from this document. Apply Google's current definitions and exemptions.
 
 - Supabase and Google act as technical service providers for the functions described above.
-- In item-delivery workflows, donor and beneficiary identity are not disclosed to each other; Ruhamaa staff/couriers receive only operational data required for their assigned task.
-- In an in-person service match, after the required parties accept and Ruhamaa coordinates the match, the minimum contact/location/scheduling data necessary to perform the service may be disclosed to the matched provider or verified partner.
-- A verified partner is prohibited from using beneficiary data for marketing, photography/publication, unrelated sales, or building a customer list from Ruhamaa data.
+- In item-delivery workflows, donor and beneficiary identity are not disclosed to each other; Ataa staff/couriers receive only operational data required for their assigned task.
+- In an in-person service match, after the required parties accept and Ataa coordinates the match, the minimum contact/location/scheduling data necessary to perform the service may be disclosed to the matched provider or verified partner.
+- A verified partner is prohibited from using beneficiary data for marketing, photography/publication, unrelated sales, or building a customer list from Ataa data.
 - Before selecting “no data shared” in Play Console, explicitly determine whether disclosure to an external verified partner qualifies for Google's user-initiated/service-provider exemption under the current Data Safety definitions. If it does not, declare the applicable shared data categories instead of understating collection/sharing.
 
 ## Location notes
 
 - The app may process precise coordinates where needed for delivery/service operations.
-- Ruhamaa does not perform continuous background location tracking in the current version.
+- Ataa does not perform continuous background location tracking in the current version.
 - Courier/user location can be captured at specific operational events such as handoff or failure reporting.
 
 ## Financial-data notes
 
 - There is no Google Play Billing flow and no in-app electronic payment in the current product.
 - Optional delivery-operation contributions are cash-to-courier pledges/records.
-- Ruhamaa does not collect card numbers, bank-account credentials, wallet credentials, or payment authentication secrets.
+- Ataa does not collect card numbers, bank-account credentials, wallet credentials, or payment authentication secrets.
 - Re-check Google's current Data Safety definition of “financial info / purchase history / other financial info” before submission to decide whether the contribution amount/status belongs in a financial-data category.
 
 ## Security and deletion

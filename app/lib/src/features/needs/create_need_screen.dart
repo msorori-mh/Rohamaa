@@ -84,7 +84,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل احتياجك'),
           content: const Text(
-            'طلبك مستمر سواء ساهمت أم لا، وعدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إذا كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة وعلى إيصال احتياجات أخرى لأشخاص لا يستطيعون تحمل التكلفة. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند التوصيل.',
+            'طلبك مستمر سواء ساهمت أم لا، وعدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إذا كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد عطاء على استمرار الخدمة وعلى إيصال احتياجات أخرى لأشخاص لا يستطيعون تحمل التكلفة. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند التوصيل.',
           ),
           actions: [
             TextButton(
@@ -160,7 +160,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'سجّل احتياجك بخصوصية. لا توجد قائمة تبرعات للتصفح؛ رحماء يبحث عن التطابق المناسب لك.',
+                  'سجّل احتياجك بخصوصية. لا توجد قائمة تبرعات للتصفح؛ عطاء يبحث عن التطابق المناسب لك.',
                   style: TextStyle(
                     color: RuhamaaColors.primaryDark,
                     height: 1.5,
@@ -225,7 +225,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
           decoration: const InputDecoration(
             labelText: 'تفاصيل خاصة بالمطابقة',
             hintText: 'مثل المقاس، العدد، العمر أو أي تفاصيل تساعد على إيجاد المناسب',
-            helperText: 'هذه التفاصيل خاصة بفريق رحماء ولا تظهر للمتبرع.',
+            helperText: 'هذه التفاصيل خاصة بفريق عطاء ولا تظهر للمتبرع.',
           ),
           validator: (v) => v == null || v.trim().length < 8
               ? 'أضف تفاصيل مختصرة تساعدنا في المطابقة'
@@ -346,7 +346,7 @@ class _CreateNeedScreenState extends State<CreateNeedScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'بعد التسجيل يبحث رحماء عن تطابق مناسب. عدم المساهمة في التوصيل لا يؤثر على أولوية الاحتياج، ولا تظهر هويتك للمتبرع.',
+                  'بعد التسجيل يبحث عطاء عن تطابق مناسب. عدم المساهمة في التوصيل لا يؤثر على أولوية الاحتياج، ولا تظهر هويتك للمتبرع.',
                   style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                 ),
               ),

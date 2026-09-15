@@ -12,7 +12,7 @@ void main() {
     test('explains delivery failures without exposing private details', () {
       final copy = OperationStatusPresenter.present('delivery', 'failed');
       expect(copy.attention, isTrue);
-      expect(copy.nextStep, contains('فريق رحماء'));
+      expect(copy.nextStep, contains('فريق عطاء'));
     });
 
     test('gives fulfilled needs a completed outcome', () {

@@ -174,7 +174,7 @@ adb shell pm get-app-links com.ruhamaa.app
 adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
 ```
 
-Only after the domain is verified by Android and the HTTPS callback opens Ruhamaa should production OAuth be switched from the internal custom scheme to `https://ruhamaa.com/login-callback`, if desired.
+Only after the domain is verified by Android and the HTTPS callback opens Ataa should production OAuth be switched from the internal custom scheme to `https://ruhamaa.com/login-callback`, if desired.
 
 ## 8. DNS / Pages checklist
 

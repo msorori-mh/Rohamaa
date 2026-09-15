@@ -1,4 +1,4 @@
-# Ruhamaa UAT — Operations Center and Priority Queue
+# Ataa UAT — Operations Center and Priority Queue
 
 هذا الفحص خاص بالمرحلة P1: مركز متابعة المستخدم، التنبيهات الداخلية، وطابور أولوية الإدارة. لا يشمل المخزون أو الإصلاح أو الغذاء أو الدواء.
 

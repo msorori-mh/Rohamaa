@@ -41,7 +41,7 @@ class ServiceHomeSection extends StatelessWidget {
         const SizedBox(height: 10),
         _ServiceActionCard(
           icon: Icons.storefront_outlined,
-          title: 'شركاء رحماء',
+          title: 'شركاء عطاء',
           subtitle: 'للمحلات والورش والصالونات والجهات التي تريد تقديم خدمات مجانية بعد التحقق.',
           background: RuhamaaColors.warmSurface,
           accent: RuhamaaColors.primary,
@@ -51,7 +51,7 @@ class ServiceHomeSection extends StatelessWidget {
         _ServiceActionCard(
           icon: Icons.support_agent_rounded,
           title: 'أحتاج خدمة',
-          subtitle: 'سجّل احتياجك بخصوصية، وسيبحث رحماء عن فرد أو شريك موثّق مناسب.',
+          subtitle: 'سجّل احتياجك بخصوصية، وسيبحث عطاء عن فرد أو شريك موثّق مناسب.',
           background: RuhamaaColors.warmGoldSoft,
           accent: RuhamaaColors.warmGold,
           onTap: () => context.push('/request-service'),
@@ -71,7 +71,7 @@ class ServiceHomeSection extends StatelessWidget {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'العطاء والاحتياج مستقلان: لا تحتاج أن تقدّم خدمة حتى تحصل على مساعدة، وتقديمك للخدمة أو شراكتك مع رحماء لا يرفعان أولوية طلباتك.',
+                  'العطاء والاحتياج مستقلان: لا تحتاج أن تقدّم خدمة حتى تحصل على مساعدة، وتقديمك للخدمة أو شراكتك مع عطاء لا يرفعان أولوية طلباتك.',
                   style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45, fontSize: 12),
                 ),
               ),

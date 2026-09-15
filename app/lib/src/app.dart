@@ -122,7 +122,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'رحماء',
+      title: 'عطاء',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
@@ -200,7 +200,7 @@ class _RoleGate extends StatelessWidget {
         final status = snapshot.data;
         if (status == null || status.role != requiredRole) {
           return Scaffold(
-            appBar: AppBar(title: const Text('رحماء')),
+            appBar: AppBar(title: const Text('عطاء')),
             body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')),
           );
         }
@@ -214,7 +214,7 @@ class _RoleGate extends StatelessWidget {
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier() {
     _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      debugPrint('Ruhamaa auth event: ${data.event}; session=${data.session != null}');
+      debugPrint('Ataa auth event: ${data.event}; session=${data.session != null}');
       notifyListeners();
     });
   }

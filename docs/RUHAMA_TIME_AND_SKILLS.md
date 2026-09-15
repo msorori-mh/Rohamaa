@@ -1,6 +1,6 @@
-# Ruhamaa — Time, Skills & Community Resources
+# Ataa — Time, Skills & Community Resources
 
-رحماء لا يقسم المجتمع إلى «متبرعين» و«محتاجين» كهوية ثابتة. الشخص نفسه قد يحتاج شيئًا أو خدمة، وفي الوقت نفسه يستطيع تقديم شيء آخر أو جزء من وقته أو مهارته.
+عطاء لا يقسم المجتمع إلى «متبرعين» و«محتاجين» كهوية ثابتة. الشخص نفسه قد يحتاج شيئًا أو خدمة، وفي الوقت نفسه يستطيع تقديم شيء آخر أو جزء من وقته أو مهارته.
 
 ## Core principle
 
@@ -8,15 +8,15 @@
 - تقديم شيء أو وقت أو مهارة لا يرفع أولوية الشخص في الحصول على احتياج.
 - الحصول على مساعدة لا يتطلب تقديم مقابل أو خدمة لاحقة.
 - لا توجد نقاط، رصيد ساعات، مقايضة، أو عملة داخلية.
-- لا توجد قائمة عامة لمقدمي الخدمات أو طالبيها؛ رحماء يراجع ويطابق بخصوصية.
+- لا توجد قائمة عامة لمقدمي الخدمات أو طالبيها؛ عطاء يراجع ويطابق بخصوصية.
 
 ## Reviewed needs as a giving prompt
 
-رحماء يسمح للمتبرعين برؤية **بطاقات احتياج راجعها الفريق** حتى تكون الحاجة الحقيقية دافعًا للعطاء، لكن دون تحويل التطبيق إلى بازار مجاني:
+عطاء يسمح للمتبرعين برؤية **بطاقات احتياج راجعها الفريق** حتى تكون الحاجة الحقيقية دافعًا للعطاء، لكن دون تحويل التطبيق إلى بازار مجاني:
 
 - لا تُعرض التبرعات للمحتاجين.
 - لا يُعرض الطلب الخام كما كتبه صاحبه.
-- فريق رحماء يكتب بطاقة محايدة تركز على الشيء المطلوب فقط.
+- فريق عطاء يكتب بطاقة محايدة تركز على الشيء المطلوب فقط.
 - لا اسم، صورة شخص، هاتف، عنوان دقيق أو قصة شخصية حساسة.
 - لا مراسلة أو حجز أو اختيار مباشر للمستفيد.
 - زر «أستطيع توفير هذا» يبدأ تسجيل عطاء فقط.
@@ -50,7 +50,7 @@ Not allowed in V1:
 
 For donated physical items, donor and beneficiary identities remain separated.
 
-For in-person services, the provider necessarily sees the person/location when performing the work. Therefore Ruhamaa only promises minimum necessary disclosure:
+For in-person services, the provider necessarily sees the person/location when performing the work. Therefore Ataa only promises minimum necessary disclosure:
 - no public listing of the request or provider identity;
 - no identity/address disclosure before an approved match and participant consent;
 - no visibility into the user's other needs or history;
@@ -59,11 +59,11 @@ For in-person services, the provider necessarily sees the person/location when p
 ## Consent workflow
 
 1. User registers a service need or donated-time offer.
-2. Ruhamaa reviews service offers before activation.
+2. Ataa reviews service offers before activation.
 3. Admin sees candidates based on service type, service area, available time and age of offer.
 4. A private service match is proposed.
 5. Provider and requester respond independently.
-6. Only when both accept can Ruhamaa schedule the service.
+6. Only when both accept can Ataa schedule the service.
 7. Admin marks the service completed after execution.
 
 ## Current V1 categories

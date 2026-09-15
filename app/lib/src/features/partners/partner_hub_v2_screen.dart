@@ -75,7 +75,7 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('شركاء رحماء')),
+      appBar: AppBar(title: const Text('شركاء عطاء')),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
@@ -94,17 +94,17 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
                     Text('شراكة أثر، وليست مساحة إعلانية', style: TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 17)),
                     SizedBox(height: 7),
                     Text(
-                      'المحل أو الورشة أو الصالون يمر بتحقق رحماء أولًا. بعد الاعتماد يستطيع تقديم خدمة مجانية أو عمل مجاني مع المواد حسب الحالة، دون عرض المستفيدين أو التسويق لهم.',
+                      'المحل أو الورشة أو الصالون يمر بتحقق عطاء أولًا. بعد الاعتماد يستطيع تقديم خدمة مجانية أو عمل مجاني مع المواد حسب الحالة، دون عرض المستفيدين أو التسويق لهم.',
                       style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(onPressed: _register, icon: const Icon(Icons.add_business_outlined), label: const Text('سجّل نشاطًا كشريك رحماء')),
+              FilledButton.icon(onPressed: _register, icon: const Icon(Icons.add_business_outlined), label: const Text('سجّل نشاطًا كشريك عطاء')),
               const SizedBox(height: 18),
               if (rows.isEmpty)
-                const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('لم تسجّل نشاطًا كشريك رحماء بعد.')))
+                const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('لم تسجّل نشاطًا كشريك عطاء بعد.')))
               else
                 ...rows.map((row) {
                   final status = '${row['verification_status']}';
@@ -190,7 +190,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_termsAccepted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اقرأ قواعد شركاء رحماء ووافق عليها قبل الإرسال.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اقرأ قواعد شركاء عطاء ووافق عليها قبل الإرسال.')));
       return;
     }
     final repo = PartnerRepository(Supabase.instance.client);
@@ -214,7 +214,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('تم إرسال طلب الشراكة'),
-          content: const Text('سيراجع فريق رحماء النشاط. قبول الشروط لا يعني الاعتماد؛ لا يمكن تقديم خدمة باسم النشاط حتى يكتمل التحقق.'),
+          content: const Text('سيراجع فريق عطاء النشاط. قبول الشروط لا يعني الاعتماد؛ لا يمكن تقديم خدمة باسم النشاط حتى يكتمل التحقق.'),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
         ),
       );
@@ -229,7 +229,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تسجيل شريك رحماء')),
+      appBar: AppBar(title: const Text('تسجيل شريك عطاء')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -262,7 +262,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(color: RuhamaaColors.warmGoldSoft, borderRadius: BorderRadius.circular(18)),
               child: const Text(
-                'قواعد شركاء رحماء V1:\n• لا تصوير للمستفيد أو نشر قصته.\n• لا استخدام لبياناته في التسويق.\n• لا رسوم أو مبالغ لم تُراجع مسبقًا مع رحماء.\n• لا اشتراط شراء خدمة أخرى أو إعطاء تقييم.\n• الخدمة مجانية، أو العمل مجاني والمواد فقط حسب الحالة المراجعة.\n• أي خرق قد يوقف الشريك وعروضه.',
+                'قواعد شركاء عطاء V1:\n• لا تصوير للمستفيد أو نشر قصته.\n• لا استخدام لبياناته في التسويق.\n• لا رسوم أو مبالغ لم تُراجع مسبقًا مع عطاء.\n• لا اشتراط شراء خدمة أخرى أو إعطاء تقييم.\n• الخدمة مجانية، أو العمل مجاني والمواد فقط حسب الحالة المراجعة.\n• أي خرق قد يوقف الشريك وعروضه.',
                 style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.55),
               ),
             ),
@@ -270,7 +270,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
               contentPadding: EdgeInsets.zero,
               value: _termsAccepted,
               onChanged: (value) => setState(() => _termsAccepted = value ?? false),
-              title: const Text('قرأت قواعد شركاء رحماء وأوافق عليها', style: TextStyle(fontWeight: FontWeight.w800)),
+              title: const Text('قرأت قواعد شركاء عطاء وأوافق عليها', style: TextStyle(fontWeight: FontWeight.w800)),
             ),
             const SizedBox(height: 18),
             FilledButton.icon(
@@ -363,7 +363,7 @@ class _PartnerServiceOfferV2ScreenState extends State<PartnerServiceOfferV2Scree
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(16)),
             child: const Text(
-              'تظهر هنا فقط أنواع الخدمات المتوافقة مع النشاط الذي راجعه فريق رحماء. توسيع نشاط الشريك يحتاج مراجعة جديدة.',
+              'تظهر هنا فقط أنواع الخدمات المتوافقة مع النشاط الذي راجعه فريق عطاء. توسيع نشاط الشريك يحتاج مراجعة جديدة.',
               style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.45, fontSize: 12),
             ),
           ),

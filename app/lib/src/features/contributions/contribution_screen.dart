@@ -23,12 +23,12 @@ class _ContributionScreenState extends State<ContributionScreen> {
 
   String get _intro {
     if (widget.donationId != null) {
-      return 'تبرعك بالشيء هو الأساس. وإذا استطعت، فمساهمتك في تكلفة استلامه وتوصيله تساعد رحماء على إيصال عطائك ودعم توصيلات أخرى.';
+      return 'تبرعك بالشيء هو الأساس. وإذا استطعت، فمساهمتك في تكلفة استلامه وتوصيله تساعد عطاء على إيصال عطائك ودعم توصيلات أخرى.';
     }
     if (widget.needId != null) {
-      return 'طلبك مستمر سواء ساهمت أم لا. إن كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة.';
+      return 'طلبك مستمر سواء ساهمت أم لا. إن كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد عطاء على استمرار الخدمة.';
     }
-    return 'مساهمتك تساعد رحماء في تغطية تكاليف التوصيل واستمرار إيصال الأشياء إلى مستحقيها.';
+    return 'مساهمتك تساعد عطاء في تغطية تكاليف التوصيل واستمرار إيصال الأشياء إلى مستحقيها.';
   }
 
   String get _cashTiming {
@@ -51,7 +51,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'شكرًا لك. سُجلت رغبتك بالمساهمة بمبلغ $_amount ريال، ويُسلَّم نقدًا لموصل رحماء $_cashTiming.',
+            'شكرًا لك. سُجلت رغبتك بالمساهمة بمبلغ $_amount ريال، ويُسلَّم نقدًا لموصل عطاء $_cashTiming.',
           ),
         ),
       );
@@ -125,7 +125,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'لا يوجد دفع أو تحويل داخل التطبيق. إذا اخترت المساهمة، سلّم المبلغ نقدًا لموصل رحماء $_cashTiming.',
+                    'لا يوجد دفع أو تحويل داخل التطبيق. إذا اخترت المساهمة، سلّم المبلغ نقدًا لموصل عطاء $_cashTiming.',
                     style: const TextStyle(color: RuhamaaColors.primaryDark, height: 1.5, fontWeight: FontWeight.w600),
                   ),
                 ),

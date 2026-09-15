@@ -17,7 +17,7 @@ Future<void> main() async {
     runApp(
       const ProviderScope(
         child: _StartupErrorApp(
-          message: 'نسخة التطبيق الحالية غير مكتملة الإعداد. أعد تثبيت النسخة المعتمدة من رحماء.',
+          message: 'نسخة التطبيق الحالية غير مكتملة الإعداد. أعد تثبيت النسخة المعتمدة من عطاء.',
         ),
       ),
     );
@@ -33,12 +33,12 @@ Future<void> main() async {
       ),
     );
   } catch (error, stackTrace) {
-    debugPrint('Ruhamaa startup configuration error: $error');
+    debugPrint('Ataa startup configuration error: $error');
     debugPrintStack(stackTrace: stackTrace);
     runApp(
       const ProviderScope(
         child: _StartupErrorApp(
-          message: 'تعذر بدء رحماء بصورة صحيحة. تحقق من اتصالك ثم أعد فتح التطبيق.',
+          message: 'تعذر بدء عطاء بصورة صحيحة. تحقق من اتصالك ثم أعد فتح التطبيق.',
         ),
       ),
     );
@@ -63,7 +63,7 @@ class _StartupErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'رحماء',
+      title: 'عطاء',
       debugShowCheckedModeBanner: false,
       theme: RuhamaaTheme.light(),
       home: Directionality(
@@ -79,7 +79,7 @@ class _StartupErrorApp extends StatelessWidget {
                     const RuhamaaBrandMark(size: 92),
                     const SizedBox(height: 22),
                     const Text(
-                      'تعذر بدء رحماء',
+                      'تعذر بدء عطاء',
                       style: TextStyle(
                         color: RuhamaaColors.primaryDark,
                         fontSize: 24,

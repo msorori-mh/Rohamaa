@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       barrierDismissible: !busy,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('دخول فريق رحماء'),
+          title: const Text('دخول فريق عطاء'),
           content: SizedBox(
             width: 430,
             child: Column(
@@ -165,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Center(child: RuhamaaBrandMark(size: 96)),
                 const SizedBox(height: 8),
                 Text(
-                  'رحماء',
+                  'عطاء',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         color: RuhamaaColors.primaryDark,
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'رحماء يتولى المطابقة والتنسيق والتوصيل دون كشف هوية المتبرع والمستفيد لبعضهما.',
+                        'عطاء يتولى المطابقة والتنسيق والتوصيل دون كشف هوية المتبرع والمستفيد لبعضهما.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                       ),
@@ -221,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 OutlinedButton.icon(
                   onPressed: _loading ? null : _staffLogin,
                   icon: const Icon(Icons.badge_outlined),
-                  label: const Text('دخول فريق رحماء'),
+                  label: const Text('دخول فريق عطاء'),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 14),

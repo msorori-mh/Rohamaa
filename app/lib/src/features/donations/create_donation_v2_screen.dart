@@ -262,7 +262,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
                 icon: Icons.lightbulb_outline_rounded,
                 color: RuhamaaColors.warmGoldSoft,
                 iconColor: RuhamaaColors.warmGold,
-                text: 'هذه الحاجة ألهمت عطائك، لذلك ملأنا ما توفر من البيانات. البطاقة ليست حجزًا لشخص بعينه؛ رحماء يوجّه العطاء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+                text: 'هذه الحاجة ألهمت عطائك، لذلك ملأنا ما توفر من البيانات. البطاقة ليست حجزًا لشخص بعينه؛ عطاء يوجّه العطاء للحاجة الأعلى أولوية من الحالات المتوافقة.',
               ),
               const SizedBox(height: 16),
             ],
@@ -289,7 +289,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'اختر النوع بدقة حتى يستطيع رحماء مطابقة عطائك مع الاحتياج المناسب بدون أن تتصفح أو تختار الأشخاص.',
+          text: 'اختر النوع بدقة حتى يستطيع عطاء مطابقة عطائك مع الاحتياج المناسب بدون أن تتصفح أو تختار الأشخاص.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -419,7 +419,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           iconColor: RuhamaaColors.primary,
           text: _inspired
               ? 'البطاقة التي رأيتها تحفّز العطاء فقط. المطابقة النهائية تتم وفق الملاءمة والأولوية والعدالة، وليس وفق اختيار المتبرع.'
-              : 'يراجع رحماء العطاء ويطابقه بخصوصية. لا تختار المستفيد ولا تظهر هوية أي طرف للآخر.',
+              : 'يراجع عطاء العطاء ويطابقه بخصوصية. لا تختار المستفيد ولا تظهر هوية أي طرف للآخر.',
         ),
         const SizedBox(height: 24),
         Row(

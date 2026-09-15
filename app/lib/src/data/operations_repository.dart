@@ -29,7 +29,7 @@ class UserNotificationItem {
   final bool isRead;
 
   factory UserNotificationItem.fromJson(Map<String, dynamic> json) => UserNotificationItem(
-    id: '${json['id']}', title: '${json['title']}', body: '${json['body']}',
+    id: '${json['id']}', title: _notificationBrand('${json['title']}'), body: _notificationBrand('${json['body']}'),
     actionRoute: '${json['action_route']}', createdAt: DateTime.parse('${json['created_at']}'),
     isRead: json['read_at'] != null,
   );
@@ -81,4 +81,14 @@ class OperationsRepository {
     final rows = await _client.rpc('admin_operations_overview', params: {'p_limit': 50});
     return (rows as List).cast<Map<String, dynamic>>().map(AdminQueueItem.fromJson).toList();
   }
+}
+
+// Exact old system templates only; never rewrite free-form user content.
+String _notificationBrand(String text) {
+  const oldName = '\u0631\u062d\u0645\u0627\u0621';
+  if (text == 'تحديث حالة شريك $oldName') return 'تحديث حالة شريك عطاء';
+  if (text == 'وجد فريق $oldName عطاءً مناسبًا لاحتياجك. راجع العرض واتخذ قرارك.') {
+    return 'وجد فريق عطاء شيئًا مناسبًا لاحتياجك. راجع العرض واتخذ قرارك.';
+  }
+  return text;
 }

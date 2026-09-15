@@ -225,13 +225,13 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('إبلاغ رحماء عن مشكلة'),
+          title: const Text('إبلاغ عطاء عن مشكلة'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'البلاغ خاص بفريق رحماء ولا ينشر كتقييم أو تعليق عام. استخدمه إذا حدثت مشكلة أثناء الخدمة أو بعدها.',
+                  'البلاغ خاص بفريق عطاء ولا ينشر كتقييم أو تعليق عام. استخدمه إذا حدثت مشكلة أثناء الخدمة أو بعدها.',
                   style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
                 ),
                 const SizedBox(height: 12),
@@ -247,7 +247,7 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
                   maxLines: 4,
                   decoration: const InputDecoration(
                     labelText: 'اشرح ما حدث',
-                    hintText: 'اذكر الوقائع التي تساعد فريق رحماء على المراجعة.',
+                    hintText: 'اذكر الوقائع التي تساعد فريق عطاء على المراجعة.',
                   ),
                 ),
               ],
@@ -275,7 +275,7 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
         incidentType: type,
         description: details.text,
       );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ لفريق رحماء للمراجعة.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ لفريق عطاء للمراجعة.')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال البلاغ: $e')));
     } finally {
@@ -348,7 +348,7 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
                         OutlinedButton.icon(
                           onPressed: () => _report(row),
                           icon: const Icon(Icons.report_outlined),
-                          label: const Text('إبلاغ رحماء عن مشكلة'),
+                          label: const Text('إبلاغ عطاء عن مشكلة'),
                         ),
                       ],
                     ],
@@ -364,7 +364,7 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
 }
 
 String _offerStatus(String status, String verification) {
-  if (verification == 'pending') return 'قيد مراجعة رحماء';
+  if (verification == 'pending') return 'قيد مراجعة عطاء';
   if (verification == 'rejected') return 'يحتاج مراجعة أو تعديل';
   switch (status) {
     case 'approved':
@@ -385,7 +385,7 @@ String _offerStatus(String status, String verification) {
 String _requestStatus(String status) {
   switch (status) {
     case 'reviewing':
-      return 'يراجع رحماء الاحتياج';
+      return 'يراجع عطاء الاحتياج';
     case 'matched':
       return 'تم العثور على مهارة مناسبة';
     case 'scheduled':

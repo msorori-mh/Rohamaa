@@ -1,14 +1,14 @@
-# Ruhamaa V1 Architecture
+# Ataa V1 Architecture
 
 ## Product boundary
 
-Ruhamaa is a need-first social-impact platform for the Marib pilot. It matches unused physical items, donated time/skills and verified-partner capacity to privately registered needs. It intentionally does **not** expose a donation marketplace, provider marketplace, public beneficiary directory or social feed.
+Ataa is a need-first social-impact platform for the Marib pilot. It matches unused physical items, donated time/skills and verified-partner capacity to privately registered needs. It intentionally does **not** expose a donation marketplace, provider marketplace, public beneficiary directory or social feed.
 
 Operational item chain:
 
-`donor → Ruhamaa courier → Ruhamaa → Ruhamaa courier → beneficiary`
+`donor → Ataa courier → Ataa → Ataa courier → beneficiary`
 
-For in-person services, Ruhamaa privately matches a requester to an approved individual provider or verified partner and reveals only the information needed after the required consent/coordination stage.
+For in-person services, Ataa privately matches a requester to an approved individual provider or verified partner and reveals only the information needed after the required consent/coordination stage.
 
 ## Client surfaces
 
@@ -70,7 +70,7 @@ Database role enum values are `user`, `courier`, `supervisor`, `admin`.
 - Requesters do not browse provider identities or partner directories.
 - Providers/partners do not browse beneficiary lists.
 - Before a service match is accepted/coordinated, identifying contact/location data remains private.
-- After the required parties accept, Ruhamaa may disclose only the contact/location/scheduling data required to perform the service.
+- After the required parties accept, Ataa may disclose only the contact/location/scheduling data required to perform the service.
 - Provider/partner access does not include the user’s other needs, donations, contribution history or unrelated operations.
 - Service incidents are private operational reports; there are no public stars/comments.
 

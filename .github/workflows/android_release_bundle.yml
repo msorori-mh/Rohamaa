@@ -101,7 +101,7 @@ jobs:
       - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: ruhamaa-release-aab-${{ inputs.build_name }}-${{ inputs.build_number }}
+          name: ataa-release-aab-${{ inputs.build_name }}-${{ inputs.build_number }}
           path: |
             app/build/app/outputs/bundle/release/app-release.aab
             app/build/app/outputs/bundle/release/app-release.aab.sha256
