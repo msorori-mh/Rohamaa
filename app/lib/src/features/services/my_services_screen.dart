@@ -20,7 +20,7 @@ class MyServicesScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'ما أقدّمه', icon: Icon(Icons.handyman_outlined)),
               Tab(text: 'ما أحتاجه', icon: Icon(Icons.support_agent_outlined)),
-              Tab(text: 'العمليات', icon: Icon(Icons.history_rounded)),
+              Tab(text: 'المتابعة', icon: Icon(Icons.history_rounded)),
             ],
           ),
         ),
@@ -62,13 +62,13 @@ class _MyOffersListState extends State<_MyOffersList> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل ما تقدمه: ${snapshot.error}'));
+        if (snapshot.hasError) return const Center(child: Text('تعذر تحميل خدماتك. تحقق من اتصالك وحاول مجددًا.'));
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
           return const _EmptyState(
             icon: Icons.handyman_outlined,
-            title: 'لم تسجل وقتًا أو مهارة بعد',
-            subtitle: 'يمكنك تقديم ساعات من وقتك أو خدمة مجانية عندما تكون قادرًا على ذلك.',
+            title: 'لم تسجّل خدمة بعد',
+            subtitle: 'يمكنك التبرع بوقتك أو تقديم خدمة مجانًا.',
           );
         }
         return RefreshIndicator(
@@ -132,13 +132,13 @@ class _MyRequestsListState extends State<_MyRequestsList> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل احتياجات الخدمة: ${snapshot.error}'));
+        if (snapshot.hasError) return const Center(child: Text('تعذر تحميل طلباتك. تحقق من اتصالك وحاول مجددًا.'));
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
           return const _EmptyState(
             icon: Icons.support_agent_outlined,
-            title: 'لا يوجد طلب خدمة مسجل',
-            subtitle: 'إذا احتجت سباكة أو كهرباء أو صيانة أو أي مهارة أخرى، سجّلها من الرئيسية.',
+            title: 'لا يوجد طلب خدمة',
+            subtitle: 'اطلب الخدمة التي تحتاجها من الصفحة الرئيسية.',
           );
         }
         return RefreshIndicator(
@@ -277,7 +277,8 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
       );
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ لفريق رحماء للمراجعة.')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال البلاغ: $e')));
+      debugPrint('Service incident submission failed: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال البلاغ. تحقق من اتصالك وحاول مرة أخرى.')));
     } finally {
       details.dispose();
     }
@@ -289,13 +290,13 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل عمليات الخدمات: ${snapshot.error}'));
+        if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المتابعة. تحقق من اتصالك وحاول مجددًا.'));
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
           return const _EmptyState(
             icon: Icons.history_rounded,
-            title: 'لا توجد عمليات خدمة بعد',
-            subtitle: 'بعد موافقة الطرفين على مطابقة خدمة ستظهر هنا للمتابعة والرجوع إليها.',
+            title: 'لا توجد خدمات قيد المتابعة',
+            subtitle: 'بعد موافقة الطرفين ستظهر تفاصيل الخدمة هنا.',
           );
         }
         return RefreshIndicator(

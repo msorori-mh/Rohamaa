@@ -27,7 +27,7 @@ class _AccountScreenState extends State<AccountScreen> {
       builder: (context) => AlertDialog(
         title: const Text('تسجيل الخروج؟'),
         content: const Text(
-          'سيتم إنهاء جلسة رحماء على هذا الجهاز، ويمكنك بعد ذلك الدخول بحساب Google آخر.',
+          'سيتم تسجيل خروجك من هذا الجهاز، ويمكنك الدخول بحساب آخر.',
         ),
         actions: [
           TextButton(
@@ -53,10 +53,10 @@ class _AccountScreenState extends State<AccountScreen> {
       } else {
         await Supabase.instance.client.auth.signOut();
       }
-    } on AuthException catch (error) {
+    } on AuthException catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تسجيل الخروج: ${error.message}')),
+        const SnackBar(content: Text('تعذر تسجيل الخروج. تحقق من اتصالك وحاول مرة أخرى.')),
       );
     } catch (_) {
       if (!mounted) return;
@@ -123,8 +123,8 @@ class _AccountScreenState extends State<AccountScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.location_on_outlined, color: RuhamaaColors.primary),
-                  title: const Text('بيانات التوصيل', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('رقم الهاتف، نطاق الخدمة، العنوان والموقع الخاص.'),
+                  title: const Text('عنوان الاستلام والتسليم', style: TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: const Text('حدّث رقم الهاتف والعنوان والموقع.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/onboarding'),
                 ),
@@ -132,7 +132,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ListTile(
                   leading: const Icon(Icons.handyman_outlined, color: RuhamaaColors.primary),
                   title: const Text('وقتي ومهاراتي', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('شاهد ما تقدمه من وقت أو مهارة وما سجلته من احتياجات للخدمات.'),
+                  subtitle: const Text('تابع الخدمات التي تقدمها أو تطلبها.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/my-services'),
                 ),
@@ -140,7 +140,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
                   title: const Text('كيف يعمل رحماء؟', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('راجع بطاقات التعريف والخصوصية والمساهمة في التوصيل.'),
+                  subtitle: const Text('تعرّف على التبرع والطلبات والتوصيل.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/intro'),
                 ),
@@ -148,7 +148,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined, color: RuhamaaColors.primary),
                   title: const Text('الخصوصية والحساب', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('سياسة الخصوصية، الشروط وطلب حذف الحساب.'),
+                  subtitle: const Text('اقرأ السياسة والشروط أو اطلب حذف حسابك.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/legal'),
                 ),
@@ -169,7 +169,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'في رحماء لا توجد هوية ثابتة باسم «متبرع» أو «محتاج». يمكنك تسجيل احتياجك، وفي الوقت نفسه تقديم شيء أو وقت أو مهارة عندما تستطيع.',
+                    'يمكنك طلب المساعدة والتبرع في الوقت نفسه؛ لا يصنّفك رحماء في دور ثابت.',
                     style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                   ),
                 ),

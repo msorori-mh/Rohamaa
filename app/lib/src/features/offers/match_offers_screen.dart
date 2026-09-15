@@ -31,7 +31,7 @@ class _MatchAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => AppBar(
-        title: const Text('المطابقات'),
+        title: const Text('العروض المناسبة'),
         bottom: const TabBar(
           tabs: [
             Tab(text: 'الأشياء', icon: Icon(Icons.inventory_2_outlined)),
@@ -90,16 +90,16 @@ class _ItemOffersTabState extends State<_ItemOffersTab> {
         SnackBar(
           content: Text(
             accept
-                ? 'تم قبول المطابقة. سيبدأ رحماء ترتيب الاستلام والتوصيل.'
-                : 'تم تحديث احتياجك وسيستمر البحث عن بديل مناسب.',
+                ? 'تم قبول العرض. سنرتب الاستلام والتسليم.'
+                : 'تم رفض العرض، وسنواصل البحث عن بديل.',
           ),
         ),
       );
       setState(_reload);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تحديث العرض: $e')),
+        const SnackBar(content: Text('تعذر تحديث العرض. تحقق من اتصالك وحاول مرة أخرى.')),
       );
     }
   }
@@ -113,14 +113,14 @@ class _ItemOffersTabState extends State<_ItemOffersTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل عروض الأشياء: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل العروض. تحقق من اتصالك وحاول مجددًا.'));
         }
         final offers = snapshot.data ?? const [];
         if (offers.isEmpty) {
           return const _EmptyOffers(
             icon: Icons.inventory_2_outlined,
-            title: 'لا يوجد تطابق أشياء جديد الآن',
-            subtitle: 'إذا كان لديك احتياج مسجل، يستمر رحماء في البحث عن شيء مناسب وسنظهره لك هنا عند توفره.',
+            title: 'لا توجد عروض جديدة',
+            subtitle: 'سنخبرك هنا عندما نجد شيئًا مناسبًا لطلبك.',
           );
         }
         return RefreshIndicator(
@@ -195,7 +195,7 @@ class _ItemOffersTabState extends State<_ItemOffersTab> {
                       ),
                       const SizedBox(height: 12),
                       const _PrivacyBox(
-                        text: 'هوية المتبرع تبقى خاصة، وهويتك لا تظهر له.',
+                        text: 'بياناتك وبيانات المتبرع خاصة.',
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
@@ -246,16 +246,16 @@ class _ServiceOffersTabState extends State<_ServiceOffersTab> {
       final state = await _repo.respondServiceMatch(offer.matchId, accept: accept);
       if (!mounted) return;
       final message = !accept
-          ? 'تم رفض المطابقة، وسيواصل رحماء البحث عن بديل مناسب.'
+          ? 'تم رفض العرض، وسنواصل البحث عن بديل.'
           : state == 'accepted'
-              ? 'وافق الطرفان على المطابقة. سيكمل رحماء تنسيق الموعد بأقل قدر من المعلومات الضرورية.'
-              : 'تم تسجيل موافقتك. ننتظر موافقة الطرف الآخر.';
+              ? 'وافق الطرفان. سنرتب الموعد ونشارك المعلومات الضرورية فقط.'
+              : 'تم تسجيل موافقتك، وننتظر رد الطرف الآخر.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       setState(_reload);
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تعذر تحديث مطابقة الخدمة: $e')),
+          const SnackBar(content: Text('تعذر تحديث العرض. تحقق من اتصالك وحاول مرة أخرى.')),
         );
       }
     }
@@ -270,14 +270,14 @@ class _ServiceOffersTabState extends State<_ServiceOffersTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل مطابقات الخدمات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل عروض الخدمات. تحقق من اتصالك وحاول مجددًا.'));
         }
         final offers = snapshot.data ?? const [];
         if (offers.isEmpty) {
           return const _EmptyOffers(
             icon: Icons.handyman_outlined,
-            title: 'لا توجد مطابقة خدمة جديدة الآن',
-            subtitle: 'إذا سجلت احتياج خدمة أو عرضت وقتك ومهارتك، سيظهر التطابق الخاص هنا بعد مراجعة رحماء.',
+            title: 'لا توجد عروض خدمات جديدة',
+            subtitle: 'سنخبرك هنا عندما نجد خدمة أو طلبًا مناسبًا.',
           );
         }
         return RefreshIndicator(
@@ -365,8 +365,8 @@ class _ServiceMatchCard extends StatelessWidget {
             const SizedBox(height: 10),
             _PrivacyBox(
               text: provider
-                  ? 'لا يظهر لك اسم أو عنوان صاحب الاحتياج الآن. بعد موافقة الطرفين، يشارك رحماء فقط المعلومات الضرورية لتنفيذ الخدمة.'
-                  : 'لا يظهر لك اسم مقدم الخدمة أو بياناته الآن. بعد موافقة الطرفين، يشارك رحماء فقط المعلومات الضرورية لتنسيق الموعد.',
+                  ? 'بعد موافقة الطرفين، نشارك المعلومات الضرورية لتنفيذ الخدمة فقط.'
+                  : 'بعد موافقة الطرفين، نشارك المعلومات الضرورية لترتيب الموعد فقط.',
             ),
             const SizedBox(height: 14),
             if (bothAccepted)
@@ -389,7 +389,7 @@ class _ServiceMatchCard extends StatelessWidget {
             ] else
               const _StatusBox(
                 icon: Icons.hourglass_top_rounded,
-                text: 'وافقت على المطابقة، وننتظر رد الطرف الآخر.',
+                text: 'وافقت على العرض، وننتظر رد الطرف الآخر.',
               ),
           ],
         ),

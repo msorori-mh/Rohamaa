@@ -122,9 +122,9 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
       final contribute = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل احتياجك'),
+          title: const Text('تم تسجيل طلبك'),
           content: const Text(
-            'طلبك مستمر سواء ساهمت أم لا. عدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إن رغبت، يمكنك المساهمة بجزء من تكلفة التوصيل نقدًا للموصل عند التسليم؛ لا يوجد دفع داخل التطبيق.',
+            'سنراجع طلبك ونبحث عن شيء مناسب. المساهمة في التوصيل اختيارية ولا تؤثر في قبول طلبك أو أولويته.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('بدون مساهمة')),
@@ -142,7 +142,8 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الاحتياج: $e')));
+        debugPrint('Need submission failed: $e');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الطلب. تحقق من اتصالك وحاول مرة أخرى.')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -152,7 +153,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('أحتاج شيئًا')),
+      appBar: AppBar(title: const Text('اطلب ما تحتاجه')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -183,7 +184,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.warmGoldSoft,
           iconColor: RuhamaaColors.warmGold,
-          text: 'اختر ما تحتاجه بدقة. أنت لا تتصفح تبرعات الناس؛ رحماء يستخدم هذه التفاصيل للبحث عن الشيء الأنسب لك بخصوصية.',
+          text: 'اختر ما تحتاجه بدقة لنبحث لك عن الشيء الأنسب بخصوصية.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -218,7 +219,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
         TextFormField(
           controller: _title,
           decoration: const InputDecoration(
-            labelText: 'اسم مختصر للاحتياج',
+            labelText: 'اسم مختصر للطلب',
             hintText: 'يمكنك جعله أدق من النوع المختار',
           ),
           validator: (value) => value == null || value.trim().length < 3 ? 'اكتب احتياجًا واضحًا' : null,
@@ -266,18 +267,18 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           controller: _privateDetails,
           maxLines: 4,
           decoration: const InputDecoration(
-            labelText: 'تفاصيل خاصة تساعد رحماء',
+            labelText: 'تفاصيل تساعدنا',
             hintText: 'أي معلومات مهمة لفهم المطلوب أو شروط الملاءمة',
             helperText: 'هذه التفاصيل خاصة بفريق رحماء ولا تظهر للمتبرعين كما كتبتها.',
           ),
-          validator: (value) => value == null || value.trim().length < 8 ? 'أضف تفاصيل مختصرة تساعدنا في المطابقة' : null,
+          validator: (value) => value == null || value.trim().length < 8 ? 'أضف تفاصيل مختصرة تساعدنا في البحث' : null,
         ),
         const SizedBox(height: 14),
         const _InfoBox(
           icon: Icons.lock_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'إذا قرر فريق رحماء عرض احتياجك لتحفيز العطاء، سيكتب بطاقة محايدة منفصلة لا تحتوي اسمك أو رقمك أو عنوانك أو قصتك الخاصة.',
+          text: 'قد نعرض بطاقة مختصرة عن الطلب دون اسمك أو رقمك أو عنوانك.',
         ),
         const SizedBox(height: 26),
         Row(
@@ -320,10 +321,10 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('راجع احتياجك قبل التسجيل', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                const Text('راجع طلبك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
                 const SizedBox(height: 14),
                 _ReviewRow('التصنيف', path),
-                _ReviewRow('الاحتياج', _title.text.trim()),
+                _ReviewRow('الطلب', _title.text.trim()),
                 if (attributeText.isNotEmpty) _ReviewRow('الخصائص', attributeText),
                 _ReviewRow('المستعمل', _acceptsUsed ? 'أقبل المستعمل بحالة جيدة' : 'أفضل غير المستعمل'),
                 if (_category == 'clothes') _ReviewRow('المقاس', _sizeFlexible ? 'أقبل مقاسًا قريبًا' : 'المقاس المذكور مهم'),
@@ -336,7 +337,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.balance_outlined,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'المطابقة تعتمد على الملاءمة والأولوية والعدالة. عدم المساهمة في التوصيل وعدم تقديمك لعطاء أو خدمة لا يخفضان أولوية احتياجك.',
+          text: 'نرتّب الطلبات حسب الحاجة والملاءمة. المساهمة في التوصيل أو التبرع ليست شرطًا ولا تغيّر الأولوية.',
         ),
         const SizedBox(height: 24),
         Row(
@@ -348,7 +349,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
               child: FilledButton.icon(
                 onPressed: _saving ? null : _submit,
                 icon: const Icon(Icons.favorite_outline_rounded),
-                label: Text(_saving ? 'جارٍ الحفظ...' : 'تسجيل الاحتياج'),
+                label: Text(_saving ? 'جارٍ الإرسال...' : 'إرسال الطلب'),
               ),
             ),
           ],

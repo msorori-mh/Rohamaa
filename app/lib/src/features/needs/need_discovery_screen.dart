@@ -72,7 +72,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('احتياجات راجعها رحماء')),
+      appBar: AppBar(title: const Text('طلبات للمساعدة')),
       body: RefreshIndicator(
         onRefresh: () async => setState(_reload),
         child: ListView(
@@ -93,7 +93,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                       SizedBox(width: 9),
                       Expanded(
                         child: Text(
-                          'قد تلهمك حاجة حقيقية إلى شيء تستطيع توفيره',
+                          'قد تجد طلبًا تستطيع المساعدة في تلبيته',
                           style: TextStyle(
                             color: RuhamaaColors.primaryDark,
                             fontSize: 17,
@@ -105,7 +105,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'هذه بطاقات راجعها فريق رحماء قبل عرضها وأخفى هوية أصحابها. لا توجد مراسلة مباشرة ولا اختيار لشخص بعينه؛ بعد تبرعك يوجّه رحماء الشيء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+                    'راجع فريقنا هذه الطلبات وأخفى بيانات أصحابها. إذا تبرعت، سنوجّه الشيء إلى الطلب الأنسب والأعلى أولوية.',
                     style: TextStyle(color: RuhamaaColors.textMuted, height: 1.55),
                   ),
                 ],
@@ -153,7 +153,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
                   return Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      'تعذر تحميل الاحتياجات التي راجعها رحماء: ${snapshot.error}',
+                      'تعذر تحميل الطلبات. تحقق من اتصالك وحاول مجددًا.',
                       textAlign: TextAlign.center,
                     ),
                   );
@@ -240,7 +240,7 @@ class _NeedCard extends StatelessWidget {
                   ),
                 ),
                 const Tooltip(
-                  message: 'راجع فريق رحماء هذه البطاقة قبل عرضها',
+                  message: 'راجع فريقنا هذا الطلب قبل عرضه',
                   child: Icon(Icons.verified_rounded, color: RuhamaaColors.primary),
                 ),
               ],
@@ -264,7 +264,7 @@ class _NeedCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(15),
               ),
               child: const Text(
-                'لن تعرف هوية صاحب الاحتياج، ولا تعني استجابتك أن التبرع محجوز لهذه الحالة بعينها.',
+                'تبقى بيانات صاحب الطلب خاصة، وسنوجّه تبرعك حسب الملاءمة والأولوية.',
                 style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.45, fontSize: 12),
               ),
             ),
@@ -272,7 +272,7 @@ class _NeedCard extends StatelessWidget {
             FilledButton.icon(
               onPressed: onOffer,
               icon: const Icon(Icons.volunteer_activism_outlined),
-              label: const Text('أستطيع توفير هذا'),
+              label: const Text('أستطيع التبرع بهذا'),
             ),
           ],
         ),
@@ -298,13 +298,13 @@ class _EmptyDiscovery extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'لا توجد بطاقات راجعها رحماء في هذا التصنيف الآن',
+            'لا توجد طلبات في هذا القسم الآن',
             textAlign: TextAlign.center,
             style: TextStyle(color: RuhamaaColors.primaryDark, fontSize: 17, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 7),
           const Text(
-            'لا يعني ذلك عدم وجود احتياجات؛ رحماء يعرض هنا فقط الطلبات التي راجعها وقرر أنها مناسبة للعرض المحايد.',
+            'نعرض هنا فقط الطلبات التي راجعها فريقنا ويمكن مشاركتها دون بيانات شخصية.',
             textAlign: TextAlign.center,
             style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
           ),

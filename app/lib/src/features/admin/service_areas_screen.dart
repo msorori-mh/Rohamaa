@@ -177,7 +177,7 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(child: Text('تعذر تحميل المناطق: ${snapshot.error}'));
+              return const Center(child: Text('تعذر تحميل المناطق. حاول مجددًا.'));
             }
             final rows = snapshot.data ?? const [];
             if (rows.isEmpty) {

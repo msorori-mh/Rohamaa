@@ -73,7 +73,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل المستخدمين: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المستخدمين. حاول مجددًا.'));
           final users = snapshot.data ?? const [];
           if (users.isEmpty) return const Center(child: Text('لا يوجد مستخدمون حتى الآن.'));
           return RefreshIndicator(

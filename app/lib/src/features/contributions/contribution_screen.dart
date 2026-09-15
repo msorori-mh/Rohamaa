@@ -23,12 +23,12 @@ class _ContributionScreenState extends State<ContributionScreen> {
 
   String get _intro {
     if (widget.donationId != null) {
-      return 'تبرعك بالشيء هو الأساس. وإذا استطعت، فمساهمتك في تكلفة استلامه وتوصيله تساعد رحماء على إيصال عطائك ودعم توصيلات أخرى.';
+      return 'تبرعك هو الأساس. إن استطعت، تساعد مساهمتك في تكلفة استلامه وتوصيله.';
     }
     if (widget.needId != null) {
-      return 'طلبك مستمر سواء ساهمت أم لا. إن كان بإمكانك المساهمة بجزء من تكلفة التوصيل، فهذا يساعد رحماء على استمرار الخدمة.';
+      return 'طلبك مستمر سواء ساهمت أم لا. إن استطعت، تساعد مساهمتك في استمرار خدمة التوصيل.';
     }
-    return 'مساهمتك تساعد رحماء في تغطية تكاليف التوصيل واستمرار إيصال الأشياء إلى مستحقيها.';
+    return 'مساهمتك تساعد على تغطية تكلفة التوصيل واستمرار الخدمة.';
   }
 
   String get _cashTiming {
@@ -56,10 +56,10 @@ class _ContributionScreenState extends State<ContributionScreen> {
         ),
       );
       Navigator.of(context).pop();
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تسجيل المساهمة: $e')),
+        const SnackBar(content: Text('تعذر تسجيل المساهمة. تحقق من اتصالك وحاول مرة أخرى.')),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -69,7 +69,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ساهم في وصول الخير')),
+      appBar: AppBar(title: const Text('المساهمة في التوصيل')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
@@ -98,7 +98,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'عدم القدرة على المساهمة لا يمنع الخدمة ولا يقلل أولوية الاستحقاق.',
+                  'عدم المساهمة لا يمنع الخدمة ولا يغيّر أولوية طلبك.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                 ),
@@ -166,7 +166,7 @@ class _ContributionScreenState extends State<ContributionScreen> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'المبلغ المختار رغبة بالمساهمة وليس شرطًا لإتمام التبرع أو الطلب. يتم اعتماد المساهمة فقط بعد استلامها نقدًا.',
+            'المساهمة اختيارية، وتُسجّل بعد تسليمها نقدًا للموصل.',
             textAlign: TextAlign.center,
             style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.45),
           ),

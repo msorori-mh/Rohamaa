@@ -80,7 +80,7 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل الشركاء: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل بيانات الشركاء. تحقق من اتصالك وحاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           return ListView(
             padding: const EdgeInsets.fromLTRB(18, 10, 18, 30),
@@ -91,17 +91,17 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('شراكة أثر، وليست مساحة إعلانية', style: TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 17)),
+                    Text('قدّم خدمة من خلال نشاطك', style: TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 17)),
                     SizedBox(height: 7),
                     Text(
-                      'المحل أو الورشة أو الصالون يمر بتحقق رحماء أولًا. بعد الاعتماد يستطيع تقديم خدمة مجانية أو عمل مجاني مع المواد حسب الحالة، دون عرض المستفيدين أو التسويق لهم.',
+                      'نسجّل المحلات والورش والجهات بعد التحقق منها، ثم نتيح لها تقديم خدمات مجانية بخصوصية.',
                       style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(onPressed: _register, icon: const Icon(Icons.add_business_outlined), label: const Text('سجّل نشاطًا كشريك رحماء')),
+              FilledButton.icon(onPressed: _register, icon: const Icon(Icons.add_business_outlined), label: const Text('تسجيل نشاطك')),
               const SizedBox(height: 18),
               if (rows.isEmpty)
                 const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('لم تسجّل نشاطًا كشريك رحماء بعد.')))
@@ -138,7 +138,7 @@ class _PartnerHubV2ScreenState extends State<PartnerHubV2Screen> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('السعة: حتى ${row['monthly_case_capacity']} حالات شهريًا', style: const TextStyle(color: RuhamaaColors.textMuted)),
+                            Text('القدرة: حتى ${row['monthly_case_capacity']} خدمات شهريًا', style: const TextStyle(color: RuhamaaColors.textMuted)),
                             if (verified) ...[
                               const SizedBox(height: 14),
                               FilledButton.icon(
@@ -214,13 +214,14 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('تم إرسال طلب الشراكة'),
-          content: const Text('سيراجع فريق رحماء النشاط. قبول الشروط لا يعني الاعتماد؛ لا يمكن تقديم خدمة باسم النشاط حتى يكتمل التحقق.'),
+          content: const Text('سنراجع بيانات النشاط. يمكنك تقديم الخدمات باسمه بعد اكتمال التحقق.'),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
         ),
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تسجيل الشريك: $e')));
+      debugPrint('Partner registration failed: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال طلب الشراكة. تحقق من اتصالك وحاول مرة أخرى.')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -246,7 +247,7 @@ class _RegisterPartnerV2ScreenState extends State<RegisterPartnerV2Screen> {
             const SizedBox(height: 12),
             TextFormField(controller: _description, maxLines: 3, decoration: const InputDecoration(labelText: 'وصف مختصر للنشاط')),
             const SizedBox(height: 12),
-            TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم تواصل النشاط', helperText: 'خاص بالتحقق والتنسيق، ولا يعرض للعامة.')),
+            TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم تواصل النشاط', helperText: 'نستخدمه للتحقق والتنسيق، ولا نعرضه للعامة.')),
             const SizedBox(height: 12),
             TextFormField(
               controller: _capacity,
@@ -344,7 +345,8 @@ class _PartnerServiceOfferV2ScreenState extends State<PartnerServiceOfferV2Scree
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تسجيل عرض الشريك للمراجعة التشغيلية.')));
       Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تسجيل الخدمة: $e')));
+      debugPrint('Partner service offer failed: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الخدمة. تحقق من اتصالك وحاول مرة أخرى.')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -363,7 +365,7 @@ class _PartnerServiceOfferV2ScreenState extends State<PartnerServiceOfferV2Scree
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(16)),
             child: const Text(
-              'تظهر هنا فقط أنواع الخدمات المتوافقة مع النشاط الذي راجعه فريق رحماء. توسيع نشاط الشريك يحتاج مراجعة جديدة.',
+              'اختر خدمة متوافقة مع نشاطك المعتمد. تحتاج الخدمات الجديدة إلى مراجعة.',
               style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.45, fontSize: 12),
             ),
           ),

@@ -95,7 +95,7 @@ class _PendingOffersTabState extends State<_PendingOffersTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل عروض المهارات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل عروض المهارات. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -239,7 +239,7 @@ class _OpenRequestsTabState extends State<_OpenRequestsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل طلبات الخدمات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل طلبات الخدمات. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -403,7 +403,7 @@ class _AcceptedServicesTabState extends State<_AcceptedServicesTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل الخدمات المقبولة: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل الخدمات المقبولة. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -547,7 +547,7 @@ class _CandidateSheetState extends State<_CandidateSheet> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('تعذر تحميل المرشحين: ${snapshot.error}'));
+            return const Center(child: Text('تعذر تحميل المرشحين. حاول مجددًا.'));
           }
           final candidates = snapshot.data ?? const [];
           return ListView(

@@ -219,13 +219,13 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
       final contribute = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل عطائك'),
+          title: const Text('تم تسجيل تبرعك'),
           content: const Text(
-            'تبرعك بالشيء هو الأهم. وإذا استطعت يمكنك أيضًا المساهمة في تكلفة الاستلام والتوصيل. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند الاستلام.',
+            'سنراجع التبرع ونتواصل معك لترتيب الاستلام. يمكنك أيضًا المساهمة في تكلفة التوصيل إن رغبت.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('أكتفي بالتبرع')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أساهم في التوصيل')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إنهاء')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('المساهمة في التوصيل')),
           ],
         ),
       );
@@ -239,7 +239,8 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ العطاء: $e')));
+        debugPrint('Donation submission failed: $e');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال التبرع. تحقق من اتصالك وحاول مرة أخرى.')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -249,7 +250,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('أعطي شيئًا')),
+      appBar: AppBar(title: const Text('تبرّع بشيء')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -262,7 +263,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
                 icon: Icons.lightbulb_outline_rounded,
                 color: RuhamaaColors.warmGoldSoft,
                 iconColor: RuhamaaColors.warmGold,
-                text: 'هذه الحاجة ألهمت عطائك، لذلك ملأنا ما توفر من البيانات. البطاقة ليست حجزًا لشخص بعينه؛ رحماء يوجّه العطاء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+                text: 'ملأنا بعض البيانات من الطلب الذي اخترته. سنوجّه تبرعك إلى الطلب الأنسب والأعلى أولوية.',
               ),
               const SizedBox(height: 16),
             ],
@@ -289,7 +290,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'اختر النوع بدقة حتى يستطيع رحماء مطابقة عطائك مع الاحتياج المناسب بدون أن تتصفح أو تختار الأشخاص.',
+          text: 'اختر النوع الأقرب حتى نصل تبرعك بالشخص المناسب.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -401,7 +402,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('راجع عطائك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                const Text('راجع تبرعك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
                 const SizedBox(height: 14),
                 _ReviewRow('التصنيف', path),
                 _ReviewRow('الشيء', _title.text.trim()),
@@ -418,8 +419,8 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
           text: _inspired
-              ? 'البطاقة التي رأيتها تحفّز العطاء فقط. المطابقة النهائية تتم وفق الملاءمة والأولوية والعدالة، وليس وفق اختيار المتبرع.'
-              : 'يراجع رحماء العطاء ويطابقه بخصوصية. لا تختار المستفيد ولا تظهر هوية أي طرف للآخر.',
+              ? 'سنوجّه تبرعك إلى الطلب الأنسب والأعلى أولوية.'
+              : 'يراجع رحماء التبرع ويوجهه بخصوصية. لا تظهر هوية أي طرف للآخر.',
         ),
         const SizedBox(height: 24),
         Row(
@@ -431,7 +432,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
               child: FilledButton.icon(
                 onPressed: _saving ? null : _submit,
                 icon: const Icon(Icons.volunteer_activism_outlined),
-                label: Text(_saving ? 'جارٍ الحفظ...' : 'أرسل عطائي'),
+                label: Text(_saving ? 'جارٍ الإرسال...' : 'إرسال التبرع'),
               ),
             ),
           ],

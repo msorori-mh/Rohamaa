@@ -52,10 +52,10 @@ class _LegalScreenState extends State<LegalScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم تسجيل طلب حذف الحساب.')),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تسجيل طلب الحذف: $e')),
+        const SnackBar(content: Text('تعذر إرسال طلب الحذف. تحقق من اتصالك وحاول مرة أخرى.')),
       );
     } finally {
       if (mounted) setState(() => _requestingDeletion = false);
@@ -70,7 +70,7 @@ class _LegalScreenState extends State<LegalScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
-            'رحماء يقلل كشف البيانات إلى الحد اللازم للمطابقة والتشغيل. في عمليات الأشياء لا يعرف المتبرع والمستفيد هوية بعضهما، وفي الخدمات الحضورية لا تُشارك معلومات التنفيذ الضرورية إلا بعد الموافقة والتنسيق.',
+            'نحافظ على خصوصية بياناتك، ولا نشارك إلا ما يلزم لإتمام الاستلام أو التسليم أو الخدمة بعد الموافقة.',
           ),
           const SizedBox(height: 18),
           Card(
