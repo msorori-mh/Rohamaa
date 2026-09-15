@@ -1,3 +1,5 @@
+> **تحديث الهوية:** اعتمد اسم «عطاء» (Ataa). هذه وثيقة تاريخية؛ راجع [الهوية الحالية وخطوات التوافق](ATAA_IDENTITY.md).
+
 # Website V2 — 14 September 2026
 
 Scope: public Arabic RTL website in `site/`, on the existing GitHub Pages hosting path. This is a public information website, not a Flutter web build or an administrative portal. No backend schema or application changes.

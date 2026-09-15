@@ -228,7 +228,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                               tools: [
                                 _Tool(Icons.shield_outlined, 'مراجعة المخاطر', 'فحص الإشارات وتوثيق قرار المراجعة.', RuhamaaColors.rose, () => _open(const RiskManagementScreen())),
                                 _Tool(Icons.report_problem_outlined, 'بلاغات الخدمات', 'الخصوصية، عدم الحضور وجودة التنفيذ.', RuhamaaColors.vividGold, () => _open(const ServiceIncidentManagementScreen())),
-                                _Tool(Icons.storefront_outlined, 'شركاء رحماء', 'اعتماد الورش والمحلات ومقدمي الخدمات.', RuhamaaColors.blue, () => _open(const PartnerManagementScreen())),
+                                _Tool(Icons.storefront_outlined, 'شركاء عطاء', 'اعتماد الورش والمحلات ومقدمي الخدمات.', RuhamaaColors.blue, () => _open(const PartnerManagementScreen())),
                                 _Tool(Icons.payments_outlined, 'المساهمات التشغيلية', 'تأكيد المبالغ النقدية المستلمة ميدانيًا.', RuhamaaColors.primaryBright, () => _open(const ContributionReviewScreen())),
                               ],
                             ),
@@ -245,7 +245,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                             ),
                             const SizedBox(height: 28),
                             const Text(
-                              'مركز تشغيل رحماء • مأرب',
+                              'مركز تشغيل عطاء • مأرب',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
                             ),
@@ -333,7 +333,7 @@ class _AdminHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('مركز التشغيل', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                    Text('لوحة إدارة رحماء', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                    Text('لوحة إدارة عطاء', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
                   ],
                 ),
               ),

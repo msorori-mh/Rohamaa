@@ -103,7 +103,7 @@ class _CreateServiceOfferScreenState extends State<CreateServiceOfferScreen> {
         builder: (context) => AlertDialog(
           title: const Text('شكرًا لعطائك من وقتك'),
           content: const Text(
-            'تم تسجيل ما تستطيع تقديمه. يراجع فريق رحماء العرض قبل مطابقته باحتياج مناسب. لن يُعرض كإعلان عام، وتقديمك للخدمة لا يؤثر على أولوية أي احتياج تسجله لنفسك.',
+            'تم تسجيل ما تستطيع تقديمه. يراجع فريق عطاء العرض قبل مطابقته باحتياج مناسب. لن يُعرض كإعلان عام، وتقديمك للخدمة لا يؤثر على أولوية أي احتياج تسجله لنفسك.',
           ),
           actions: [
             FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم')),
@@ -335,7 +335,7 @@ class _CreateServiceOfferScreenState extends State<CreateServiceOfferScreen> {
             DropdownMenuItem(value: 'none', child: Text('لا تحتاج مواد غالبًا')),
             DropdownMenuItem(value: 'provider', child: Text('أستطيع توفيرها')),
             DropdownMenuItem(value: 'recipient', child: Text('من يحتاج الخدمة يوفرها')),
-            DropdownMenuItem(value: 'case_by_case', child: Text('حسب الحالة وبعد مراجعة رحماء')),
+            DropdownMenuItem(value: 'case_by_case', child: Text('حسب الحالة وبعد مراجعة عطاء')),
           ],
           onChanged: (value) => setState(() => _materialsMode = value ?? 'case_by_case'),
         ),
@@ -357,7 +357,7 @@ class _CreateServiceOfferScreenState extends State<CreateServiceOfferScreen> {
         const SizedBox(height: 12),
         _InfoBox(
           icon: Icons.verified_user_outlined,
-          text: 'يعرض هذا التسجيل على فريق رحماء للمراجعة. لن يظهر للعامة، ولن يحصل مقدم الخدمة على اسم أو عنوان الشخص الآخر إلا بالقدر الضروري بعد اعتماد المطابقة.',
+          text: 'يعرض هذا التسجيل على فريق عطاء للمراجعة. لن يظهر للعامة، ولن يحصل مقدم الخدمة على اسم أو عنوان الشخص الآخر إلا بالقدر الضروري بعد اعتماد المطابقة.',
           warm: true,
         ),
         const SizedBox(height: 12),

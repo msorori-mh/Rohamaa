@@ -1,4 +1,4 @@
-# Ruhamaa V1 — Marib Pilot Execution Plan
+# Ataa V1 — Marib Pilot Execution Plan
 
 Target: launch a controlled pilot in Marib with two couriers and the two active electric motorbikes (`BIKE-01`, `BIKE-02`), reach the first 1,000 successful item handoffs/services, and measure social impact, safety and operating sustainability.
 
@@ -28,7 +28,7 @@ Exit criteria met for repository/backend work: privileged actions are role/owner
 
 ## Phase 2 — Community item experience ✅
 
-- [x] Arabic RTL + Ruhamaa branding
+- [x] Arabic RTL + Ataa branding
 - [x] Profile/address/location onboarding
 - [x] Category System V2 donation wizard
 - [x] Category System V2 need wizard

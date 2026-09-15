@@ -6,3 +6,6 @@
 @media(max-width:360px){.hero h1{font-size:54px}.button{gap:16px;padding-inline:18px}.hero-actions .text-link{font-size:14px}.steps-grid{grid-template-columns:1fr}.step:before{display:none}.art-note{font-size:17px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
 @media print{.site-header,.site-footer,.hero-actions,.menu-toggle,.skip-link{display:none!important}.container{width:100%}.legal{max-width:none}.card{break-inside:avoid}body{background:white;color:black}a{color:black}.legal p{color:black}}
+
+/* Ataa: equal participants, shared contribution. */
+.logo-mark{border:0;transform:none;overflow:hidden}.logo-mark img{display:block;width:100%;height:100%;object-fit:contain}.logo small{font-size:10px}

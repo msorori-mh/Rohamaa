@@ -205,7 +205,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   _Metric('أشياء وصلت بنجاح', '${_impact!.deliveredItems}', Icons.inventory_2_outlined),
                   _Metric('عطاءات بتصنيف V2', '${_impact!.v2Donations}', Icons.category_outlined),
                   _Metric('احتياجات بتصنيف V2', '${_impact!.v2Needs}', Icons.fact_check_outlined),
-                  _Metric('بطاقات احتياج راجعها رحماء', '${_impact!.reviewedNeedCards}', Icons.visibility_outlined),
+                  _Metric('بطاقات احتياج راجعها عطاء', '${_impact!.reviewedNeedCards}', Icons.visibility_outlined),
                   _Metric('تبرعات ألهمتها البطاقات', '${_impact!.inspiredDonations}', Icons.lightbulb_outline_rounded),
                   _Metric('معدل إلهام البطاقات', '${_impact!.reviewedNeedInspirationRate.toStringAsFixed(1)}%', Icons.insights_outlined),
                   _Metric('عروض وقت ومهارة', '${_impact!.serviceOffers}', Icons.handyman_outlined),

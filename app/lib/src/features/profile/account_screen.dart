@@ -27,7 +27,7 @@ class _AccountScreenState extends State<AccountScreen> {
       builder: (context) => AlertDialog(
         title: const Text('تسجيل الخروج؟'),
         content: const Text(
-          'سيتم إنهاء جلسة رحماء على هذا الجهاز، ويمكنك بعد ذلك الدخول بحساب Google آخر.',
+          'سيتم إنهاء جلسة عطاء على هذا الجهاز، ويمكنك بعد ذلك الدخول بحساب Google آخر.',
         ),
         actions: [
           TextButton(
@@ -96,7 +96,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'حساب رحماء',
+                        'حساب عطاء',
                         style: TextStyle(
                           color: RuhamaaColors.primaryDark,
                           fontWeight: FontWeight.w900,
@@ -139,7 +139,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
-                  title: const Text('كيف يعمل رحماء؟', style: TextStyle(fontWeight: FontWeight.w800)),
+                  title: const Text('كيف يعمل عطاء؟', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('راجع بطاقات التعريف والخصوصية والمساهمة في التوصيل.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/intro'),
@@ -169,7 +169,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'في رحماء لا توجد هوية ثابتة باسم «متبرع» أو «محتاج». يمكنك تسجيل احتياجك، وفي الوقت نفسه تقديم شيء أو وقت أو مهارة عندما تستطيع.',
+                    'في عطاء لا توجد هوية ثابتة باسم «متبرع» أو «محتاج». يمكنك تسجيل احتياجك، وفي الوقت نفسه تقديم شيء أو وقت أو مهارة عندما تستطيع.',
                     style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                   ),
                 ),

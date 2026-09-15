@@ -69,7 +69,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل وقتك أو مهارتك'),
           content: const Text(
-            'يراجع فريق رحماء العرض قبل مطابقته باحتياج مناسب. لن يظهر كإعلان عام، وتقديمك للخدمة لا يزيد أولوية احتياجاتك الشخصية.',
+            'يراجع فريق عطاء العرض قبل مطابقته باحتياج مناسب. لن يظهر كإعلان عام، وتقديمك للخدمة لا يزيد أولوية احتياجاتك الشخصية.',
           ),
           actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('تم'))],
         ),
@@ -94,7 +94,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
             padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(18)),
             child: const Text(
-              'هذا المسار للأفراد. إذا كنت تمثل محلًا أو ورشة أو صالونًا فاستخدم «شركاء رحماء» حتى يتم التحقق من النشاط أولًا.',
+              'هذا المسار للأفراد. إذا كنت تمثل محلًا أو ورشة أو صالونًا فاستخدم «شركاء عطاء» حتى يتم التحقق من النشاط أولًا.',
               style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
             ),
           ),

@@ -178,42 +178,27 @@ class _RuhamaaBrandPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final green = Paint()
-      ..color = RuhamaaColors.primary
-      ..style = PaintingStyle.fill;
-    final gold = Paint()
-      ..color = RuhamaaColors.warmGold
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(Offset(w * 0.34, h * 0.22), w * 0.105, green);
-    canvas.drawCircle(Offset(w * 0.69, h * 0.28), w * 0.085, gold);
-
-    final left = Path()
-      ..moveTo(w * 0.33, h * 0.36)
-      ..cubicTo(w * 0.17, h * 0.40, w * 0.14, h * 0.62, w * 0.50, h * 0.88)
-      ..cubicTo(w * 0.46, h * 0.70, w * 0.48, h * 0.50, w * 0.33, h * 0.36)
-      ..close();
-    canvas.drawPath(left, green);
-
-    final right = Path()
-      ..moveTo(w * 0.68, h * 0.39)
-      ..cubicTo(w * 0.84, h * 0.38, w * 0.92, h * 0.53, w * 0.81, h * 0.67)
-      ..cubicTo(w * 0.72, h * 0.78, w * 0.61, h * 0.84, w * 0.50, h * 0.90)
-      ..cubicTo(w * 0.56, h * 0.72, w * 0.56, h * 0.52, w * 0.68, h * 0.39)
-      ..close();
-    canvas.drawPath(right, gold);
-
-    final embrace = Paint()
-      ..color = RuhamaaColors.warmSurface
+    // Shared geometry with site/assets/ataa-mark.svg and ataa_launcher.xml.
+    canvas.save();
+    canvas.scale(size.width / 108, size.height / 108);
+    final green = Paint()..color = RuhamaaColors.primary;
+    final gold = Paint()..color = RuhamaaColors.warmGold;
+    canvas.drawCircle(const Offset(34, 26), 10, green);
+    canvas.drawCircle(const Offset(74, 26), 10, gold);
+    green
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.055
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    gold
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
       ..strokeCap = StrokeCap.round;
-    final arc = Path()
-      ..moveTo(w * 0.42, h * 0.50)
-      ..quadraticBezierTo(w * 0.53, h * 0.59, w * 0.61, h * 0.49);
-    canvas.drawPath(arc, embrace);
+    canvas.drawPath(Path()..moveTo(20, 49)..cubicTo(20, 73, 35, 90, 54, 90), green);
+    canvas.drawPath(Path()..moveTo(88, 49)..cubicTo(88, 73, 73, 90, 54, 90), gold);
+    green.strokeWidth = 8;
+    canvas.drawPath(Path()..moveTo(34, 49)..lineTo(54, 64)..lineTo(74, 49), green);
+    canvas.restore();
   }
 
   @override

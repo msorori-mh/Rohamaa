@@ -30,7 +30,7 @@ class _NeedDiscoveryAdminAppBar extends StatelessWidget implements PreferredSize
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: const Text('احتياجات راجعها رحماء'),
+      title: const Text('احتياجات راجعها عطاء'),
       bottom: const TabBar(
         tabs: [
           Tab(text: 'للمراجعة', icon: Icon(Icons.fact_check_outlined)),
@@ -179,7 +179,7 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'خاص بفريق رحماء — لا تنسخه تلقائيًا إلى البطاقة المعروضة',
+                              'خاص بفريق عطاء — لا تنسخه تلقائيًا إلى البطاقة المعروضة',
                               style: TextStyle(
                                 color: RuhamaaColors.primaryDark,
                                 fontWeight: FontWeight.w800,

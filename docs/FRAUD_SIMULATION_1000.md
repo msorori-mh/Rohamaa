@@ -1,3 +1,5 @@
+> **تحديث الهوية:** اعتمد اسم «عطاء» (Ataa). هذه وثيقة تاريخية؛ راجع [الهوية الحالية وخطوات التوافق](ATAA_IDENTITY.md).
+
 # Ruhamaa — 1,000-operation synthetic abuse stress test
 
 This document records an **early adversarial simulation**, not a prediction of Marib abuse rates and not a current measured detection rate. The generator intentionally overrepresented abuse to expose design gaps before pilot operation.

@@ -1,0 +1,50 @@
+name: Ataa identity checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: isolated-brand-test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check branding and compatibility boundaries
+        run: python3 tools/branding/check_identity.py
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+      - name: Generate forward migration using CLI
+        run: |
+          mkdir -p "$RUNNER_TEMP/ataa-identity"
+          cd "$RUNNER_TEMP/ataa-identity"
+          supabase init
+          supabase migration new ataa_display_identity
+          cp "$GITHUB_WORKSPACE/tools/branding/ataa_notifications.sql" supabase/migrations/*_ataa_display_identity.sql
+      - name: Verify migration twice on disposable PostgreSQL
+        run: |
+          psql postgresql://postgres:isolated-brand-test@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 \
+            -f tools/branding/notification_fixture.sql \
+            -f "$RUNNER_TEMP"/ataa-identity/supabase/migrations/*_ataa_display_identity.sql \
+            -f "$RUNNER_TEMP"/ataa-identity/supabase/migrations/*_ataa_display_identity.sql \
+            -f tools/branding/verify_notification_migration.sql
+      - name: Save generated migration
+        uses: actions/upload-artifact@v4
+        with:
+          name: ataa-identity-migration
+          path: ${{ runner.temp }}/ataa-identity/supabase/migrations/*_ataa_display_identity.sql
+          retention-days: 14

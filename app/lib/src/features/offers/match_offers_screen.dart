@@ -90,7 +90,7 @@ class _ItemOffersTabState extends State<_ItemOffersTab> {
         SnackBar(
           content: Text(
             accept
-                ? 'تم قبول المطابقة. سيبدأ رحماء ترتيب الاستلام والتوصيل.'
+                ? 'تم قبول المطابقة. سيبدأ عطاء ترتيب الاستلام والتوصيل.'
                 : 'تم تحديث احتياجك وسيستمر البحث عن بديل مناسب.',
           ),
         ),
@@ -120,7 +120,7 @@ class _ItemOffersTabState extends State<_ItemOffersTab> {
           return const _EmptyOffers(
             icon: Icons.inventory_2_outlined,
             title: 'لا يوجد تطابق أشياء جديد الآن',
-            subtitle: 'إذا كان لديك احتياج مسجل، يستمر رحماء في البحث عن شيء مناسب وسنظهره لك هنا عند توفره.',
+            subtitle: 'إذا كان لديك احتياج مسجل، يستمر عطاء في البحث عن شيء مناسب وسنظهره لك هنا عند توفره.',
           );
         }
         return RefreshIndicator(
@@ -246,9 +246,9 @@ class _ServiceOffersTabState extends State<_ServiceOffersTab> {
       final state = await _repo.respondServiceMatch(offer.matchId, accept: accept);
       if (!mounted) return;
       final message = !accept
-          ? 'تم رفض المطابقة، وسيواصل رحماء البحث عن بديل مناسب.'
+          ? 'تم رفض المطابقة، وسيواصل عطاء البحث عن بديل مناسب.'
           : state == 'accepted'
-              ? 'وافق الطرفان على المطابقة. سيكمل رحماء تنسيق الموعد بأقل قدر من المعلومات الضرورية.'
+              ? 'وافق الطرفان على المطابقة. سيكمل عطاء تنسيق الموعد بأقل قدر من المعلومات الضرورية.'
               : 'تم تسجيل موافقتك. ننتظر موافقة الطرف الآخر.';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       setState(_reload);
@@ -277,7 +277,7 @@ class _ServiceOffersTabState extends State<_ServiceOffersTab> {
           return const _EmptyOffers(
             icon: Icons.handyman_outlined,
             title: 'لا توجد مطابقة خدمة جديدة الآن',
-            subtitle: 'إذا سجلت احتياج خدمة أو عرضت وقتك ومهارتك، سيظهر التطابق الخاص هنا بعد مراجعة رحماء.',
+            subtitle: 'إذا سجلت احتياج خدمة أو عرضت وقتك ومهارتك، سيظهر التطابق الخاص هنا بعد مراجعة عطاء.',
           );
         }
         return RefreshIndicator(
@@ -336,8 +336,8 @@ class _ServiceMatchCard extends StatelessWidget {
                       children: [
                         Text(
                           provider
-                              ? 'وجد رحماء احتياجًا يناسب مهارتك'
-                              : 'وجد رحماء وقتًا أو مهارة تناسب احتياجك',
+                              ? 'وجد عطاء احتياجًا يناسب مهارتك'
+                              : 'وجد عطاء وقتًا أو مهارة تناسب احتياجك',
                           style: const TextStyle(
                             color: RuhamaaColors.primaryDark,
                             fontWeight: FontWeight.w900,
@@ -365,8 +365,8 @@ class _ServiceMatchCard extends StatelessWidget {
             const SizedBox(height: 10),
             _PrivacyBox(
               text: provider
-                  ? 'لا يظهر لك اسم أو عنوان صاحب الاحتياج الآن. بعد موافقة الطرفين، يشارك رحماء فقط المعلومات الضرورية لتنفيذ الخدمة.'
-                  : 'لا يظهر لك اسم مقدم الخدمة أو بياناته الآن. بعد موافقة الطرفين، يشارك رحماء فقط المعلومات الضرورية لتنسيق الموعد.',
+                  ? 'لا يظهر لك اسم أو عنوان صاحب الاحتياج الآن. بعد موافقة الطرفين، يشارك عطاء فقط المعلومات الضرورية لتنفيذ الخدمة.'
+                  : 'لا يظهر لك اسم مقدم الخدمة أو بياناته الآن. بعد موافقة الطرفين، يشارك عطاء فقط المعلومات الضرورية لتنسيق الموعد.',
             ),
             const SizedBox(height: 14),
             if (bothAccepted)
@@ -374,7 +374,7 @@ class _ServiceMatchCard extends StatelessWidget {
                 icon: Icons.task_alt_rounded,
                 text: offer.status == 'scheduled'
                     ? 'وافق الطرفان وتم ترتيب الموعد.'
-                    : 'وافق الطرفان. سيكمل رحماء تنسيق الموعد.',
+                    : 'وافق الطرفان. سيكمل عطاء تنسيق الموعد.',
               )
             else if (awaitingMe) ...[
               FilledButton(

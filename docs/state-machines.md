@@ -1,4 +1,4 @@
-# Ruhamaa V1 State Machines
+# Ataa V1 State Machines
 
 This document mirrors the current live PostgreSQL enum/check states used by the Marib pilot. Not every transition is legal from every preceding state; privileged workflow changes remain server/admin controlled.
 
@@ -139,7 +139,7 @@ Incidents are private operational reports, not public reviews.
 5. New contributions remain `pending` until physical cash receipt is confirmed and verified by staff.
 6. A service match requires the relevant provider/requester consent before scheduling.
 7. A provider/partner receives only the operational information required for an accepted in-person service, not the user’s unrelated history.
-8. An unverified/suspended partner cannot operate as an approved Ruhamaa business provider.
+8. An unverified/suspended partner cannot operate as an approved Ataa business provider.
 9. Partner activity scope and monthly capacity are enforced server-side, not only in UI.
 10. Risk flags and service incidents are review evidence; they do not silently delete needs or automatically convict/suspend a participant without the configured staff workflow.
 11. Courier visibility remains scoped to assigned deliveries.

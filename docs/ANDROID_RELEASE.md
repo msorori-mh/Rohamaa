@@ -1,4 +1,4 @@
-# Ruhamaa Android release signing
+# Ataa Android release signing
 
 This document defines the release-signing path for the Android app. Release signing secrets must never be committed to the repository.
 
@@ -125,7 +125,7 @@ The Gradle configuration intentionally refuses a release build unless all four s
 
 Keep these separate:
 
-- **Upload key**: generated and controlled by Ruhamaa; used to sign uploads to Google Play.
+- **Upload key**: generated and controlled by Ataa; used to sign uploads to Google Play.
 - **Play App Signing key**: controlled by Google Play after enrollment; its SHA-256 is the fingerprint that belongs in `assetlinks.json` for production App Links.
 
 Do not publish private keys or passwords. Certificate SHA-256 fingerprints are public identifiers and may be published in `assetlinks.json`.

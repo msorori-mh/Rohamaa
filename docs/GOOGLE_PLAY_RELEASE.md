@@ -1,4 +1,4 @@
-# Ruhamaa — Google Play / Android release checklist
+# Ataa — Google Play / Android release checklist
 
 This is the release checklist for the current Marib pilot build. Detailed signing commands live in `docs/ANDROID_RELEASE.md`; Data Safety source-of-truth lives in `docs/PLAY_DATA_SAFETY.md`. Do not duplicate secrets in this file.
 
@@ -32,7 +32,7 @@ Before store submission, verify the URLs in a normal unauthenticated browser and
 
 Branding/authorized-domain configuration should use:
 
-- App name: `Ruhamaa` / `رحماء`
+- App name: `Ataa` / `عطاء`
 - Home page: `https://ruhamaa.com/`
 - Privacy: `https://ruhamaa.com/privacy/`
 - Terms: `https://ruhamaa.com/terms/`
@@ -94,7 +94,7 @@ adb shell pm get-app-links com.ruhamaa.app
 adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
 ```
 
-5. Only after the domain reports verified and the HTTPS link opens Ruhamaa should the production build use:
+5. Only after the domain reports verified and the HTTPS link opens Ataa should the production build use:
 
 ```text
 AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback
@@ -106,8 +106,8 @@ Keep the custom scheme available as an internal/fallback path until the HTTPS ca
 
 Suggested names:
 
-- Arabic: `رحماء`
-- English: `Ruhamaa`
+- Arabic: `عطاء`
+- English: `Ataa`
 
 Suggested short description:
 
@@ -115,7 +115,7 @@ Suggested short description:
 
 Suggested full-description direction:
 
-> رحماء منصة مجتمعية في مأرب تربط الأشياء التي لم يعد أصحابها بحاجة إليها، والوقت والمهارات والخدمات المجانية التي يستطيع أفراد أو شركاء موثّقون تقديمها، باحتياجات مسجلة مسبقًا. لا يتصفح المستفيد التبرعات ولا يختار المتبرع المستفيد. يراجع رحماء المطابقات بخصوصية، وفي عمليات الأشياء لا تُكشف هوية المتبرع للمستفيد أو هوية المستفيد للمتبرع. يمكن أيضًا تسجيل احتياج خدمة أو تقديم وقت/مهارة، وتتم المطابقة الخاصة بعد المراجعة والموافقة. شركاء رحماء يمرون بتحقق منفصل ويلتزمون بقواعد تمنع التصوير والتسويق والرسوم غير المتفق عليها. المساهمة في تكاليف التوصيل اختيارية ولا تؤثر على الاستحقاق، ولا يوجد دفع إلكتروني داخل التطبيق في التدفق الحالي.
+> عطاء منصة مجتمعية في مأرب تربط الأشياء التي لم يعد أصحابها بحاجة إليها، والوقت والمهارات والخدمات المجانية التي يستطيع أفراد أو شركاء موثّقون تقديمها، باحتياجات مسجلة مسبقًا. لا يتصفح المستفيد التبرعات ولا يختار المتبرع المستفيد. يراجع عطاء المطابقات بخصوصية، وفي عمليات الأشياء لا تُكشف هوية المتبرع للمستفيد أو هوية المستفيد للمتبرع. يمكن أيضًا تسجيل احتياج خدمة أو تقديم وقت/مهارة، وتتم المطابقة الخاصة بعد المراجعة والموافقة. شركاء عطاء يمرون بتحقق منفصل ويلتزمون بقواعد تمنع التصوير والتسويق والرسوم غير المتفق عليها. المساهمة في تكاليف التوصيل اختيارية ولا تؤثر على الاستحقاق، ولا يوجد دفع إلكتروني داخل التطبيق في التدفق الحالي.
 
 Use screenshots with safe demo data only—no real names, phone numbers, addresses, coordinates, emails or private item photos.
 

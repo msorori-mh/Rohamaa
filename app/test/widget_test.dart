@@ -4,17 +4,17 @@ import 'package:ruhamaa/src/features/profile/account_screen.dart';
 import 'package:ruhamaa/src/theme/ruhamaa_theme.dart';
 
 void main() {
-  testWidgets('renders Ruhamaa Arabic RTL smoke widget', (tester) async {
+  testWidgets('renders Ataa Arabic RTL smoke widget', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Directionality(
           textDirection: TextDirection.rtl,
-          child: Scaffold(body: Center(child: Text('رحماء'))),
+          child: Scaffold(body: Center(child: Text('عطاء'))),
         ),
       ),
     );
 
-    expect(find.text('رحماء'), findsOneWidget);
+    expect(find.text('عطاء'), findsOneWidget);
   });
 
   testWidgets('account sign-out action stays visible on a compact phone', (tester) async {

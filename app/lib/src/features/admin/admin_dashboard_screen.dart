@@ -27,7 +27,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('لوحة تشغيل رحماء')),
+      appBar: AppBar(title: const Text('لوحة تشغيل عطاء')),
       body: FutureBuilder<AdminStats>(
         future: _stats,
         builder: (context, snapshot) {
