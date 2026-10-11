@@ -111,6 +111,14 @@ jobs:
           path: test-results/
           if-no-files-found: warn
           retention-days: 7
+      - name: Summarise findings as annotations
+        if: always()
+        run: |
+          echo "::notice title=E2E gates::backend=${{ steps.backend.outcome }} fixtures=${{ steps.fixtures.outcome }} schema=${{ steps.schema.outcome }} api=${{ steps.api.outcome }} unit=${{ steps.unit.outcome }} deps=${{ steps.dependencies.outcome }} ui=${{ steps.ui.outcome }}"
+          python3 tools/ci/annotate.py "e2e api" test-results/api.log
+          python3 tools/ci/annotate.py "e2e analyze" test-results/analyze.log
+          python3 tools/ci/annotate.py "e2e unit" test-results/unit.log
+          python3 tools/ci/annotate.py "e2e ui" test-results/ui.log
       - uses: actions/setup-java@v5
         if: ${{ !cancelled() && steps.schema.outcome == 'success' }}
         with:
@@ -137,6 +145,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           script: bash tests/e2e/run_android.sh
+      - name: Summarise Android findings as annotations
+        if: always()
+        run: |
+          echo "::notice title=E2E android gate::android=${{ steps.android.outcome }}"
+          python3 tools/ci/annotate.py "e2e android" test-results/android.log
       - name: Upload test evidence only
         if: always()
         uses: actions/upload-artifact@v4
