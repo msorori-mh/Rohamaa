@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.staff-change-password]
 verify_jwt = true
+
+[functions.admin-delete-account]
+verify_jwt = true
