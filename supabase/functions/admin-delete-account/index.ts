@@ -15,6 +15,8 @@ const rpcFailure = (message: string | undefined, fallback: string): [string, num
   if (text.includes('admin required')) return ['admin_required', 403]
   if (text.includes('deletion request not found')) return ['request_not_found', 404]
   if (text.includes('delivery in progress')) return ['delivery_in_progress', 409]
+  if (text.includes('courier has open deliveries')) return ['courier_deliveries_open', 409]
+  if (text.includes('auth identity still active')) return ['auth_identity_active', 409]
   if (text.includes('deletion request is not open')) return ['request_not_open', 409]
   if (text.includes('deletion request is not pending')) return ['request_not_pending', 409]
   if (text.includes('deletion request is not being processed')) return ['request_not_processing', 409]

@@ -59,7 +59,10 @@ Deno.serve(async (req) => {
   const areaIds = [...new Set((payload.area_ids as string[]).map((id) => id.toLowerCase()))]
 
   // The primary administrator's address is reserved; it is read from the
-  // database so no personal address lives in function source.
+  // database so no personal address lives in function source. Kept although
+  // createUser would normally answer email_exists for it: the check does not
+  // depend on staff_email still matching the auth email, and the app shows a
+  // dedicated message for reserved_email.
   const { data: primaryAdmins, error: primaryError } = await admin.from('profiles')
     .select('staff_email').eq('is_primary_admin', true)
   if (primaryError) return json({ error: 'profile_lookup_failed' }, 500)
@@ -73,17 +76,37 @@ Deno.serve(async (req) => {
   if (areasError) return json({ error: 'area_lookup_failed' }, 500)
   if (!areas || areas.length !== areaIds.length) return json({ error: 'invalid_area' }, 400)
 
+  // Only the provider's machine-readable code is inspected; its message is never returned.
+  const passwordFailure = (error: unknown): string =>
+    (error as { code?: string } | null)?.code === 'weak_password' ? 'password_not_complex' : 'create_user_failed'
+
+  // The auth user is marked as pending until the profile is finalized, so a
+  // retry after a partial failure can find and resume it instead of failing
+  // forever with email_exists. app_metadata is writable by the service role only.
+  let userId = ''
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email, password, email_confirm: true, user_metadata: { full_name: fullName },
+    app_metadata: { pending_staff: true },
   })
   if (createError || !created?.user) {
-    // Only the provider's machine-readable code is inspected; its message is never returned.
     const code = (createError as { code?: string } | null)?.code
-    if (code === 'email_exists' || code === 'user_already_exists') return json({ error: 'email_exists' }, 409)
-    if (code === 'weak_password') return json({ error: 'password_not_complex' }, 400)
-    return json({ error: 'create_user_failed' }, 400)
+    if (code !== 'email_exists' && code !== 'user_already_exists') {
+      return json({ error: passwordFailure(createError) }, 400)
+    }
+    // Only an account this function created and never finished is resumed;
+    // every other existing address is reported as taken.
+    const { data: pendingId, error: pendingError } = await admin.rpc('pending_staff_user_id', { p_email: email })
+    if (pendingError) return json({ error: 'profile_lookup_failed' }, 500)
+    if (typeof pendingId !== 'string' || !UUID.test(pendingId)) return json({ error: 'email_exists' }, 409)
+    // The password of the first attempt may be unknown by now: the new one wins.
+    const { error: resumeError } = await admin.auth.admin.updateUserById(pendingId, {
+      password, email_confirm: true, user_metadata: { full_name: fullName },
+    })
+    if (resumeError) return json({ error: passwordFailure(resumeError) }, 400)
+    userId = pendingId
+  } else {
+    userId = created.user.id
   }
-  const userId = created.user.id
 
   // Profile, areas, courier row and audit entry are written in one transaction.
   const { error: setupError } = await admin.rpc('admin_finalize_staff_account', {
@@ -95,5 +118,19 @@ Deno.serve(async (req) => {
     if (rollbackError) return json({ error: 'rollback_failed' }, 500)
     return json({ error: 'staff_setup_failed' }, 500)
   }
+
+  // Finalized: clear the marker (one retry). A marker that could not be
+  // cleared is harmless, because pending_staff_user_id also requires the
+  // profile to still be a plain, never-provisioned user.
+  const clearPending = async (): Promise<boolean> => {
+    try {
+      const { error } = await admin.auth.admin.updateUserById(userId, { app_metadata: { pending_staff: false } })
+      return !error
+    } catch (_) {
+      return false
+    }
+  }
+  if (!(await clearPending())) await clearPending()
+
   return json({ id: userId, email, role, force_password_change: true }, 201)
 })
