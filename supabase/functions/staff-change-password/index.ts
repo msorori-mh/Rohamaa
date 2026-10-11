@@ -72,6 +72,18 @@ Deno.serve(async (req) => {
     if (currentPassword === password) return json({ error: 'password_unchanged' }, 400)
   }
 
+  // Every other session (a thief's, and the verification sign-in above) is revoked
+  // before anything changes; if that is impossible the password is left alone.
+  const revokeOtherSessions = async (): Promise<boolean> => {
+    try {
+      const { error } = await admin.auth.admin.signOut(jwt, 'others')
+      return !error
+    } catch (_) {
+      return false
+    }
+  }
+  if (!(await revokeOtherSessions())) return json({ error: 'session_revoke_failed' }, 500)
+
   const { error: updateError } = await admin.auth.admin.updateUserById(user.id, { password })
   if (updateError) return json({ error: 'password_update_failed' }, 400)
   const now = new Date().toISOString()
@@ -80,11 +92,15 @@ Deno.serve(async (req) => {
     .eq('id', user.id)
   if (profileError) return json({ error: 'profile_update_failed' }, 500)
 
-  // Every other session (including the verification sign-in above) is revoked; the caller stays signed in.
-  const { error: signOutError } = await admin.auth.admin.signOut(jwt, 'others')
+  // Closes the window between the first revocation and the update. Best effort:
+  // the auth server may already have ended every session, including this one,
+  // as part of the password update, in which case there is nothing left to revoke.
+  await revokeOtherSessions()
+
+  // The password has changed at this point, so a failed audit write is reported, not turned into an error.
   const { error: auditError } = await admin.from('audit_logs').insert({
     actor_id: user.id, action: 'staff_password_changed', entity_type: 'profile', entity_id: user.id,
-    metadata: { forced, other_sessions_revoked: !signOutError },
+    metadata: { forced },
   })
-  return json({ ok: true, other_sessions_revoked: !signOutError, audit_logged: !auditError })
+  return json({ ok: true, audit_logged: !auditError })
 })

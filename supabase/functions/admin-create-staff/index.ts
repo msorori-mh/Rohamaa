@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
   const { data: primaryAdmins, error: primaryError } = await admin.from('profiles')
     .select('staff_email').eq('is_primary_admin', true)
   if (primaryError) return json({ error: 'profile_lookup_failed' }, 500)
-  if ((primaryAdmins ?? []).some((row) => typeof row.staff_email === 'string' && row.staff_email.toLowerCase() === email)) {
+  const reserved = ((primaryAdmins ?? []) as { staff_email?: unknown }[])
+    .some((row) => typeof row.staff_email === 'string' && row.staff_email.toLowerCase() === email)
+  if (reserved) {
     return json({ error: 'reserved_email' }, 400)
   }
 
