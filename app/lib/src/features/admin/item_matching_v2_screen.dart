@@ -29,7 +29,9 @@ class _ItemMatchingV2ScreenState extends State<ItemMatchingV2Screen> {
 
   Future<void> _refresh() async {
     final next = _repo.donationsQueue();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -150,7 +152,9 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.matchCandidates(_donationId);
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -159,7 +163,9 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
   }
 
   void _reloadPhotos() {
-    setState(() => _photos = _loadPhotos());
+    setState(() {
+      _photos = _loadPhotos();
+    });
   }
 
   Future<void> _approve(Map<String, dynamic> candidate) async {

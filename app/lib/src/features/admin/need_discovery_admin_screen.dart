@@ -98,7 +98,9 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
 
   Future<void> _refresh() async {
     final next = _load();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -359,7 +361,9 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
 
   Future<void> _refresh() async {
     final next = _loadActive();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

@@ -109,7 +109,9 @@ class _PendingOffersTabState extends State<_PendingOffersTab> {
 
   Future<void> _refresh() async {
     final next = _repo.pendingOffers();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -278,7 +280,9 @@ class _OpenRequestsTabState extends State<_OpenRequestsTab> {
 
   Future<void> _refresh() async {
     final next = _repo.openRequests();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -410,7 +414,9 @@ class _AcceptedServicesTabState extends State<_AcceptedServicesTab> {
 
   Future<void> _refresh() async {
     final next = _repo.acceptedMatches();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -625,7 +631,9 @@ class _CandidateSheetState extends State<_CandidateSheet> {
   }
 
   void _retry() {
-    setState(() => _future = _repo.candidates(_requestId));
+    setState(() {
+      _future = _repo.candidates(_requestId);
+    });
   }
 
   Future<void> _match(Map<String, dynamic> candidate) async {

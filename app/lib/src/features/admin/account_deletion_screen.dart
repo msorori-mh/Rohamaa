@@ -31,7 +31,9 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.accountDeletionQueue();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

@@ -79,7 +79,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   Future<void> _refresh() async {
     final next = _load();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

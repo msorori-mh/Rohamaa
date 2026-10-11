@@ -27,7 +27,9 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.serviceAreas();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

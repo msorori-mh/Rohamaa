@@ -32,7 +32,9 @@ class _ContributionReviewScreenState extends State<ContributionReviewScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.pendingContributions();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

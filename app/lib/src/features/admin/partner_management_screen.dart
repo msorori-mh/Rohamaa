@@ -30,7 +30,9 @@ class _PartnerManagementScreenState extends State<PartnerManagementScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.adminPartners();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

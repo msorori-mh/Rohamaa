@@ -29,7 +29,9 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.deliveryDispatchQueue();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

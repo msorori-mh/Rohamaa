@@ -25,7 +25,9 @@ class _AcceptedMatchesScreenState extends State<AcceptedMatchesScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.acceptedMatchesAwaitingDelivery();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

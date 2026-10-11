@@ -28,7 +28,9 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.riskQueue();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {

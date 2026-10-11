@@ -66,7 +66,9 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
 
   Future<void> _refresh() async {
     final next = _repo.myTasks();
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -238,7 +240,9 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
 
   Future<void> _refresh() async {
     final next = _loadDetails();
-    setState(() => _details = next);
+    setState(() {
+      _details = next;
+    });
     try {
       await next;
     } catch (_) {
