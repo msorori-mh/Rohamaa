@@ -433,8 +433,19 @@ class EndToEnd(unittest.TestCase):
         user = self.clients['donor']
         user.rpc('request_account_deletion')
         user.rpc('request_account_deletion')
-        rows = user.ok('GET', '/rest/v1/account_deletion_requests?user_id=eq.' + self.user('donor')['id'])
+        # The staff note is not readable through the API, so a wildcard read is refused.
+        own = '/rest/v1/account_deletion_requests?user_id=eq.' + self.user('donor')['id']
+        rows = user.ok('GET', own + '&select=id,status,requested_at,completed_at')
         self.assertEqual(len(rows), 1)
+        self.denied(user, 'GET', own)
+        self.denied(user, 'GET', own + '&select=admin_note')
+        self.denied(user, 'PATCH', own, {'status': 'rejected'})
+        self.denied(user, 'DELETE', own)
+        self.assertEqual(len(self.root.ok('GET', own)), 1)
+
+    def test_suspended_account_cannot_request_deletion(self):
+        self.assertEqual(self.message(self.clients['suspended'], 'request_account_deletion', {}), 'account suspended')
+        self.assertEqual(self.root.ok('GET', '/rest/v1/account_deletion_requests?user_id=eq.' + self.user('suspended')['id']), [])
 
     def test_edge_staff_creation_rejects_regular_user(self):
         self.denied(self.clients['donor'], 'POST', '/functions/v1/admin-create-staff', {'email': 'test-only-denied@example.test', 'password': 'TestOnly!Password9', 'role': 'courier', 'full_name': 'TEST_ONLY', 'area_ids': [self.data['area_id']]})
@@ -551,21 +562,30 @@ class EndToEnd(unittest.TestCase):
         for column in ('pickup_phone', 'pickup_description', 'dropoff_phone', 'dropoff_description', 'dropoff_latitude'):
             self.assertIsNone(paused[column], column)
         self.assertIn(task, {r['delivery_id'] for r in self.clients['admin'].rpc('admin_delivery_dispatch_queue')})
-        self.clients['admin'].rpc('admin_reassign_delivery', {**args, 'p_courier_id': self.user('courier2')['id']})
-        self.assertEqual(courier.rpc('courier_task_details', args), [])
-        offered = courier2.rpc('courier_task_details', args)[0]
+        # A collected item stays with the courier who collected it: another courier is
+        # refused (the admin cancels instead), the same courier may be asked again.
+        admin = self.clients['admin']
+        same = {**args, 'p_courier_id': self.user('courier')['id']}
+        self.assertEqual(self.message(admin, 'admin_reassign_delivery', {**args, 'p_courier_id': self.user('courier2')['id']}), 'collected item cannot change courier')
+        self.assertEqual(self.message(admin, 'admin_reassign_delivery', {**same, 'p_vehicle_id': str(uuid.uuid4())}), 'vehicle inactive')
+        self.assertEqual(self.root.ok('GET', '/rest/v1/deliveries?id=eq.' + task)[0]['status'], 'rescheduled')
+        admin.rpc('admin_reassign_delivery', same)
+        self.assertEqual(courier2.rpc('courier_task_details', args), [])
+        offered = courier.rpc('courier_task_details', args)[0]
         self.assertEqual(offered['status'], 'assigned')
         self.assertIsNone(offered['pickup_area'], 'A collected item must not be offered as a new pickup')
         self.assertIsNotNone(offered['dropoff_area'])
         self.assertIsNone(offered['dropoff_phone'])
-        self.assertEqual(courier2.rpc('courier_respond_delivery', {**args, 'p_accept': True}), 'picked_up')
-        resumed = courier2.rpc('courier_task_details', args)[0]
+        self.assertEqual(courier.rpc('courier_respond_delivery', {**args, 'p_accept': True}), 'picked_up')
+        resumed = courier.rpc('courier_task_details', args)[0]
         self.assertIsNone(resumed['pickup_phone'])
         self.assertIsNotNone(resumed['dropoff_phone'])
         self.denied(self.clients['donor'], 'POST', '/rest/v1/rpc/user_issue_handoff_pin', {**args, 'p_kind': 'pickup'})
-        courier2.rpc('courier_start_dropoff', args)
+        # After the pickup the donor is no longer part of the handoff.
+        self.assertEqual(self.message(courier, 'courier_report_delivery_failure', {**failure, 'p_party': 'donor'}), 'invalid party for this phase')
+        courier.rpc('courier_start_dropoff', args)
         pin = self.clients['recipient'].rpc('user_issue_handoff_pin', {**args, 'p_kind': 'delivery'})
-        self.assertTrue(courier2.rpc('verify_delivery_pin', {**args, 'p_pin': pin, 'p_kind': 'delivery'}))
+        self.assertTrue(courier.rpc('verify_delivery_pin', {**args, 'p_pin': pin, 'p_kind': 'delivery'}))
         self.assertEqual(self.root.ok('GET', '/rest/v1/deliveries?id=eq.' + task)[0]['status'], 'delivered')
         self.assertEqual(self.root.ok('GET', '/rest/v1/needs?id=eq.' + need)[0]['status'], 'fulfilled')
         self.assertEqual(self.root.ok('GET', '/rest/v1/donations?id=eq.' + donation)[0]['status'], 'delivered')
@@ -810,9 +830,14 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(self.root.ok('GET', '/rest/v1/contributions?id=eq.' + pledge['id'])[0]['status'], 'rejected')
         self.assertEqual(self.root.ok('GET', '/rest/v1/addresses?id=eq.' + spare['id']), [], 'Unreferenced addresses are removed')
         kept = self.root.ok('GET', '/rest/v1/addresses?id=eq.' + victim['address_id'])[0]
-        for column in ('label', 'description', 'latitude', 'longitude'):
+        for column in ('label', 'area', 'description', 'latitude', 'longitude'):
             self.assertIsNone(kept[column], column)
         self.assertEqual(self.root.ok('GET', '/rest/v1/user_notifications?user_id=eq.' + uid), [])
+        # The person who was waiting on the cancelled offer is told explicitly, once.
+        told = '/rest/v1/user_notifications?notification_type=eq.item_match_cancelled&entity_id=eq.' + offer
+        notices = self.root.ok('GET', told)
+        self.assertEqual([n['user_id'] for n in notices], [self.user('recipient')['id']])
+        self.assertEqual(notices[0]['action_route'], '/handoffs')
         # The other party keeps its records and gets its place in the queue back.
         self.assertEqual(self.root.ok('GET', '/rest/v1/matches?id=eq.' + offer)[0]['status'], 'cancelled')
         for other in (waiting, scheduled):
@@ -828,8 +853,103 @@ class EndToEnd(unittest.TestCase):
         self.denied(client, 'POST', '/rest/v1/rpc/cancel_account_deletion_request', {})
         self.denied(admin, 'POST', '/rest/v1/rpc/admin_reject_account_deletion', {'p_request_id': request, 'p_note': 'TEST_ONLY too late'})
         self.assertEqual(len(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.prepare_account_deletion&entity_id=eq.' + uid)), 1)
-        # Completion is refused while the user's photos still exist.
-        self.assertEqual(self.message(admin, 'admin_complete_account_deletion', {'p_request_id': request}), 'storage objects remain')
+        # A retry after a partial failure repeats nothing that other people can see.
+        self.assertEqual(admin.rpc('admin_prepare_account_deletion', prepare)['user_id'], uid)
+        self.assertEqual(len(self.root.ok('GET', told)), 1)
+        # The pipeline is the only writer: not even an admin can edit a request directly.
+        row = '/rest/v1/account_deletion_requests?id=eq.' + request
+        self.denied(admin, 'PATCH', row, {'status': 'completed'})
+        self.denied(admin, 'DELETE', row)
+        self.denied(admin, 'GET', row + '&select=admin_note')
+        self.assertEqual(admin.ok('GET', row + '&select=id,status')[0]['status'], 'processing')
+        # A scrubbed account cannot be reactivated.
+        self.assertEqual(self.message(admin, 'admin_set_user_suspension', {'p_user_id': uid, 'p_suspended': False, 'p_reason': 'TEST_ONLY'}), 'account deletion in progress')
+        self.assertTrue(self.root.ok('GET', '/rest/v1/profiles?id=eq.' + uid)[0]['is_suspended'])
+        # Completion is refused while the person could still sign in ...
+        complete = {'p_request_id': request}
+        self.assertEqual(self.message(admin, 'admin_complete_account_deletion', complete), 'auth identity still active')
+        self.assertEqual(self.root.ok('GET', row)[0]['status'], 'processing')
+        status, body = self.root.request('DELETE', '/auth/v1/admin/users/' + uid, {'should_soft_delete': True})
+        self.assertIn(status, (200, 204), body)
+        # ... and while the user's photos still exist.
+        self.assertEqual(self.message(admin, 'admin_complete_account_deletion', complete), 'storage objects remain')
+        self.assertEqual(self.root.ok('GET', row)[0]['status'], 'processing')
+
+    def test_account_deletion_scrubs_free_text_and_location_traces(self):
+        admin, courier = self.clients['admin'], self.clients['courier']
+        victim = self.disposable_user('scrubbed')
+        client, uid = victim['client'], victim['id']
+        area = self.data['area_id']
+        text = {'description': 'TEST_ONLY private text', 'item_attributes': {'size': 'TEST_ONLY'}}
+        own = {'user_id': uid, 'category': 'furniture', 'item_type': 'TEST_ONLY scrubbed', 'address_id': victim['address_id']}
+        donation = client.ok('POST', '/rest/v1/donations', {**own, **text, 'condition': 'TEST_ONLY used'})[0]
+        need = client.ok('POST', '/rest/v1/needs', {**own, **text, 'reason': 'TEST_ONLY private reason'})[0]
+        card = admin.rpc('admin_publish_need_discovery_card', {'p_need_id': need['id'], 'p_display_title': 'TEST_ONLY scrubbed need', 'p_display_detail': 'TEST_ONLY public description', 'p_city_label': 'مأرب'})
+        service = {'public_code': self.code(), 'user_id': uid, 'service_area_id': area, 'category': 'plumbing', 'service_type': 'repair'}
+        offer = client.ok('POST', '/rest/v1/service_offers', {**service, 'title': 'TEST_ONLY scrubbed offer', 'description': 'TEST_ONLY private', 'availability_note': 'TEST_ONLY mornings', 'availability_mode': 'hours', 'available_hours': 2})[0]
+        request_row = client.ok('POST', '/rest/v1/service_requests', {**service, 'public_code': self.code(), 'title': 'TEST_ONLY scrubbed request', 'details': 'TEST_ONLY private details', 'preferred_time_note': 'TEST_ONLY evenings'})[0]
+        helper = self.clients['donor'].ok('POST', '/rest/v1/service_offers', {'public_code': self.code(), 'user_id': self.user('donor')['id'], 'service_area_id': area, 'category': 'plumbing', 'service_type': 'repair', 'title': 'TEST_ONLY helper offer', 'availability_mode': 'hours', 'available_hours': 2})[0]
+        admin.ok('PATCH', '/rest/v1/service_offers?id=eq.' + helper['id'], {'status': 'approved', 'verification_status': 'verified'})
+        service_match = admin.ok('POST', '/rest/v1/service_matches', {'service_offer_id': helper['id'], 'service_request_id': request_row['id'], 'approved_by': self.user('admin')['id'], 'operational_note': 'TEST_ONLY private note'})[0]
+        incident = self.root.ok('POST', '/rest/v1/service_incidents', {'service_match_id': service_match['id'], 'reporter_user_id': uid, 'incident_type': 'other', 'description': 'TEST_ONLY private incident'})[0]
+        pledge = client.ok('POST', '/rest/v1/contributions', {'user_id': uid, 'amount_yer': 1000, 'payment_method': 'cash_to_courier', 'payment_reference': 'TEST_ONLY-' + uuid.uuid4().hex})[0]
+        flag = self.root.ok('POST', '/rest/v1/risk_flags', {'user_id': uid, 'rule_code': 'TEST_ONLY_RULE', 'details': {'note': 'TEST_ONLY private'}})[0]
+        self.root.ok('PATCH', '/rest/v1/profiles?id=eq.' + uid, {'staff_email': victim['email']})
+        # The donation is collected, the dropoff fails and the delivery is cancelled:
+        # the item is now with staff and must stay available to warehouse intake.
+        other = self.create_item('needs', 'recipient')
+        match = admin.rpc('admin_approve_match', {'p_donation_id': donation['id'], 'p_need_id': other['id']})
+        self.clients['recipient'].rpc('user_respond_match_offer', {'p_match_id': match, 'p_accept': True})
+        task = admin.rpc('admin_create_delivery', {'p_match_id': match, 'p_courier_id': self.user('courier')['id']})[0]['delivery_id']
+        args = {'p_delivery_id': task}
+        courier.rpc('courier_respond_delivery', {**args, 'p_accept': True})
+        pin = client.rpc('user_issue_handoff_pin', {**args, 'p_kind': 'pickup'})
+        self.assertTrue(courier.rpc('verify_delivery_pin', {**args, 'p_pin': pin, 'p_kind': 'pickup', 'p_latitude': 15.41, 'p_longitude': 45.31}))
+        courier.rpc('courier_report_delivery_failure', {**args, 'p_party': 'beneficiary', 'p_reason_code': 'no_answer', 'p_note': 'TEST_ONLY private courier note', 'p_latitude': 15.42, 'p_longitude': 45.32})
+        admin.rpc('admin_cancel_delivery', {**args, 'p_reason': 'TEST_ONLY recipient unreachable'})
+        self.assertEqual(self.root.ok('GET', '/rest/v1/donations?id=eq.' + donation['id'])[0]['status'], 'under_review')
+        events = '/rest/v1/delivery_events?delivery_id=eq.' + task
+        self.assertTrue(any(e['latitude'] is not None for e in self.root.ok('GET', events)))
+        self.assertTrue(any('note' in e['metadata'] for e in self.root.ok('GET', events)))
+
+        request = client.rpc('request_account_deletion')
+        admin.rpc('admin_prepare_account_deletion', {'p_request_id': request, 'p_note': None})
+
+        def stored(table, row):
+            return self.root.ok('GET', '/rest/v1/' + table + '?id=eq.' + row['id'])[0]
+        row = stored('donations', donation)
+        self.assertEqual(row['status'], 'under_review', 'A collected item is left for warehouse intake')
+        self.assertEqual((row['description'], row['condition'], row['item_attributes']), (None, None, {}))
+        self.assertIn(donation['id'], {r['donation_id'] for r in admin.rpc('admin_inventory_intake_candidates')})
+        row = stored('needs', need)
+        self.assertEqual((row['status'], row['description'], row['reason'], row['item_attributes']), ('cancelled', None, None, {}))
+        self.assertEqual(self.root.ok('GET', '/rest/v1/need_discovery_cards?id=eq.' + card), [])
+        row = stored('service_offers', offer)
+        self.assertEqual((row['status'], row['title'], row['description'], row['availability_note']), ('cancelled', 'محذوف', None, None))
+        row = stored('service_requests', request_row)
+        self.assertEqual((row['status'], row['title'], row['details'], row['preferred_time_note']), ('cancelled', 'محذوف', 'محذوف', None))
+        row = stored('service_matches', service_match)
+        self.assertEqual((row['status'], row['operational_note']), ('cancelled', None))
+        self.assertEqual(stored('service_incidents', incident)['description'], '[deleted]')
+        row = stored('contributions', pledge)
+        self.assertEqual((row['status'], row['payment_reference']), ('rejected', None))
+        self.assertEqual(stored('risk_flags', flag)['details'], {})
+        profile = self.root.ok('GET', '/rest/v1/profiles?id=eq.' + uid)[0]
+        self.assertEqual((profile['full_name'], profile['phone'], profile['staff_email']), (None, None, None))
+        self.assertIsNone(self.root.ok('GET', '/rest/v1/addresses?id=eq.' + victim['address_id'])[0]['area'])
+        trace = self.root.ok('GET', events)
+        self.assertTrue(trace)
+        for event in trace:
+            self.assertEqual((event['latitude'], event['longitude']), (None, None), event['event_type'])
+            self.assertNotIn('note', event['metadata'], event['event_type'])
+        # Operational evidence other than the free text and the location survives.
+        reported = next(e for e in trace if e['event_type'] == 'delivery_failure')
+        self.assertEqual(reported['metadata']['reason_code'], 'no_answer')
+        failures = self.root.ok('GET', '/rest/v1/delivery_failures?delivery_id=eq.' + task)
+        self.assertEqual([(f['note'], f['latitude'], f['longitude'], f['reason_code']) for f in failures], [(None, None, None, 'no_answer')])
+        # The other people involved keep their own records.
+        self.assertEqual(stored('service_offers', helper)['title'], 'TEST_ONLY helper offer')
+        self.assertEqual(stored('needs', other)['user_id'], self.user('recipient')['id'])
 
     def test_admin_delete_account_function_completes_deletion(self):
         admin = self.clients['admin']
@@ -861,6 +981,186 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(len(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.complete_account_deletion&entity_id=eq.' + uid)), 1)
         status, body = admin.request('POST', path, payload)
         self.assertEqual((status, (body or {}).get('error')), (409, 'request_not_open'))
+
+    def test_length_limits_reject_new_text_without_blocking_status_changes(self):
+        donor = self.clients['donor']
+        row = self.create_item('donations', 'donor', description='TEST_ONLY short')
+        path = '/rest/v1/donations?id=eq.' + row['id']
+        # The limits are triggers that name the column, which the app maps to one message.
+        status, body = donor.request('PATCH', path, {'description': 'x' * 2001})
+        self.assertEqual(status, 400, body)
+        self.assertEqual(body.get('message'), 'value too long for description')
+        status, body = donor.request('POST', '/rest/v1/donations', {'user_id': self.user('donor')['id'], 'category': 'furniture', 'item_type': 'x' * 161})
+        self.assertEqual(status, 400, body)
+        self.assertEqual(body.get('message'), 'value too long for item_type')
+        status, body = donor.request('POST', '/rest/v1/needs', {'user_id': self.user('donor')['id'], 'category': 'furniture', 'item_type': 'TEST_ONLY', 'item_attributes': {'note': 'x' * 4001}})
+        self.assertEqual(status, 400, body)
+        self.assertEqual(body.get('message'), 'value too long for item_attributes')
+        status, body = self.clients['admin'].request('POST', '/rest/v1/rpc/admin_publish_need_discovery_card', {'p_need_id': self.create_item('needs', 'recipient')['id'], 'p_display_title': 'x' * 161})
+        self.assertEqual(status, 400, body)
+        self.assertEqual(body.get('message'), 'value too long for display_title')
+        self.assertEqual(self.root.ok('GET', path)[0]['description'], 'TEST_ONLY short')
+        # Editing within the limit and moving the row through its workflow keep working.
+        self.assertEqual(donor.ok('PATCH', path, {'description': 'y' * 2000})[0]['description'], 'y' * 2000)
+        donor.rpc('user_cancel_donation', {'p_donation_id': row['id']})
+        self.assertEqual(self.root.ok('GET', path)[0]['status'], 'cancelled')
+
+    def test_admin_pause_delivery_allows_reassignment(self):
+        admin, courier, courier2 = self.clients['admin'], self.clients['courier'], self.clients['courier2']
+        task, _, _ = self.delivery()
+        args = {'p_delivery_id': task}
+        pause = {**args, 'p_reason': 'TEST_ONLY courier unreachable'}
+        # An offer that was never accepted is simply reassigned; there is nothing to pause.
+        self.assertEqual(self.message(admin, 'admin_pause_delivery', pause), 'delivery cannot be paused in its current state')
+        courier.rpc('courier_respond_delivery', {**args, 'p_accept': True})
+        # An accepted task is out of reach of reassignment until it is paused.
+        self.denied(admin, 'POST', '/rest/v1/rpc/admin_reassign_delivery', {**args, 'p_courier_id': self.user('courier2')['id']})
+        for name in ('donor', 'courier', 'supervisor'):
+            self.denied(self.clients[name], 'POST', '/rest/v1/rpc/admin_pause_delivery', pause)
+        self.assertEqual(self.message(admin, 'admin_pause_delivery', {**args, 'p_reason': ' '}), 'pause reason required')
+        self.assertEqual(self.message(admin, 'admin_pause_delivery', {**args, 'p_reason': 'x' * 501}), 'pause reason too long')
+        self.clients['donor'].rpc('user_issue_handoff_pin', {**args, 'p_kind': 'pickup'})
+        admin.rpc('admin_pause_delivery', pause)
+        state = self.root.ok('GET', '/rest/v1/deliveries?id=eq.' + task)[0]
+        self.assertEqual((state['status'], state['courier_id']), ('rescheduled', self.user('courier')['id']))
+        for column in ('pickup_pin_hash', 'pickup_pin_expires_at', 'offer_expires_at'):
+            self.assertIsNone(state[column], column)
+        self.assertEqual(len(self.root.ok('GET', '/rest/v1/delivery_events?event_type=eq.delivery_paused&delivery_id=eq.' + task)), 1)
+        self.assertEqual(len(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.pause_delivery&entity_id=eq.' + task)), 1)
+        self.assertEqual(self.message(admin, 'admin_pause_delivery', pause), 'delivery cannot be paused in its current state')
+        self.denied(courier, 'POST', '/rest/v1/rpc/verify_delivery_pin', {**args, 'p_pin': '0000', 'p_kind': 'pickup'})
+        # Nothing was collected yet, so any active courier can take over.
+        admin.rpc('admin_reassign_delivery', {**args, 'p_courier_id': self.user('courier2')['id']})
+        self.assertEqual(courier.rpc('courier_task_details', args), [])
+        self.assertEqual(courier2.rpc('courier_respond_delivery', {**args, 'p_accept': True}), 'heading_to_pickup')
+
+    def test_cash_pledge_answer_is_final_and_blocks_verification(self):
+        admin, courier = self.clients['admin'], self.clients['courier']
+        task, donation, _ = self.delivery()
+        args = {'p_delivery_id': task}
+        pledge = self.clients['donor'].ok('POST', '/rest/v1/contributions', {'user_id': self.user('donor')['id'], 'amount_yer': 1000, 'payment_method': 'cash_to_courier', 'donation_id': donation})[0]
+        # Linked to this delivery only: it can never be collected once the delivery is closed.
+        bound = self.clients['recipient'].ok('POST', '/rest/v1/contributions', {'user_id': self.user('recipient')['id'], 'amount_yer': 2000, 'payment_method': 'cash_to_courier', 'delivery_id': task})[0]
+        courier.rpc('courier_respond_delivery', {**args, 'p_accept': True})
+        answer = {'p_contribution_id': pledge['id']}
+        courier.rpc('courier_confirm_cash_pledge', {**answer, 'p_received': False})
+        self.assertEqual(self.message(courier, 'courier_confirm_cash_pledge', {**answer, 'p_received': True}), 'pledge already answered')
+        self.assertEqual(self.message(courier, 'courier_confirm_cash_pledge', {**answer, 'p_received': False}), 'pledge already answered')
+        stored = '/rest/v1/contributions?id=eq.' + pledge['id']
+        self.assertFalse(self.root.ok('GET', stored)[0]['courier_received'])
+        self.assertEqual(len(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.courier_confirm_cash_pledge&entity_id=eq.' + pledge['id'])), 1)
+        # Cash the courier says was not handed over cannot be verified, only rejected.
+        review = {**answer, 'p_note': 'TEST_ONLY'}
+        self.assertEqual(self.message(admin, 'admin_verify_contribution', {**review, 'p_verified': True}), 'courier reported cash not received')
+        self.assertEqual(self.root.ok('GET', stored)[0]['status'], 'pending')
+        admin.rpc('admin_verify_contribution', {**review, 'p_verified': False})
+        self.assertEqual(self.root.ok('GET', stored)[0]['status'], 'rejected')
+        self.assertEqual(self.message(admin, 'admin_verify_contribution', {**review, 'p_verified': False}), 'contribution is no longer pending')
+        admin.rpc('admin_cancel_delivery', {**args, 'p_reason': 'TEST_ONLY closed with pledge'})
+        self.assertEqual(self.root.ok('GET', '/rest/v1/contributions?id=eq.' + bound['id'])[0]['status'], 'rejected')
+
+    def test_demotion_to_user_clears_temporary_password_flag(self):
+        staff = self.disposable_user('demoted')
+        profile = '/rest/v1/profiles?id=eq.' + staff['id']
+        self.root.ok('PATCH', profile, {'role': 'supervisor', 'force_password_change': True, 'temp_password_expires_at': '2999-01-01T00:00:00Z'})
+        self.denied(self.clients['supervisor'], 'POST', '/rest/v1/rpc/admin_set_user_role', {'p_user_id': staff['id'], 'p_role': 'user'})
+        self.clients['admin'].rpc('admin_set_user_role', {'p_user_id': staff['id'], 'p_role': 'user'})
+        row = self.root.ok('GET', profile)[0]
+        self.assertEqual((row['role'], row['force_password_change'], row['temp_password_expires_at']), ('user', False, None))
+        # Without the stale flag the account works as a regular user again.
+        self.assertTrue(staff['client'].ok('POST', '/rest/v1/needs', {'user_id': staff['id'], 'category': 'furniture', 'item_type': 'TEST_ONLY after demotion'}))
+
+    def test_staff_password_change_locks_after_repeated_wrong_current_password(self):
+        staff = self.disposable_user('locked')
+        self.root.ok('PATCH', '/rest/v1/profiles?id=eq.' + staff['id'], {'role': 'supervisor'})
+        client = staff['client']
+        path = '/functions/v1/staff-change-password'
+        new = 'LockedTestOnly!9a' + secrets.token_hex(8)
+        attempts = '/rest/v1/staff_password_attempts?user_id=eq.' + staff['id']
+        for count in range(1, 6):
+            status, body = client.request('POST', path, {'password': new, 'current_password': 'WrongTestOnly!9z'})
+            self.assertEqual((status, (body or {}).get('error')), (403, 'current_password_invalid'))
+            self.assertEqual(self.root.ok('GET', attempts)[0]['failed_count'], count)
+        # Locked: even the right current password is refused until the window ends.
+        status, body = client.request('POST', path, {'password': new, 'current_password': staff['password']})
+        self.assertEqual((status, (body or {}).get('error')), (429, 'too_many_attempts'))
+        # The counters and the verifier are not reachable with a user JWT, not even an admin's.
+        for name in ('admin', 'supervisor'):
+            self.denied(self.clients[name], 'GET', attempts)
+            self.denied(self.clients[name], 'POST', '/rest/v1/rpc/staff_verify_password', {'p_user': staff['id'], 'p_password': staff['password']})
+            self.denied(self.clients[name], 'POST', '/rest/v1/rpc/staff_password_reset_attempts', {'p_user': staff['id']})
+        self.assertEqual(self.root.ok('GET', attempts)[0]['failed_count'], 5)
+        self.assertEqual(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.staff_password_changed&entity_id=eq.' + staff['id']), [])
+        # Once the window is over the right password works (so the lock changed nothing)
+        # and clears the counter. Sign-ins are kept to a minimum: the auth server rate-limits them.
+        self.root.ok('PATCH', attempts, {'window_started_at': '2000-01-01T00:00:00Z'})
+        status, body = client.request('POST', path, {'password': new, 'current_password': staff['password']})
+        self.assertEqual(status, 200, body)
+        self.assertTrue(body['ok'])
+        self.assertIn('sessions_revoked', body)
+        self.assertEqual(self.root.ok('GET', attempts), [])
+        anonymous = API(self.data['url'], self.data['anon'])
+        self.assertEqual(anonymous.request('POST', '/auth/v1/token?grant_type=password', {'email': staff['email'], 'password': new})[0], 200)
+
+    def test_admin_reset_staff_password(self):
+        admin = self.clients['admin']
+        staff = self.disposable_user('reset')
+        profile = '/rest/v1/profiles?id=eq.' + staff['id']
+        self.root.ok('PATCH', profile, {'role': 'supervisor'})
+        path = '/functions/v1/admin-reset-staff-password'
+        change = '/functions/v1/staff-change-password'
+        temporary = 'ResetTestOnly!9a' + secrets.token_hex(8)
+        payload = {'user_id': staff['id'], 'password': temporary}
+        for name in ('donor', 'courier', 'supervisor'):
+            self.denied(self.clients[name], 'POST', path, payload)
+        for broken, code, error in [
+            ({'user_id': 'not-a-uuid'}, 400, 'invalid_user'),
+            ({'user_id': str(uuid.uuid4())}, 404, 'invalid_user'),
+            ({'user_id': self.user('admin')['id']}, 400, 'not_staff'),
+            ({'user_id': self.user('donor')['id']}, 400, 'not_staff'),
+            ({'password': 'short'}, 400, 'password_too_short'),
+            ({'password': 'alllowercase1!'}, 400, 'password_not_complex'),
+            ({'password': 'Aa1!' + 'x' * 80}, 400, 'password_too_long'),
+        ]:
+            with self.subTest(error=error, broken=list(broken)):
+                status, body = admin.request('POST', path, {**payload, **broken})
+                self.assertEqual((status, (body or {}).get('error')), (code, error))
+        status, body = admin.request('POST', path, ['not', 'an', 'object'])
+        self.assertEqual((status, (body or {}).get('error')), (400, 'invalid_body'))
+        # Rejected requests changed nothing: no audit entry, and the admin and donor sessions still work.
+        self.assertEqual(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.reset_staff_password&entity_id=eq.' + staff['id']), [])
+        self.assertFalse(self.root.ok('GET', profile)[0]['force_password_change'])
+        for name in ('admin', 'donor'):
+            self.assertEqual(self.clients[name].ok('GET', '/auth/v1/user')['id'], self.user(name)['id'])
+        anonymous = API(self.data['url'], self.data['anon'])
+        login = '/auth/v1/token?grant_type=password'
+
+        status, body = admin.request('POST', path, payload)
+        self.assertEqual(status, 200, body)
+        self.assertTrue(body['ok'])
+        row = self.root.ok('GET', profile)[0]
+        self.assertEqual((row['role'], row['force_password_change']), ('supervisor', True))
+        self.assertIsNotNone(row['temp_password_expires_at'])
+        self.assertEqual(len(self.root.ok('GET', '/rest/v1/audit_logs?action=eq.reset_staff_password&entity_id=eq.' + staff['id'])), 1)
+        # A session from before the reset cannot be used to exchange the temporary password.
+        final = 'FinalTestOnly!9b' + secrets.token_hex(8)
+        self.denied(staff['client'], 'POST', change, {'password': 'StolenTestOnly!9c' + secrets.token_hex(8)})
+        self.assertTrue(self.root.ok('GET', profile)[0]['force_password_change'])
+        # Signing in with the temporary password proves the old one was replaced.
+        session = anonymous.ok('POST', login, {'email': staff['email'], 'password': temporary})
+        fresh = API(self.data['url'], self.data['anon'], session['access_token'])
+        # Until the exchange the account is locked out of staff work ...
+        self.assertEqual(fresh.rpc('my_account_state')[0]['force_password_change'], True)
+        # ... and the temporary password itself cannot be kept.
+        status, body = fresh.request('POST', change, {'password': temporary})
+        self.assertEqual((status, (body or {}).get('error')), (400, 'password_unchanged'))
+        fresh.ok('POST', change, {'password': final})
+        self.assertFalse(self.root.ok('GET', profile)[0]['force_password_change'])
+        # The provisioning helpers are not API endpoints for signed-in users.
+        self.denied(admin, 'POST', '/rest/v1/rpc/admin_mark_staff_password_reset', {'p_admin_id': self.user('admin')['id'], 'p_user_id': staff['id']})
+        self.denied(admin, 'POST', '/rest/v1/rpc/pending_staff_user_id', {'p_email': staff['email']})
+        self.denied(admin, 'POST', '/rest/v1/rpc/staff_revoke_sessions', {'p_user': staff['id']})
+        self.assertFalse(self.root.ok('GET', profile)[0]['force_password_change'])
 
 
 class XMLResult(unittest.TextTestResult):
