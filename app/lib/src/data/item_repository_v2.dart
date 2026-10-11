@@ -1,21 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
+
+/// A row the server just created: its id and the server-generated code.
+class CreatedOperation {
+  const CreatedOperation({required this.id, required this.publicCode});
+
+  final String id;
+  final String publicCode;
+}
 
 class ItemRepositoryV2 {
   ItemRepositoryV2(this._client);
 
   final SupabaseClient _client;
-  static const _uuid = Uuid();
 
   String get userId {
     final id = _client.auth.currentUser?.id;
     if (id == null) throw StateError('User must be authenticated');
     return id;
-  }
-
-  String _publicCode(String prefix) {
-    final suffix = _uuid.v4().replaceAll('-', '').substring(0, 10).toUpperCase();
-    return 'RHM-MRB-$prefix-$suffix';
   }
 
   Future<String?> defaultAddressId() async {
@@ -42,7 +43,9 @@ class ItemRepositoryV2 {
     return phone.isNotEmpty && (addresses as List).isNotEmpty;
   }
 
-  Future<String> createDonation({
+  /// Creates a donation. `public_code` and `status` are set by the server
+  /// and read back from the insert response.
+  Future<CreatedOperation> createDonation({
     required String category,
     required String categoryGroup,
     required String itemTypeKey,
@@ -57,7 +60,6 @@ class ItemRepositoryV2 {
       attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
     );
     final row = await _client.from('donations').insert({
-      'public_code': _publicCode('DON'),
       'user_id': userId,
       'category': category,
       'category_version': 2,
@@ -69,12 +71,16 @@ class ItemRepositoryV2 {
       'description': description == null || description.trim().isEmpty ? null : description.trim(),
       'address_id': addressId,
       'inspired_by_discovery_card_id': inspiredByDiscoveryCardId,
-      'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    }).select('id,public_code').single();
+    return CreatedOperation(
+      id: row['id'] as String,
+      publicCode: '${row['public_code'] ?? ''}',
+    );
   }
 
-  Future<String> createNeed({
+  /// Creates a need. `public_code` and `status` are set by the server and
+  /// read back from the insert response.
+  Future<CreatedOperation> createNeed({
     required String category,
     required String categoryGroup,
     required String itemTypeKey,
@@ -88,7 +94,6 @@ class ItemRepositoryV2 {
       attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
     );
     final row = await _client.from('needs').insert({
-      'public_code': _publicCode('NEED'),
       'user_id': userId,
       'category': category,
       'category_version': 2,
@@ -99,8 +104,10 @@ class ItemRepositoryV2 {
       'reason': privateDetails.trim(),
       'accepts_used': acceptsUsed,
       'address_id': addressId,
-      'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    }).select('id,public_code').single();
+    return CreatedOperation(
+      id: row['id'] as String,
+      publicCode: '${row['public_code'] ?? ''}',
+    );
   }
 }

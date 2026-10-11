@@ -10,15 +10,36 @@ class ContributionRepository {
     return id;
   }
 
-  Future<void> createContribution({
+  /// The code of the person's pending pledge for the same donation or need,
+  /// or null when there is none. A pledge that is not tied to an operation is
+  /// never treated as a duplicate.
+  Future<String?> pendingPledgeCode({
+    String? donationId,
+    String? needId,
+  }) async {
+    if (donationId == null && needId == null) return null;
+    var query = _client
+        .from('contributions')
+        .select('public_code')
+        .eq('user_id', _userId)
+        .eq('status', 'pending');
+    if (donationId != null) query = query.eq('donation_id', donationId);
+    if (needId != null) query = query.eq('need_id', needId);
+    final rows = await query.limit(1);
+    if ((rows as List).isEmpty) return null;
+    return '${rows.first['public_code'] ?? ''}';
+  }
+
+  /// Registers a cash-to-courier pledge and returns its server-generated
+  /// code. `public_code`, `status`, `verified_by` and `verified_at` are set by
+  /// the server and are never sent from the app.
+  Future<String> createContribution({
     required int amountYer,
     String? donationId,
     String? needId,
     String? deliveryId,
   }) async {
-    final code = 'CTR-MRB-${DateTime.now().millisecondsSinceEpoch}';
-    await _client.from('contributions').insert({
-      'public_code': code,
+    final row = await _client.from('contributions').insert({
       'user_id': _userId,
       'donation_id': donationId,
       'need_id': needId,
@@ -26,7 +47,7 @@ class ContributionRepository {
       'amount_yer': amountYer,
       'payment_method': 'cash_to_courier',
       'payment_reference': null,
-      'status': 'pending',
-    });
+    }).select('public_code').single();
+    return '${row['public_code'] ?? ''}';
   }
 }

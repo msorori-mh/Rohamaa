@@ -143,6 +143,20 @@ class ServiceRepository {
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
+  /// Withdraws the person's own offer while it is not tied to a match.
+  Future<void> withdrawServiceOffer(String offerId) async {
+    await _client.rpc('user_withdraw_service_offer', params: {
+      'p_offer_id': offerId,
+    });
+  }
+
+  /// Cancels the person's own request while it is not tied to a match.
+  Future<void> cancelServiceRequest(String requestId) async {
+    await _client.rpc('user_cancel_service_request', params: {
+      'p_request_id': requestId,
+    });
+  }
+
   Future<List<ServiceMatchOffer>> pendingServiceMatches() async {
     final rows = await _client.rpc('user_pending_service_matches');
     return (rows as List)
