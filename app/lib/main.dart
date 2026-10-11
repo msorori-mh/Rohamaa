@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +11,7 @@ import 'src/theme/ruhamaa_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _installErrorHandlers();
 
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   const supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -45,14 +48,48 @@ Future<void> main() async {
     return;
   }
 
-  final prefs = await SharedPreferences.getInstance();
-  final introSeen = prefs.getBool(ruhamaaIntroSeenKey) ?? false;
+  // If local preferences cannot be read, skip the intro rather than block
+  // startup; it stays available from the account screen.
+  var introSeen = true;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    introSeen = prefs.getBool(ruhamaaIntroSeenKey) ?? false;
+  } catch (error) {
+    debugPrint('Ataa preferences unavailable: ${error.runtimeType}');
+  }
 
   runApp(
     ProviderScope(
       child: RuhamaaApp(showIntro: !introSeen),
     ),
   );
+}
+
+/// Unexpected framework and platform errors are logged only. They are never
+/// shown to the person as raw text and never rethrown, so one failing widget
+/// or plugin callback cannot put the app into a crash loop.
+void _installErrorHandlers() {
+  FlutterError.onError = (details) {
+    var presented = false;
+    assert(() {
+      // Full diagnostics in debug builds only.
+      FlutterError.presentError(details);
+      presented = true;
+      return true;
+    }());
+    if (!presented) {
+      debugPrint('Ataa framework error: ${details.exceptionAsString()}');
+    }
+  };
+  ui.PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Ataa uncaught error: ${error.runtimeType}');
+    assert(() {
+      debugPrint('$error');
+      debugPrintStack(stackTrace: stack);
+      return true;
+    }());
+    return true;
+  };
 }
 
 class _StartupErrorApp extends StatelessWidget {

@@ -2,11 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../data/staff_repository.dart';
+import '../../core/app_error.dart';
+import '../../data/account_repository.dart';
+import 'account_status_screens.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key, required this.role, this.requiredChange = true});
+  const ChangePasswordScreen({super.key, required this.role, this.requiredChange = true, this.onChanged});
   final String role;
+
+  /// Called after a successful forced change so the host can reload the
+  /// account state. When null the screen navigates to the role's home route.
+  final VoidCallback? onChanged;
+
+  /// True when the server forces a new password (temporary password or first
+  /// setup). The current password is not asked for in that case.
   final bool requiredChange;
 
   @override
@@ -15,16 +24,25 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _current = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   bool _busy = false;
   bool _obscure = true;
+  bool _obscureCurrent = true;
 
   @override
   void dispose() {
+    _current.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
+  }
+
+  String? _validateCurrent(String? value) {
+    if (widget.requiredChange) return null;
+    if ((value ?? '').isEmpty) return 'أدخل كلمة المرور الحالية';
+    return null;
   }
 
   String? _validate(String? value) {
@@ -33,22 +51,37 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!RegExp(r'[a-z]').hasMatch(v) || !RegExp(r'[A-Z]').hasMatch(v) || !RegExp(r'[0-9]').hasMatch(v) || !RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
       return 'يجب أن تحتوي على حرف كبير وصغير ورقم ورمز';
     }
+    if (!widget.requiredChange && v == _current.text) {
+      return 'اختر كلمة مرور مختلفة عن الحالية';
+    }
+    return null;
+  }
+
+  String? _validateConfirm(String? value) {
+    if ((value ?? '').isEmpty) return 'أعد إدخال كلمة المرور';
+    if (value != _password.text) return 'كلمتا المرور غير متطابقتين';
     return null;
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_password.text != _confirm.text) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('كلمتا المرور غير متطابقتين')));
-      return;
-    }
+    if (_busy) return;
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
     setState(() => _busy = true);
     try {
-      await StaffRepository(Supabase.instance.client).changePassword(_password.text);
+      await AccountRepository(Supabase.instance.client).changeStaffPassword(
+        password: _password.text,
+        currentPassword: widget.requiredChange ? null : _current.text,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تغيير كلمة المرور.')));
       if (!widget.requiredChange && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(true);
+        return;
+      }
+      final onChanged = widget.onChanged;
+      if (onChanged != null) {
+        onChanged();
         return;
       }
       final route = switch (widget.role) {
@@ -58,8 +91,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         _ => '/home',
       };
       context.go(route);
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'لم يتم تغيير كلمة المرور. تحقق من البيانات ثم حاول مرة أخرى.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -88,19 +127,47 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 28),
+                if (!widget.requiredChange) ...[
+                  TextFormField(
+                    key: const Key('current-password-field'),
+                    controller: _current,
+                    enabled: !_busy,
+                    obscureText: _obscureCurrent,
+                    validator: _validateCurrent,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور الحالية',
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
+                        icon: Icon(_obscureCurrent ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
                 TextFormField(
+                  key: const Key('new-password-field'),
                   controller: _password,
+                  enabled: !_busy,
                   obscureText: _obscure,
                   validator: _validate,
+                  textInputAction: TextInputAction.next,
                   decoration: InputDecoration(labelText: 'كلمة المرور الجديدة', suffixIcon: IconButton(onPressed: () => setState(() => _obscure = !_obscure), icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined))),
                 ),
                 const SizedBox(height: 14),
-                TextFormField(controller: _confirm, obscureText: _obscure, validator: (v) => (v ?? '').isEmpty ? 'أعد إدخال كلمة المرور' : null, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
+                TextFormField(
+                  key: const Key('confirm-password-field'),
+                  controller: _confirm,
+                  enabled: !_busy,
+                  obscureText: _obscure,
+                  validator: _validateConfirm,
+                  decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور'),
+                ),
                 const SizedBox(height: 24),
                 FilledButton(onPressed: _busy ? null : _save, child: Text(_busy ? 'جارٍ الحفظ...' : 'حفظ')),
                 if (widget.requiredChange) ...[
                   const SizedBox(height: 10),
-                  TextButton(onPressed: _busy ? null : () => Supabase.instance.client.auth.signOut(), child: const Text('تسجيل الخروج')),
+                  const SignOutButton(),
                 ],
               ],
             ),

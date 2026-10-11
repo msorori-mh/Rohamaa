@@ -5,8 +5,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'data/staff_repository.dart';
+import 'core/main_tab_signal.dart';
+import 'data/account_repository.dart';
+import 'domain/account_state.dart';
 import 'features/admin/admin_home_screen.dart';
+import 'features/auth/account_status_screens.dart';
 import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/session_landing_screen.dart';
@@ -57,26 +60,47 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         if (loggedIn && isLogin) return '/';
         return null;
       },
+      errorBuilder: (_, __) => const _NotFoundScreen(),
       routes: [
         GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+        // The OAuth deep link (com.ruhamaa.app://login-callback) is consumed
+        // by Supabase; the router only needs to land somewhere valid.
+        GoRoute(path: '/login-callback', redirect: (_, __) => '/'),
         GoRoute(path: '/legal', builder: (_, __) => const LegalScreen()),
         GoRoute(path: '/', builder: (_, __) => const SessionLandingScreen()),
-        ShellRoute(
-          builder: (context, state, child) => _MainNavigationShell(
-            location: state.matchedLocation,
-            child: child,
+        // Each bottom-navigation tab keeps its own state while hidden.
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) => _MainNavigationShell(
+            navigationShell: navigationShell,
           ),
-          routes: [
-            GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-            GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
-            GoRoute(
-              path: '/handoffs',
-              builder: (_, state) => MyHandoffsScreen(
-                initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
-              ),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+              ],
             ),
-            GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/handoffs',
+                  builder: (_, state) => MyHandoffsScreen(
+                    initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                    tabRequestId: state.uri.queryParameters['t'],
+                  ),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/account', builder: (_, __) => const AccountScreen()),
+              ],
+            ),
           ],
         ),
         GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
@@ -137,41 +161,63 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
   }
 }
 
-class _MainNavigationShell extends StatelessWidget {
-  const _MainNavigationShell({required this.location, required this.child});
+class _MainNavigationShell extends StatefulWidget {
+  const _MainNavigationShell({required this.navigationShell});
 
-  final String location;
-  final Widget child;
+  final StatefulNavigationShell navigationShell;
 
-  int get _selectedIndex {
-    if (location.startsWith('/offers')) return 1;
-    if (location.startsWith('/handoffs')) return 2;
-    if (location.startsWith('/account')) return 3;
-    return 0;
+  @override
+  State<_MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends State<_MainNavigationShell> {
+  @override
+  void initState() {
+    super.initState();
+    _announceActiveTab();
   }
 
-  void _go(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        context.go('/home');
-      case 1:
-        context.go('/offers');
-      case 2:
-        context.go('/handoffs');
-      case 3:
-        context.go('/account');
-    }
+  @override
+  void didUpdateWidget(covariant _MainNavigationShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _announceActiveTab();
+  }
+
+  /// Tells the tab screens which tab is visible so the one that just became
+  /// active can refresh its data. Deferred: listeners call setState.
+  void _announceActiveTab() {
+    final index = widget.navigationShell.currentIndex;
+    if (MainTabs.active.value == index) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      MainTabs.active.value = widget.navigationShell.currentIndex;
+    });
+  }
+
+  void _go(int index) {
+    final shell = widget.navigationShell;
+    // Tapping the active tab again returns it to its first screen.
+    shell.goBranch(index, initialLocation: index == shell.currentIndex);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      body: widget.navigationShell,
       bottomNavigationBar: DecoratedBox(
-        decoration:BoxDecoration(color:Colors.white,boxShadow:[BoxShadow(color:RuhamaaColors.primaryDark.withValues(alpha:.12),blurRadius:22,offset:const Offset(0,-7))]),
-        child:NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) => _go(context, index),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: RuhamaaColors.primaryDark.withValues(alpha: .12),
+              blurRadius: 22,
+              offset: const Offset(0, -7),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: widget.navigationShell.currentIndex,
+          onDestinationSelected: _go,
           destinations: const [
             NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
             NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'العروض'),
@@ -184,29 +230,151 @@ class _MainNavigationShell extends StatelessWidget {
   }
 }
 
-class _RoleGate extends StatelessWidget {
+/// Guards a staff route. Loads the account state once; a network failure
+/// shows a retry screen, never a "no permission" message.
+class _RoleGate extends StatefulWidget {
   const _RoleGate({required this.requiredRole, required this.child});
   final String requiredRole;
   final Widget child;
 
   @override
+  State<_RoleGate> createState() => _RoleGateState();
+}
+
+class _RoleGateState extends State<_RoleGate> {
+  AccountState? _state;
+  Object? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final state = await AccountRepository(Supabase.instance.client).myState();
+      if (!mounted) return;
+      setState(() {
+        _state = state;
+        _error = null;
+        _loading = false;
+      });
+    } catch (error) {
+      debugPrint('Ataa role gate load failed: ${error.runtimeType}');
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _loading = false;
+      });
+    }
+  }
+
+  void _retry() {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<StaffStatus>(
-      future: StaffRepository(Supabase.instance.client).myStatus(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        final status = snapshot.data;
-        if (status == null || status.role != requiredRole) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('عطاء')),
-            body: const Center(child: Text('ليس لديك صلاحية للوصول إلى هذه الشاشة.')),
-          );
-        }
-        if (status.forcePasswordChange) return ChangePasswordScreen(role: status.role);
-        return child;
-      },
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final error = _error;
+    final state = _state;
+    if (error != null || state == null) {
+      return AccountLoadErrorScreen(
+        error: error ?? StateError('account state unavailable'),
+        onRetry: _retry,
+      );
+    }
+    if (state.isBlocked) return AccountBlockedScreen(gate: state.gate);
+    if (state.role != widget.requiredRole) return const _NoPermissionScreen();
+    if (state.forcePasswordChange) {
+      return ChangePasswordScreen(role: state.role, onChanged: _retry);
+    }
+    return widget.child;
+  }
+}
+
+class _NoPermissionScreen extends StatelessWidget {
+  const _NoPermissionScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('عطاء')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline_rounded, size: 48, color: RuhamaaColors.textMuted),
+              const SizedBox(height: 12),
+              const Text(
+                'ليس لديك صلاحية للوصول إلى هذه الشاشة.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.home_outlined),
+                label: const Text('العودة للرئيسية'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotFoundScreen extends StatelessWidget {
+  const _NotFoundScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('عطاء')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.explore_off_outlined, size: 52, color: RuhamaaColors.textMuted),
+              const SizedBox(height: 12),
+              Text(
+                'الصفحة غير موجودة',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: RuhamaaColors.primaryDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'ربما تغيّر الرابط أو لم يعد متاحًا. يمكنك العودة إلى الصفحة الرئيسية.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                key: const Key('not-found-go-home'),
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.home_outlined),
+                label: const Text('العودة للرئيسية'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -64,8 +64,13 @@ class _IntroScreenState extends State<IntroScreen> {
   Future<void> _finish() async {
     if (_finishing) return;
     setState(() => _finishing = true);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(ruhamaaIntroSeenKey, true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(ruhamaaIntroSeenKey, true);
+    } catch (error) {
+      // Not being able to remember the intro must not trap the person here.
+      debugPrint('Ataa intro flag not saved: ${error.runtimeType}');
+    }
     if (!mounted) return;
     final loggedIn = Supabase.instance.client.auth.currentSession != null;
     context.go(loggedIn ? '/account' : '/login');
@@ -151,7 +156,7 @@ class _IntroScreenState extends State<IntroScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Icon(isLast ? Icons.arrow_back_rounded : Icons.chevron_left_rounded),
+                        : Icon(isLast ? Icons.arrow_forward_rounded : Icons.chevron_right_rounded),
                     label: Text(
                       _finishing
                           ? 'جارٍ البدء...'
