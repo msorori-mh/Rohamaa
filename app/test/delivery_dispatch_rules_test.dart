@@ -36,7 +36,6 @@ void main() {
         'heading_to_pickup',
         'picked_up',
         'heading_to_recipient',
-        'failed',
         'rescheduled',
       ];
       for (final status in statuses) {
