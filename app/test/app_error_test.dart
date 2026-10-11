@@ -139,7 +139,7 @@ void main() {
     test('the new dispatch and pledge messages have their own copy', () {
       for (final message in [
         'pause reason required',
-        'delivery cannot be paused in this state',
+        'delivery cannot be paused',
         'collected item cannot change courier',
         'vehicle inactive',
         'pledge already answered',

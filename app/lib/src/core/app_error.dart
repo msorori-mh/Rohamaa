@@ -96,7 +96,7 @@ const Map<String, String> kServerErrorMessages = <String, String>{
   'failure cannot be reported in this state': 'لا يمكن الإبلاغ عن تعذر في هذه المرحلة.',
   'invalid party for this phase': 'هذا الطرف لا يناسب مرحلة المهمة الحالية. اختر طرفًا آخر.',
   'pause reason required': 'اكتب سبب إيقاف المهمة.',
-  'delivery cannot be paused in this state': 'لا يمكن إيقاف المهمة في هذه المرحلة.',
+  'delivery cannot be paused': 'لا يمكن إيقاف المهمة في هذه المرحلة.',
   'collected item cannot change courier': 'استُلم الشيء فعلًا، ولا يمكن نقل المهمة إلى موصل آخر بهذه الطريقة.',
   'vehicle inactive': 'المركبة المختارة غير مفعّلة. اختر مركبة أخرى أو بدون مركبة.',
   'courier reported cash not received': 'أفاد الموصل بأن المبلغ لم يُستلم، فلا يمكن اعتماد المساهمة.',
@@ -171,6 +171,10 @@ const Map<String, String> kServerErrorMessages = <String, String>{
   'service area must belong': 'أكمل عنوانك ونطاق الخدمة أولًا.',
   'display name is required': 'اكتب اسم النشاط.',
   'invalid monthly capacity': 'اكتب عدد الحالات بين 1 و100.',
+  'account already deleted': 'حُذف هذا الحساب مسبقًا.',
+  'courier_deliveries_open': 'لدى هذا الحساب مهام توصيل مفتوحة. أعد إسنادها أو ألغها أولًا.',
+  'courier has open deliveries': 'لدى هذا الحساب مهام توصيل مفتوحة. أعد إسنادها أو ألغها أولًا.',
+  'auth_identity_active': 'لم يكتمل حذف هوية الدخول بعد. أعد المحاولة.',
   'location_service_disabled': 'خدمة الموقع متوقفة في الجهاز. فعّلها ثم حاول مرة أخرى.',
 };
 
