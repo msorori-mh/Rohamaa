@@ -17,9 +17,14 @@ class MatchOffersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tab = initialTab.clamp(0, 1).toInt();
     return DefaultTabController(
+      // A new key rebuilds the controller when the route asks for another
+      // tab while this screen is already open (for example from a
+      // notification that links to the services tab).
+      key: ValueKey<int>(tab),
       length: 2,
-      initialIndex: initialTab.clamp(0, 1).toInt(),
+      initialIndex: tab,
       child: const Scaffold(
         appBar: _MatchAppBar(),
         body: TabBarView(
