@@ -97,9 +97,14 @@ Deno.serve(async (req) => {
   //    row that operational history references is kept.
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId, true)
   if (deleteError) {
-    // A retry after an earlier partial run finds the user already soft-deleted.
+    // A retry after an earlier partial run finds the user already soft-deleted. The profile
+    // row checked by the prepare step proves the auth row still exists, so "not found"
+    // from the auth server can only mean it is already soft-deleted.
     const { data: existing, error: lookupError } = await admin.auth.admin.getUserById(userId)
-    const alreadyDeleted = !lookupError && Boolean((existing?.user as { deleted_at?: string | null } | null | undefined)?.deleted_at)
+    const notFound = (error: unknown) => (error as { status?: number } | null)?.status === 404
+    const alreadyDeleted = lookupError
+      ? notFound(lookupError) && notFound(deleteError)
+      : Boolean((existing?.user as { deleted_at?: string | null } | null | undefined)?.deleted_at)
     if (!alreadyDeleted) return json({ error: 'auth_delete_failed' }, 500)
   }
 
