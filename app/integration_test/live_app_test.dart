@@ -167,6 +167,8 @@ void main() {
     final submit = find.text('أسجّل رغبتي بالمساهمة بـ 1000 ريال');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contribution-confirm')));
     await settle(tester);
     final after = await client.from('contributions').select('id,status').eq('user_id', client.auth.currentUser!.id);
     final previous = before.map((r) => r['id']).toSet();

@@ -5,13 +5,14 @@ abstract final class DeliveryDispatchRules {
   static const pickupStatuses = {'heading_to_pickup'};
   static const dropoffPreviewStatuses = {'picked_up'};
   static const dropoffStatuses = {'heading_to_recipient'};
-  static const waitingForAdminStatuses = {'failed', 'rescheduled'};
-  static const closedStatuses = {'delivered', 'cancelled'};
+  static const waitingForAdminStatuses = {'rescheduled'};
+
+  /// 'failed' is terminal: only `admin_cancel_delivery` writes it.
+  static const closedStatuses = {'delivered', 'cancelled', 'failed'};
 
   /// Statuses `admin_reassign_delivery` accepts.
   static const adminReassignableStatuses = {
     'assigned',
-    'failed',
     'rescheduled',
   };
 
@@ -49,7 +50,7 @@ abstract final class DeliveryDispatchRules {
         'picked_up' => 'تم الاستلام',
         'heading_to_recipient' => 'في الطريق للتسليم',
         'rescheduled' => 'بانتظار إعادة التنسيق',
-        'failed' => 'تحتاج تدخل الفريق',
+        'failed' => 'أُلغيت المهمة',
         'delivered' => 'تم التسليم',
         'cancelled' => 'أُلغيت المهمة',
         _ => 'حالة غير معروفة',
@@ -59,7 +60,6 @@ abstract final class DeliveryDispatchRules {
   static String adminStatusLabel(String status) => switch (status) {
         'assigned' => 'بانتظار رد الموصل',
         'rescheduled' => 'تحتاج إعادة إسناد',
-        'failed' => 'متعثرة وتحتاج إعادة إسناد',
         _ => statusLabel(status),
       };
 

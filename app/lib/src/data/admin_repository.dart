@@ -64,7 +64,7 @@ class AdminRepository {
       final response = await _client
           .from('deliveries')
           .select('id')
-          .neq('status', 'delivered')
+          .not('status', 'in', '(delivered,failed)')
           .limit(1)
           .count(CountOption.exact);
       return _asCount(response.count);

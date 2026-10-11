@@ -82,7 +82,12 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(path: '/offers', builder: (_, __) => const MatchOffersScreen()),
+                GoRoute(
+                  path: '/offers',
+                  builder: (_, state) => MatchOffersScreen(
+                    initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                  ),
+                ),
               ],
             ),
             StatefulShellBranch(

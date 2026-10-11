@@ -19,8 +19,9 @@ void main() {
       );
     });
 
-    test('failed and rescheduled tasks wait for admin', () {
-      expect(DeliveryDispatchRules.waitsForAdmin('failed'), isTrue);
+    test('rescheduled tasks wait for admin and failed is terminal', () {
+      expect(DeliveryDispatchRules.waitsForAdmin('failed'), isFalse);
+      expect(DeliveryDispatchRules.isClosed('failed'), isTrue);
       expect(DeliveryDispatchRules.waitsForAdmin('rescheduled'), isTrue);
       expect(DeliveryDispatchRules.canReportProblem('rescheduled'), isFalse);
       expect(
@@ -96,7 +97,7 @@ void main() {
 
     test('admin can reassign only the states the RPC accepts', () {
       expect(DeliveryDispatchRules.canAdminReassign('assigned'), isTrue);
-      expect(DeliveryDispatchRules.canAdminReassign('failed'), isTrue);
+      expect(DeliveryDispatchRules.canAdminReassign('failed'), isFalse);
       expect(DeliveryDispatchRules.canAdminReassign('rescheduled'), isTrue);
       expect(
         DeliveryDispatchRules.canAdminReassign('heading_to_pickup'),
