@@ -435,6 +435,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
           latitude: position?.latitude,
           longitude: position?.longitude,
         );
+        return null;
       },
       success: 'وصل البلاغ إلى الفريق لإعادة التنسيق.',
       closeAfter: true,

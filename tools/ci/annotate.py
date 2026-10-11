@@ -14,7 +14,7 @@ INTERESTING = re.compile(
     r'(error|warning|info) [•-] |issues? found|Some tests failed|All tests passed|'
     r'^(FAIL|ERROR): |^Ran \d+ tests|^OK\b|^FAILED|AssertionError|\[E\]|'
     r'Expected: |Actual: |Which: |^\d+:\d+ \+\d+.* -\d+: .*\[E\]|'
-    r'Error: |The following .* was thrown|Because .* depends|version solving failed', re.I)
+    r'❌|\(failed\)|\(skipped\)|^::error|Error: |The following .* was thrown|Because .* depends|version solving failed', re.I)
 SECRET = re.compile(r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_.-]+|sb_[a-z]+_[A-Za-z0-9_-]{8,}|'
                     r'(?:password|token|apikey|secret|authorization)\S*\s*[:=]\s*\S+', re.I)
 
