@@ -152,7 +152,7 @@ The pilot deliberately avoids invasive device fingerprinting or an automated soc
 - Supabase Auth, PostgreSQL, RLS, Storage and Edge Functions.
 - `go_router` navigation and Arabic RTL visual system.
 - Private Storage for item images.
-- GitHub Actions for migration-version checks, Flutter analysis/tests/debug APK and secure signed-AAB generation.
+- GitHub Actions for migration-version checks, Flutter analysis/tests/debug APK, isolated E2E/security tests on a disposable local Supabase stack, website checks before every Pages deployment, and a manual signed-AAB workflow that runs in the protected `release` environment (see `docs/ANDROID_RELEASE.md`; no signed bundle is recorded yet).
 - Production domain `ruhamaa.com` for public policy pages and future verified Android App Link.
 
 No Supabase service-role key or Android signing secret may be embedded in the Flutter client or committed to Git.

@@ -76,6 +76,14 @@ android {
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // Explicit so a Flutter/AGP default change cannot silently ship
+            // unshrunk code. Flutter plugins contribute their own consumer rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

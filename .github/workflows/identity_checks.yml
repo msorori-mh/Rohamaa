@@ -10,6 +10,8 @@ jobs:
   identity:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     services:
       postgres:
         image: postgres:16
@@ -22,9 +24,13 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: Check branding and compatibility boundaries
         run: python3 tools/branding/check_identity.py
+      - name: Check the identity migration tool would change nothing
+        run: python3 tools/branding/apply_identity.py --check
       - name: Verify migration twice on disposable PostgreSQL
         run: |
           psql postgresql://postgres:isolated-brand-test@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 \
@@ -33,7 +39,7 @@ jobs:
             -f supabase/migrations/20260915151416_ataa_display_identity.sql \
             -f tools/branding/verify_notification_migration.sql
       - name: Save tested migration
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ataa-identity-migration
           path: supabase/migrations/20260915151416_ataa_display_identity.sql
