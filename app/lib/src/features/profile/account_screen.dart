@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
+import '../../data/handoff_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 class AccountScreen extends StatefulWidget {
@@ -43,7 +45,7 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || _signingOut) return;
 
     setState(() => _signingOut = true);
     try {
@@ -53,16 +55,15 @@ class _AccountScreenState extends State<AccountScreen> {
       } else {
         await Supabase.instance.client.auth.signOut();
       }
-    } on AuthException catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر تسجيل الخروج. تحقق من اتصالك وحاول مرة أخرى.')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر تسجيل الخروج. تحقق من اتصالك ثم حاول مرة أخرى.')),
-      );
+      HandoffRepository.clearIssuedPins();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'لم يكتمل تسجيل الخروج. تحقق من اتصالك ثم حاول مرة أخرى.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _signingOut = false);
     }
@@ -125,7 +126,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   leading: const Icon(Icons.location_on_outlined, color: RuhamaaColors.primary),
                   title: const Text('عنوان الاستلام والتسليم', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('حدّث رقم الهاتف والعنوان والموقع.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/onboarding'),
                 ),
                 const Divider(height: 1),
@@ -133,7 +134,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   leading: const Icon(Icons.handyman_outlined, color: RuhamaaColors.primary),
                   title: const Text('وقتي ومهاراتي', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('تابع الخدمات التي تقدمها أو تطلبها.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/my-services'),
                 ),
                 const Divider(height: 1),
@@ -141,7 +142,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
                   title: const Text('كيف يعمل عطاء؟', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('تعرّف على التبرع والطلبات والتوصيل.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/intro'),
                 ),
                 const Divider(height: 1),
@@ -149,7 +150,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   leading: const Icon(Icons.privacy_tip_outlined, color: RuhamaaColors.primary),
                   title: const Text('الخصوصية والحساب', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('اقرأ السياسة والشروط أو اطلب حذف حسابك.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/legal'),
                 ),
               ],
