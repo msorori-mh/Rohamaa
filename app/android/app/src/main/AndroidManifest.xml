@@ -6,7 +6,10 @@
         android:label="عطاء"
         android:name="${applicationName}"
         android:icon="@drawable/ataa_launcher"
-        android:roundIcon="@drawable/ataa_launcher">
+        android:roundIcon="@drawable/ataa_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -40,7 +43,6 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" android:host="ruhamaa.com" android:pathPrefix="/login-callback" />
                 <data android:scheme="https" android:host="ruhamaa.com" android:pathPrefix="/login-callback" />
             </intent-filter>
         </activity>
