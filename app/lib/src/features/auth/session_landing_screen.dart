@@ -2,41 +2,89 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../data/staff_repository.dart';
+import '../../data/account_repository.dart';
+import '../../domain/account_state.dart';
 import '../admin/admin_home_screen.dart';
 import '../courier/courier_tasks_screen.dart';
 import '../supervisor/supervisor_home_screen.dart';
+import 'account_status_screens.dart';
 import 'change_password_screen.dart';
 
-class SessionLandingScreen extends StatelessWidget {
+/// First screen after sign-in. Loads the account state once and sends the
+/// person to the right place: staff screens by role, the forced password
+/// change, a dedicated blocked-account screen, or the community home.
+class SessionLandingScreen extends StatefulWidget {
   const SessionLandingScreen({super.key});
 
   @override
+  State<SessionLandingScreen> createState() => _SessionLandingScreenState();
+}
+
+class _SessionLandingScreenState extends State<SessionLandingScreen> {
+  AccountState? _state;
+  Object? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final state = await AccountRepository(Supabase.instance.client).myState();
+      if (!mounted) return;
+      setState(() {
+        _state = state;
+        _error = null;
+        _loading = false;
+      });
+    } catch (error) {
+      debugPrint('Ataa account state load failed: ${error.runtimeType}');
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _loading = false;
+      });
+    }
+  }
+
+  void _retry() {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    _load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<StaffStatus>(
-      future: StaffRepository(Supabase.instance.client).myStatus(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (snapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('عطاء')),
-            body: const Center(child: Text('تعذر التحقق من الحساب. تحقق من اتصالك وحاول مجددًا.')),
-          );
-        }
-        final status = snapshot.data ?? const StaffStatus(role: 'user', forcePasswordChange: false, isPrimaryAdmin: false);
-        if (status.forcePasswordChange && ['admin', 'supervisor', 'courier'].contains(status.role)) {
-          return ChangePasswordScreen(role: status.role);
-        }
-        return switch (status.role) {
-          'admin' => const AdminHomeScreen(),
-          'supervisor' => const SupervisorHomeScreen(),
-          'courier' => const CourierTasksScreen(),
-          _ => const _CommunityHomeRedirect(),
-        };
-      },
-    );
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final error = _error;
+    final state = _state;
+    if (error != null || state == null) {
+      return AccountLoadErrorScreen(
+        error: error ?? StateError('account state unavailable'),
+        onRetry: _retry,
+      );
+    }
+    final gate = state.gate;
+    return switch (gate) {
+      AccountGate.suspended ||
+      AccountGate.deletionProcessing ||
+      AccountGate.deleted =>
+        AccountBlockedScreen(gate: gate),
+      AccountGate.passwordChange =>
+        ChangePasswordScreen(role: state.role, onChanged: _retry),
+      AccountGate.admin => const AdminHomeScreen(),
+      AccountGate.supervisor => const SupervisorHomeScreen(),
+      AccountGate.courier => const CourierTasksScreen(),
+      AccountGate.community => const _CommunityHomeRedirect(),
+    };
   }
 }
 
