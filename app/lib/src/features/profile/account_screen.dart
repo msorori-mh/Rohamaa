@@ -139,7 +139,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
-                  title: const Text('كيف يعمل رحماء؟', style: TextStyle(fontWeight: FontWeight.w800)),
+                  title: const Text('كيف يعمل عطاء؟', style: TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: const Text('تعرّف على التبرع والطلبات والتوصيل.'),
                   trailing: const Icon(Icons.chevron_left_rounded),
                   onTap: () => context.push('/intro'),
@@ -169,7 +169,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'يمكنك طلب المساعدة والتبرع في الوقت نفسه؛ لا يصنّفك رحماء في دور ثابت.',
+                    'يمكنك طلب المساعدة والتبرع في الوقت نفسه؛ لا يصنّفك عطاء في دور ثابت.',
                     style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                   ),
                 ),

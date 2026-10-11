@@ -22,14 +22,14 @@ class _IntroScreenState extends State<IntroScreen> {
   static const _pages = <_IntroPageData>[
     _IntroPageData(
       icon: Icons.volunteer_activism_rounded,
-      title: 'مرحبًا بك في رحماء',
-      body: 'تبرّع بشيء أو بوقتك ومهارتك، أو اطلب ما تحتاجه. يتولى رحماء المراجعة والتنسيق بخصوصية.',
+      title: 'مرحبًا بك في عطاء',
+      body: 'تبرّع بشيء أو بوقتك ومهارتك، أو اطلب ما تحتاجه. يتولى عطاء المراجعة والتنسيق بخصوصية.',
       accent: RuhamaaColors.primary,
       footer: 'ما لا تحتاجه قد ينفع شخصًا آخر.',
     ),
     _IntroPageData(
       icon: Icons.route_rounded,
-      title: 'كيف يعمل رحماء؟',
+      title: 'كيف يعمل عطاء؟',
       body: 'أخبرنا بما تقدمه أو تحتاجه، وسنبحث عن العرض المناسب دون عرض بيانات الأشخاص للعامة.',
       accent: RuhamaaColors.warmGold,
       steps: [

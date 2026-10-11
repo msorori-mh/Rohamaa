@@ -420,7 +420,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           iconColor: RuhamaaColors.primary,
           text: _inspired
               ? 'سنوجّه تبرعك إلى الطلب الأنسب والأعلى أولوية.'
-              : 'يراجع رحماء التبرع ويوجهه بخصوصية. لا تظهر هوية أي طرف للآخر.',
+              : 'يراجع عطاء التبرع ويوجهه بخصوصية. لا تظهر هوية أي طرف للآخر.',
         ),
         const SizedBox(height: 24),
         Row(

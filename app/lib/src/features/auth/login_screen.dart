@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'يراجع رحماء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
+                        'يراجع عطاء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                       ),

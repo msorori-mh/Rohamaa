@@ -113,7 +113,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('رجوع')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('تأكيد الاعتذار'))],
     )));
     if (confirmed != true || !mounted) return;
-    await _run(() => _repo.respond(deliveryId: details.deliveryId, accept: false, reason: reason), success: 'تم إرسال اعتذارك، وستعود المهمة إلى فريق رحماء لإسنادها.', closeAfter: true);
+    await _run(() => _repo.respond(deliveryId: details.deliveryId, accept: false, reason: reason), success: 'تم إرسال اعتذارك، وستعود المهمة إلى فريق عطاء لإسنادها.', closeAfter: true);
   }
 
   Future<void> _verifyPin(CourierTaskDetails details, {required bool pickup}) async {
@@ -200,7 +200,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
         FilledButton.icon(onPressed: _busy ? null : () => _verifyPin(details, pickup: false), icon: const Icon(Icons.pin_outlined), label: Text(_busy ? 'جارٍ التحقق...' : 'تأكيد التسليم بالرمز')),
         _ProblemButton(busy: _busy, onPressed: () => _reportProblem(details)),
       ] else if (DeliveryDispatchRules.waitsForAdmin(details.status))
-        const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('وصلت المشكلة إلى فريق رحماء. انتظر إعادة تنسيق المهمة.'))),
+        const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('وصلت المشكلة إلى فريق عطاء. انتظر إعادة تنسيق المهمة.'))),
     ]);
   }));
 }

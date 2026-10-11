@@ -108,7 +108,7 @@ void main() {
 
   testWidgets('live admin operations center', (tester) async {
     await login(tester, adminEmail, adminPassword);
-    expect(find.text('لوحة إدارة رحماء'), findsOneWidget);
+    expect(find.text('لوحة إدارة عطاء'), findsOneWidget);
   });
   const adminTools = <String, String>{
     'التأهيل والمخزون': 'RecoveryInventoryScreen',
@@ -119,7 +119,7 @@ void main() {
     'متابعة التوصيل': 'DeliveryOperationsScreen',
     'مراجعة المخاطر': 'RiskManagementScreen',
     'بلاغات الخدمات': 'ServiceIncidentManagementScreen',
-    'شركاء رحماء': 'PartnerManagementScreen',
+    'شركاء عطاء': 'PartnerManagementScreen',
     'المساهمات التشغيلية': 'ContributionReviewScreen',
     'التقارير الأساسية': 'ReportsScreen',
     'المدن والمناطق': 'ServiceAreasScreen',
@@ -153,7 +153,7 @@ void main() {
   testWidgets('ordinary user cannot open admin screen', (tester) async {
     await login(tester, donorEmail, donorPassword);
     await route(tester, '/admin');
-    expect(find.text('لوحة إدارة رحماء'), findsNothing);
+    expect(find.text('لوحة إدارة عطاء'), findsNothing);
   });
   testWidgets('contribution UI persists a pending contribution', (tester) async {
     await login(tester, donorEmail, donorPassword);

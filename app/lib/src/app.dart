@@ -215,7 +215,7 @@ class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier() {
     _loggedIn = Supabase.instance.client.auth.currentSession != null;
     _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      debugPrint('Ruhamaa auth event: ${data.event}; session=${data.session != null}');
+      debugPrint('Ataa auth event: ${data.event}; session=${data.session != null}');
       final loggedIn = data.session != null;
       if (loggedIn == _loggedIn) return;
       _loggedIn = loggedIn;
