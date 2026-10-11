@@ -14,7 +14,7 @@ INTERESTING = re.compile(
     r'(error|warning|info) [•-] |issues? found|Some tests failed|All tests passed|'
     r'^(FAIL|ERROR): |^Ran \d+ tests|^OK\b|^FAILED|AssertionError|\[E\]|'
     r'Expected: |Actual: |Which: |^\d+:\d+ \+\d+.* -\d+: .*\[E\]|'
-    r'❌|\(failed\)|\(skipped\)|^::error|Error: |The following .* was thrown|Because .* depends|version solving failed', re.I)
+    r'Failed assertion|❌|\(failed\)|\(skipped\)|^::error|Error: |The following .* was thrown|Because .* depends|version solving failed', re.I)
 SECRET = re.compile(r'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_.-]+|sb_[a-z]+_[A-Za-z0-9_-]{8,}|'
                     r'(?:password|token|apikey|secret|authorization)\S*\s*[:=]\s*\S+', re.I)
 
@@ -27,7 +27,14 @@ def main():
         return
     lines = path.read_text(errors='replace').splitlines()
     if not full:
-        lines = [line[:300] for line in lines if INTERESTING.search(line)] or ['(no findings)']
+        keep = set()
+        for index, line in enumerate(lines):
+            if INTERESTING.search(line):
+                keep.add(index)
+                # Framework errors put the actual reason on the following lines.
+                if 'was thrown' in line or 'Failed assertion' in line:
+                    keep.update(range(index, min(len(lines), index + 12)))
+        lines = [lines[i][:300] for i in sorted(keep)] or ['(no findings)']
     text = SECRET.sub('[redacted]', '\n'.join(lines))[:LIMIT]
     encoded = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
     print(f'::notice title={title}::{encoded}')
