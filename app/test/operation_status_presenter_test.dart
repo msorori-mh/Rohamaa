@@ -40,10 +40,24 @@ void main() {
       expect(copy.label, 'ينتظر قرارك');
     });
 
-    test('explains delivery failures without exposing private details', () {
-      final copy = OperationStatusPresenter.present('delivery', 'failed');
+    test('a rescheduled delivery asks for attention', () {
+      final copy = OperationStatusPresenter.present('delivery', 'rescheduled');
       expect(copy.attention, isTrue);
       expect(copy.nextStep, contains('فريق عطاء'));
+    });
+
+    test('a cancelled delivery is closed and has its own copy', () {
+      final copy = OperationStatusPresenter.present('delivery', 'failed');
+      expect(copy.attention, isFalse);
+      expect(copy.label, 'أُلغيت عملية التوصيل');
+      expect(copy.nextStep, 'أعدنا العملية إلى فريق عطاء لترتيبها من جديد.');
+      expect(
+        copy.label,
+        isNot(OperationStatusPresenter.present('delivery', 'rescheduled').label),
+      );
+      for (final kind in ['pickup', 'delivery']) {
+        expect(OperationStatusPresenter.presentHandoff(kind, 'failed').attention, isFalse);
+      }
     });
 
     test('gives fulfilled needs a completed outcome', () {

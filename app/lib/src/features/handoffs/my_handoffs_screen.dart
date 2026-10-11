@@ -22,6 +22,12 @@ bool _isMainTabRoute(String route) {
   return _mainTabRoutes.contains(path);
 }
 
+/// A repeated request for the same tab must still be seen as a new one.
+String _withRequestId(String route) => OperationRules.withRequestId(
+      route,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+
 class MyHandoffsScreen extends StatefulWidget {
   const MyHandoffsScreen({super.key, this.initialTab = 0, this.tabRequestId});
 
@@ -210,12 +216,19 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
     );
     if (!route.startsWith('/')) return;
     if (_isMainTabRoute(route)) {
-      context.go(route);
+      context.go(_withRequestId(route));
       return;
     }
     await context.push(route);
     if (mounted) await reload();
   }
+
+  bool _showsAction(OperationItem row) => OperationRules.showsAction(
+        kind: row.kind,
+        status: row.status,
+        requiresAction: row.requiresAction,
+        serverRoute: row.actionRoute,
+      );
 
   Future<void> _cancel(OperationItem row) async {
     if (_cancellingId != null) return;
@@ -268,7 +281,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
 
   Widget _card(OperationItem row) {
     final copy = OperationStatusPresenter.present(row.kind, row.status);
-    final showAction = row.requiresAction && row.actionRoute != '/handoffs';
+    final showAction = _showsAction(row);
     final canCancel = OperationRules.canCancel(kind: row.kind, status: row.status);
     final cancelling = _cancellingId == row.id;
     return Card(
@@ -357,7 +370,8 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
           if (index == 0) {
             return _SummaryBanner(
               total: rows.length,
-              attention: rows.where((row) => row.requiresAction).length,
+              // Only rows that really offer a button count as "needs you".
+              attention: rows.where(_showsAction).length,
             );
           }
           return _card(rows[index - 1]);
@@ -396,7 +410,11 @@ class _NotificationsListState extends _ListState<_NotificationsList, UserNotific
       await reload();
     }
     if (!mounted) return;
-    final route = item.actionRoute;
+    final route = OperationRules.notificationRoute(
+      entityType: item.entityType,
+      dedupeKey: item.dedupeKey,
+      serverRoute: item.actionRoute,
+    );
     if (route == '/handoffs') {
       // Already on this screen: just show the status tab.
       widget.onOpenStatusTab();
@@ -404,7 +422,7 @@ class _NotificationsListState extends _ListState<_NotificationsList, UserNotific
     }
     if (!route.startsWith('/')) return;
     if (_isMainTabRoute(route)) {
-      context.go(route);
+      context.go(_withRequestId(route));
       return;
     }
     await context.push(route);
@@ -529,6 +547,7 @@ class _HandoffsListState extends _ListState<_HandoffsList, UserHandoff> {
     final pickup = row.kind == 'pickup';
     final canShowPin = HandoffPinRules.canIssue(kind: row.kind, status: row.status);
     final issuing = _issuingKey == _key(row);
+    final closed = OperationRules.isDeliveryClosed(row.status);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -537,10 +556,10 @@ class _HandoffsListState extends _ListState<_HandoffsList, UserHandoff> {
           children: [
             Row(
               children: [
-                const CircleAvatar(
-                  backgroundColor: RuhamaaColors.softGreen,
-                  foregroundColor: RuhamaaColors.primary,
-                  child: Icon(Icons.local_shipping_outlined),
+                CircleAvatar(
+                  backgroundColor: closed ? RuhamaaColors.warmSurface : RuhamaaColors.softGreen,
+                  foregroundColor: closed ? RuhamaaColors.textMuted : RuhamaaColors.primary,
+                  child: const Icon(Icons.local_shipping_outlined),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

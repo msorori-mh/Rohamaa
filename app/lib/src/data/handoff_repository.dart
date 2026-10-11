@@ -35,18 +35,42 @@ class HandoffRepository {
 
   Future<List<UserHandoff>> myHandoffs() async {
     final rows = await _client.rpc('user_my_handoffs');
-    return (rows as List)
+    final handoffs = (rows as List)
         .cast<Map<String, dynamic>>()
         .map(UserHandoff.fromJson)
         .toList();
+    dropStalePins(handoffs);
+    return handoffs;
+  }
+
+  /// Forgets cached PINs whose handoff is no longer in the status where a
+  /// PIN can be issued, so a failure report, reassignment or cancellation on
+  /// the server never leaves an invalid PIN on screen.
+  void dropStalePins(Iterable<UserHandoff> handoffs) {
+    final issuable = <String>{
+      for (final row in handoffs)
+        if (HandoffPinRules.canIssue(kind: row.kind, status: row.status))
+          _pinKey(row.deliveryId, row.kind),
+    };
+    final stale = HandoffPinRules.staleKeys(
+      cachedKeys: _issuedPins.keys.toList(),
+      userId: _client.auth.currentUser?.id,
+      issuableKeys: issuable,
+    );
+    for (final key in stale) {
+      _issuedPins.remove(key);
+    }
   }
 
   /// PINs issued during this app run. The server stores only a hash, so the
   /// app keeps the plain PIN in memory to show the same one until it expires.
   static final Map<String, IssuedHandoffPin> _issuedPins = <String, IssuedHandoffPin>{};
 
-  String _pinKey(String deliveryId, String kind) =>
-      '${_client.auth.currentUser?.id}:$deliveryId:$kind';
+  String _pinKey(String deliveryId, String kind) => HandoffPinRules.cacheKey(
+        userId: _client.auth.currentUser?.id,
+        deliveryId: deliveryId,
+        kind: kind,
+      );
 
   /// The PIN already issued for this handoff when it is still valid.
   IssuedHandoffPin? activePin({required String deliveryId, required String kind, DateTime? now}) {

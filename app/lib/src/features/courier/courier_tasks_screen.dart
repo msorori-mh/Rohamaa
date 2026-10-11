@@ -166,7 +166,7 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
                 ),
                 title: Text(task.publicCode),
                 subtitle: Text(_subtitle(task)),
-                trailing: const Icon(Icons.chevron_left),
+                trailing: const Icon(Icons.chevron_right),
                 onTap: () => _openTask(task),
               ),
             );
@@ -211,7 +211,7 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
     } on TaskUnavailableException {
       return null;
     }
-    if (DeliveryDispatchRules.showsCashPledges(details.status)) {
+    if (DeliveryDispatchRules.loadsCashPledges(details.status)) {
       _loadPledges();
     } else if (mounted) {
       setState(() {
@@ -236,6 +236,20 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
       if (!mounted) return;
       setState(() => _pledgesFailed = true);
     }
+  }
+
+  /// Whether a cash pledge still needs an answer once the dropoff is
+  /// confirmed. Uses a fresh list when it loads, otherwise the last one seen.
+  Future<bool> _hasUnansweredPledges() async {
+    var pledges = _pledges ?? const <CashPledge>[];
+    try {
+      pledges = await _repo.cashPledges(widget.task.id);
+    } catch (_) {
+      // Keep the list loaded earlier in this phase.
+    }
+    return DeliveryDispatchRules.staysOpenAfterDelivery(
+      pledges.map((pledge) => pledge.courierReceived),
+    );
   }
 
   Future<void> _refresh() async {
@@ -280,14 +294,18 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
   Future<void> _run(
     Future<Object?> Function() action, {
     required String success,
+    String Function(Object? result)? successFor,
     bool closeAfter = false,
   }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await action();
+      final result = await action();
       if (!mounted) return;
-      showInfoSnack(context, success);
+      showInfoSnack(
+        context,
+        successFor == null ? success : successFor(result),
+      );
       if (closeAfter) {
         Navigator.pop(context);
       } else {
@@ -308,7 +326,10 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
 
   Future<void> _accept(CourierTaskDetails details) => _run(
         () => _repo.respond(deliveryId: details.deliveryId, accept: true),
-        success: 'تم قبول المهمة. يمكنك الآن التوجه إلى موقع الاستلام.',
+        success: DeliveryDispatchRules.acceptedMessage('heading_to_pickup'),
+        // `respond` returns the status the task resumed at.
+        successFor: (result) =>
+            DeliveryDispatchRules.acceptedMessage('${result ?? ''}'),
       );
 
   Future<void> _reject(CourierTaskDetails details) async {
@@ -400,6 +421,14 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
       );
       if (pickup) {
         await _refresh();
+        return;
+      }
+      // The server accepts pledge answers for 24 hours after delivery: keep
+      // the task open only while one is still unanswered.
+      final stay = await _hasUnansweredPledges();
+      if (!mounted) return;
+      if (stay) {
+        await _refresh();
       } else {
         Navigator.pop(context);
       }
@@ -425,7 +454,9 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
     if (_busy) return;
     final report = await showDialog<_FailureReport>(
       context: context,
-      builder: (_) => const _FailureReportDialog(),
+      builder: (_) => _FailureReportDialog(
+        parties: CourierTaskRules.failurePartiesFor(details.status),
+      ),
     );
     if (report == null || !mounted) return;
     await _run(
@@ -465,7 +496,11 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
       showInfoSnack(context, 'تم تسجيل إجابتك.');
       await _loadPledges();
     } catch (error) {
-      if (mounted) showErrorSnack(context, error);
+      if (mounted) {
+        showErrorSnack(context, error);
+        // The answer is write-once: show what the server already holds.
+        await _loadPledges();
+      }
     } finally {
       if (mounted) setState(() => _pledgeBusyIds.remove(id));
     }
@@ -541,8 +576,21 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
     final status = details.status;
     if (DeliveryDispatchRules.canRespond(status)) {
       final expires = widget.task.offerExpiresAt;
+      final resumes = DeliveryDispatchRules.resumesAtDropoff(
+        status: status,
+        pickupArea: details.pickupArea,
+        dropoffArea: details.dropoffArea,
+      );
       return [
-        _locationCard(title: 'منطقة الاستلام', area: details.pickupArea),
+        if (resumes) ...[
+          _locationCard(title: 'منطقة التسليم', area: details.dropoffArea),
+          const SizedBox(height: 8),
+          const Text(
+            'الشيء مستلم مسبقًا. بعد القبول تتوجه مباشرة إلى التسليم.',
+            style: TextStyle(height: 1.45),
+          ),
+        ] else
+          _locationCard(title: 'منطقة الاستلام', area: details.pickupArea),
         if (expires != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -634,6 +682,25 @@ class _CourierTaskScreenState extends State<CourierTaskScreen> {
           title: DeliveryDispatchRules.waitingForAdminMessage,
           body:
               'وصل البلاغ إلى فريق عطاء. لا يوجد إجراء مطلوب منك الآن، وستصلك المهمة من جديد إذا أُسندت إليك.',
+        ),
+      ];
+    }
+    final pledges = _pledges;
+    if (status == 'delivered' &&
+        (_pledgesFailed || (pledges != null && pledges.isNotEmpty))) {
+      return [
+        const _NoticeCard(
+          icon: Icons.task_alt_rounded,
+          title: 'اكتمل التسليم',
+          body:
+              'بقي تسجيل إجابتك عن المساهمات النقدية المرتبطة بالمهمة. يمكنك الإجابة خلال 24 ساعة من التسليم.',
+        ),
+        ..._pledgeSection(),
+        const SizedBox(height: 16),
+        FilledButton(
+          key: const Key('courier-delivered-done'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('تم'),
         ),
       ];
     }
@@ -859,7 +926,7 @@ class _PledgesCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'سجّل لكل مساهمة هل استلمت المبلغ نقدًا أم لا. تعتمد الإدارة المساهمة بعد تأكيدك.',
+              'سجّل لكل مساهمة هل استلمت المبلغ نقدًا أم لا. الإجابة تُسجّل مرة واحدة، وتعتمد الإدارة المساهمة بعد تأكيدك.',
               style: TextStyle(height: 1.45),
             ),
             for (final pledge in pledges) ...[
@@ -880,26 +947,29 @@ class _PledgesCard extends StatelessWidget {
                   alignment: AlignmentDirectional.centerStart,
                   child: InlineSpinner(),
                 )
-              else
+              else if (DeliveryDispatchRules.canAnswerPledge(
+                pledge.courierReceived,
+              ))
                 Wrap(
                   spacing: 10,
                   runSpacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: pledge.courierReceived == true
-                          ? null
-                          : () => onAnswer(pledge, true),
+                      onPressed: () => onAnswer(pledge, true),
                       icon: const Icon(Icons.check_circle_outline_rounded),
                       label: const Text('استلمت المبلغ'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: pledge.courierReceived == false
-                          ? null
-                          : () => onAnswer(pledge, false),
+                      onPressed: () => onAnswer(pledge, false),
                       icon: const Icon(Icons.cancel_outlined),
                       label: const Text('لم أستلم'),
                     ),
                   ],
+                )
+              else
+                const Text(
+                  'سُجّلت إجابتك ولا يمكن تعديلها. تواصل مع الإدارة إذا احتجت تصحيحها.',
+                  style: TextStyle(fontSize: 12, height: 1.4),
                 ),
             ],
           ],
@@ -983,7 +1053,10 @@ class _FailureReport {
 }
 
 class _FailureReportDialog extends StatefulWidget {
-  const _FailureReportDialog();
+  const _FailureReportDialog({required this.parties});
+
+  /// Parties the server accepts in the current phase.
+  final Map<String, String> parties;
 
   @override
   State<_FailureReportDialog> createState() => _FailureReportDialogState();
@@ -1029,7 +1102,7 @@ class _FailureReportDialogState extends State<_FailureReportDialog> {
                 initialValue: _party,
                 decoration: const InputDecoration(labelText: 'الطرف المرتبط'),
                 items: [
-                  for (final entry in CourierTaskRules.failureParties.entries)
+                  for (final entry in widget.parties.entries)
                     DropdownMenuItem(
                       value: entry.key,
                       child: Text(entry.value),

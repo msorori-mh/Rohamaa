@@ -199,7 +199,13 @@ class _HomeActivityPulse extends StatelessWidget {
       borderRadius: BorderRadius.circular(29),
       child: InkWell(
         borderRadius: BorderRadius.circular(29),
-        onTap: () => context.go(route),
+        // The request id makes a repeated request for the same tab count.
+        onTap: () => context.go(
+          OperationRules.withRequestId(
+            route,
+            DateTime.now().millisecondsSinceEpoch,
+          ),
+        ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(18, 15, 18, 18),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(29), border: Border(top: BorderSide(color: accent, width: 5))),
@@ -244,7 +250,7 @@ class _PulseData {
     required List<ServiceMatchOffer> serviceOffers,
     required List<UserHandoff> handoffs,
   }) {
-    final activeHandoffs = handoffs.where((row) => row.status != 'delivered').toList();
+    final activeHandoffs = handoffs.where((row) => !OperationRules.isDeliveryClosed(row.status)).toList();
     final waitingServiceResponse = serviceOffers.where((row) => row.myResponse == 'pending').toList();
 
     if (waitingServiceResponse.isNotEmpty) {

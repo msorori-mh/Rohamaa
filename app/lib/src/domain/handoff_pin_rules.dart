@@ -23,6 +23,30 @@ abstract final class HandoffPinRules {
     return false;
   }
 
+  /// Cache key of an issued PIN: owner, delivery and handoff kind.
+  static String cacheKey({
+    required String? userId,
+    required String deliveryId,
+    required String kind,
+  }) =>
+      '$userId:$deliveryId:$kind';
+
+  /// Cached PIN keys of [userId] that must be forgotten after a reload.
+  /// [issuableKeys] are the keys of the handoffs the reload returned in a
+  /// status where a PIN can be issued. A PIN whose handoff left that status
+  /// (failure report, reassignment, cancellation, completion) or disappeared
+  /// was invalidated by the server.
+  static Set<String> staleKeys({
+    required Iterable<String> cachedKeys,
+    required String? userId,
+    required Set<String> issuableKeys,
+  }) {
+    final prefix = '$userId:';
+    return cachedKeys
+        .where((key) => key.startsWith(prefix) && !issuableKeys.contains(key))
+        .toSet();
+  }
+
   static Duration remaining(IssuedHandoffPin pin, DateTime now) {
     final left = pin.expiresAt.difference(now);
     return left.isNegative ? Duration.zero : left;

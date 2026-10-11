@@ -137,6 +137,18 @@ void main() {
     });
   });
 
+  test('the donor is not offered as the failing party after pickup', () {
+    expect(
+      CourierTaskRules.failurePartiesFor('heading_to_pickup').keys,
+      contains('donor'),
+    );
+    for (final status in ['picked_up', 'heading_to_recipient']) {
+      final parties = CourierTaskRules.failurePartiesFor(status);
+      expect(parties.keys, isNot(contains('donor')), reason: status);
+      expect(parties.keys.toSet(), {'beneficiary', 'courier', 'other'}, reason: status);
+    }
+  });
+
   test('cash pledge answer labels cover all three states', () {
     final labels = {
       CourierTaskRules.pledgeAnswerLabel(null),
