@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/admin_repository.dart';
 import 'delivery_assignment_screen.dart';
+import 'staff_widgets.dart';
 
 class AcceptedMatchesScreen extends StatefulWidget {
   const AcceptedMatchesScreen({super.key});
@@ -14,61 +15,69 @@ class AcceptedMatchesScreen extends StatefulWidget {
 class _AcceptedMatchesScreenState extends State<AcceptedMatchesScreen> {
   late Future<List<Map<String, dynamic>>> _future;
 
+  AdminRepository get _repo => AdminRepository(Supabase.instance.client);
+
   @override
   void initState() {
     super.initState();
-    _reload();
+    _future = _repo.acceptedMatchesAwaitingDelivery();
   }
 
-  void _reload() {
-    _future = AdminRepository(Supabase.instance.client).acceptedMatchesAwaitingDelivery();
+  Future<void> _refresh() async {
+    final next = _repo.acceptedMatchesAwaitingDelivery();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (_) {
+      // Rendered by the FutureBuilder as a retryable error state.
+    }
   }
 
   Future<void> _assign(String matchId) async {
     final assigned = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => DeliveryAssignmentScreen(matchId: matchId)),
+      MaterialPageRoute(
+        builder: (_) => DeliveryAssignmentScreen(matchId: matchId),
+      ),
     );
     if (!mounted) return;
     if (assigned == true) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إسناد عملية التوصيل.')));
-      setState(_reload);
+      showInfoSnack(context, 'تم إسناد عملية التوصيل.');
     }
+    // Refresh either way: the match may have been assigned by someone else.
+    await _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('مطابقات جاهزة للتوصيل')),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: RefreshableFuture<List<Map<String, dynamic>>>(
         future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المطابقات. حاول مجددًا.'));
-          final rows = snapshot.data ?? const [];
-          if (rows.isEmpty) return const Center(child: Text('لا توجد مطابقات مقبولة بانتظار الإسناد.'));
-          return RefreshIndicator(
-            onRefresh: () async => setState(_reload),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: rows.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final row = rows[index];
-                return Card(
-                  child: ListTile(
-                    title: Text('${row['item_type']}'),
-                    subtitle: Text('${row['donation_code']} • ${row['need_code']}'),
-                    trailing: FilledButton(
-                      onPressed: () => _assign(row['match_id'] as String),
-                      child: const Text('إسناد'),
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+        onRefresh: _refresh,
+        isEmpty: (rows) => rows.isEmpty,
+        emptyText: 'لا توجد مطابقات مقبولة بانتظار الإسناد.',
+        builder: (context, rows) => ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          itemCount: rows.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final row = rows[index];
+            return Card(
+              child: ListTile(
+                title: Text('${row['item_type']}'),
+                subtitle: Text(
+                  'تبرع ${row['donation_code']} • طلب ${row['need_code']}',
+                ),
+                trailing: FilledButton(
+                  onPressed: () => _assign('${row['match_id']}'),
+                  child: const Text('إسناد'),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

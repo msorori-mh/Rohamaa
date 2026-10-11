@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/staff_repository.dart';
+import '../../domain/staff_labels.dart';
+import '../../theme/ruhamaa_theme.dart';
+import 'staff_widgets.dart';
 
 class CreateStaffScreen extends StatefulWidget {
   const CreateStaffScreen({super.key});
@@ -16,15 +20,23 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   String _role = 'courier';
-  String? _areaId;
+
+  /// Selected areas in selection order; the first one is the primary area.
+  final List<String> _areaIds = <String>[];
+  bool _areaMissing = false;
   bool _busy = false;
   bool _obscure = true;
-  late Future<List<Map<String, dynamic>>> _areasFuture;
+
+  List<Map<String, dynamic>> _areas = const [];
+  bool _areasLoading = true;
+  Object? _areasError;
+
+  StaffRepository get _repo => StaffRepository(Supabase.instance.client);
 
   @override
   void initState() {
     super.initState();
-    _areasFuture = StaffRepository(Supabase.instance.client).serviceAreas();
+    _fetchAreas();
   }
 
   @override
@@ -35,47 +47,149 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
     super.dispose();
   }
 
-  String? _passwordValidator(String? value) {
-    final v = value ?? '';
-    if (v.length < 8) return 'استخدم 8 أحرف على الأقل';
-    if (!RegExp(r'[a-z]').hasMatch(v) ||
-        !RegExp(r'[A-Z]').hasMatch(v) ||
-        !RegExp(r'[0-9]').hasMatch(v) ||
-        !RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
-      return 'أضف حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا';
+  Future<void> _fetchAreas() async {
+    try {
+      final areas = await _repo.serviceAreas();
+      if (!mounted) return;
+      setState(() {
+        _areas = areas;
+        _areasLoading = false;
+        _areasError = null;
+        if (_areaIds.isEmpty && areas.length == 1) {
+          _areaIds.add(areas.first['id'] as String);
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _areasLoading = false;
+        _areasError = error;
+      });
     }
-    return null;
+  }
+
+  Future<void> _retryAreas() async {
+    setState(() {
+      _areasLoading = true;
+      _areasError = null;
+    });
+    await _fetchAreas();
+  }
+
+  void _toggleArea(String id, bool selected) {
+    setState(() {
+      if (selected) {
+        if (!_areaIds.contains(id)) _areaIds.add(id);
+      } else {
+        _areaIds.remove(id);
+      }
+      if (_areaIds.isNotEmpty) _areaMissing = false;
+    });
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _areaId == null) return;
+    if (_busy) return;
+    final formValid = _formKey.currentState?.validate() ?? false;
+    final areaValid = _areaIds.isNotEmpty;
+    if (!areaValid) setState(() => _areaMissing = true);
+    if (!formValid || !areaValid) return;
+    final role = _role;
     setState(() => _busy = true);
     try {
-      await StaffRepository(Supabase.instance.client).createStaff(
+      await _repo.createStaff(
         email: _email.text,
         temporaryPassword: _password.text,
         fullName: _name.text,
-        role: _role,
-        areaIds: [_areaId!],
+        role: role,
+        areaIds: List<String>.of(_areaIds),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _role == 'courier'
-                ? 'تم إنشاء حساب الموصل. سيُطلب منه تغيير كلمة المرور عند أول دخول.'
-                : 'تم إنشاء حساب المشرف. سيُطلب منه تغيير كلمة المرور عند أول دخول.',
-          ),
-        ),
+      showInfoSnack(
+        context,
+        role == 'courier'
+            ? 'تم إنشاء حساب الموصل. سيُطلب منه تغيير كلمة المرور عند أول دخول.'
+            : 'تم إنشاء حساب المشرف. سيُطلب منه تغيير كلمة المرور عند أول دخول.',
       );
       Navigator.pop(context, true);
-    } catch (e) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+        showErrorSnack(
+          context,
+          error,
+          fallback: staffFunctionErrorMessage(error) ??
+              'تعذر إنشاء الحساب. تحقق من البيانات ثم حاول مجددًا.',
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Widget _areasSection() {
+    final error = _areasError;
+    if (_areasLoading) return const LinearProgressIndicator();
+    if (error != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(friendlyError(error)),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _retryAreas,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة تحميل المناطق'),
+          ),
+        ],
+      );
+    }
+    if (_areas.isEmpty) {
+      return const Text(
+        'لا توجد مناطق مفعلة. أضف مدينة أو منطقة من «المدن والمناطق» أولًا.',
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _role == 'supervisor'
+              ? 'المدن / المناطق التي يشرف عليها'
+              : 'المدينة / المنطقة التي يعمل فيها',
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'يمكن اختيار أكثر من نطاق. أول نطاق تختاره هو النطاق الأساسي.',
+          style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final area in _areas)
+              FilterChip(
+                label: Text('${area['name_ar']}'),
+                selected: _areaIds.contains(area['id']),
+                onSelected: _busy
+                    ? null
+                    : (selected) =>
+                        _toggleArea(area['id'] as String, selected),
+              ),
+          ],
+        ),
+        if (_areaMissing)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'اختر منطقة واحدة على الأقل.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -108,22 +222,28 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     ),
                   ],
                   selected: {_role},
-                  onSelectionChanged: (v) => setState(() => _role = v.first),
+                  onSelectionChanged: _busy
+                      ? null
+                      : (selection) =>
+                          setState(() => _role = selection.first),
                 ),
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _name,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(labelText: 'الاسم الكامل'),
-                  validator: (v) => (v ?? '').trim().length < 2 ? 'أدخل الاسم' : null,
+                  validator: (value) =>
+                      (value ?? '').trim().length < 2 ? 'أدخل الاسم' : null,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
-                  validator: (v) => !RegExp(r'^\S+@\S+\.\S+$').hasMatch((v ?? '').trim())
+                  decoration:
+                      const InputDecoration(labelText: 'البريد الإلكتروني'),
+                  validator: (value) => !RegExp(r'^\S+@\S+\.\S+$')
+                          .hasMatch((value ?? '').trim())
                       ? 'أدخل بريدًا صحيحًا'
                       : null,
                 ),
@@ -135,44 +255,27 @@ class _CreateStaffScreenState extends State<CreateStaffScreen> {
                     labelText: 'كلمة المرور الابتدائية',
                     helperText:
                         '8 أحرف+ وتحتوي حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا. سيغيرها المستخدم عند أول دخول.',
+                    helperMaxLines: 3,
                     suffixIcon: IconButton(
+                      tooltip: _obscure ? 'إظهار' : 'إخفاء',
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
-                        _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                       ),
                     ),
                   ),
-                  validator: _passwordValidator,
+                  validator: StaffLabels.staffPasswordError,
                 ),
-                const SizedBox(height: 14),
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _areasFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return const LinearProgressIndicator();
-                    }
-                    final areas = snapshot.data ?? const [];
-                    if (areas.isEmpty) return const Text('لا توجد مناطق مفعلة.');
-                    _areaId ??= areas.first['id'] as String;
-                    return DropdownButtonFormField<String>(
-                      initialValue: _areaId,
-                      decoration: const InputDecoration(labelText: 'المدينة / المنطقة'),
-                      items: areas
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a['id'] as String,
-                              child: Text('${a['name_ar']}'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _areaId = v),
-                    );
-                  },
-                ),
+                const SizedBox(height: 18),
+                _areasSection(),
                 const SizedBox(height: 26),
                 FilledButton.icon(
-                  onPressed: _busy ? null : _submit,
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  onPressed: _busy || _areasLoading ? null : _submit,
+                  icon: _busy
+                      ? const InlineSpinner()
+                      : const Icon(Icons.person_add_alt_1_outlined),
                   label: Text(_busy ? 'جارٍ إنشاء الحساب...' : 'إنشاء الحساب'),
                 ),
               ],
