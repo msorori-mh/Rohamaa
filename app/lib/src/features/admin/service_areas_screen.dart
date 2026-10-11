@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/staff_repository.dart';
+import '../../domain/staff_labels.dart';
+import 'staff_widgets.dart';
 
 class ServiceAreasScreen extends StatefulWidget {
   const ServiceAreasScreen({super.key});
@@ -12,202 +15,181 @@ class ServiceAreasScreen extends StatefulWidget {
 
 class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  bool _creating = false;
+
+  StaffRepository get _repo => StaffRepository(Supabase.instance.client);
 
   @override
   void initState() {
     super.initState();
-    _reload();
+    _future = _repo.serviceAreas();
   }
 
-  void _reload() {
-    _future = StaffRepository(Supabase.instance.client).serviceAreas();
+  Future<void> _refresh() async {
+    final next = _repo.serviceAreas();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (_) {
+      // Rendered by the FutureBuilder as a retryable error state.
+    }
   }
 
   Future<void> _create() async {
-    final code = TextEditingController();
-    final name = TextEditingController();
+    if (_creating) return;
+    List<Map<String, dynamic>> current;
+    try {
+      current = await _future;
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'لم تُحمَّل النطاقات بعد. حدّث الصفحة ثم حاول مجددًا.',
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
     var kind = 'area';
     String? parentId;
-
-    final current = await _future;
-    if (!mounted) {
-      code.dispose();
-      name.dispose();
-      return;
-    }
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('إضافة مدينة / منطقة'),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'area', label: Text('منطقة')),
-                      ButtonSegment(value: 'city', label: Text('مدينة')),
-                    ],
-                    selected: {kind},
-                    onSelectionChanged: (v) => setDialogState(() {
-                      kind = v.first;
-                      if (kind == 'city') parentId = null;
-                    }),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: name,
-                    decoration: const InputDecoration(
-                      labelText: 'الاسم بالعربية',
-                      hintText: 'مثال: الروضة',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: code,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      labelText: 'الكود',
-                      hintText: 'مثال: MARIB_RAWDA',
-                    ),
-                  ),
-                  if (kind == 'area') ...[
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
-                      initialValue: parentId,
-                      decoration: const InputDecoration(labelText: 'تتبع'),
-                      items: current
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a['id'] as String,
-                              child: Text('${a['name_ar']}'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setDialogState(() => parentId = v),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    final values = await TextFieldsDialog.show(
+      context,
+      title: 'إضافة مدينة / منطقة',
+      confirmLabel: 'إضافة',
+      headerBuilder: (context, setDialogState) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'area', label: Text('منطقة')),
+              ButtonSegment(value: 'city', label: Text('مدينة')),
+            ],
+            selected: {kind},
+            onSelectionChanged: (selection) => setDialogState(() {
+              kind = selection.first;
+              if (kind == 'city') parentId = null;
+            }),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('إضافة'),
+          if (kind == 'area') ...[
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: parentId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'تتبع'),
+              items: current
+                  .map(
+                    (area) => DropdownMenuItem(
+                      value: area['id'] as String,
+                      child: Text('${area['name_ar']}'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setDialogState(() => parentId = value),
+              validator: (value) => value == null
+                  ? 'اختر المدينة أو المنطقة التي يتبعها هذا النطاق.'
+                  : null,
             ),
           ],
-        ),
+        ],
       ),
+      fields: [
+        DialogField(
+          id: 'name',
+          label: 'الاسم بالعربية',
+          hint: 'مثال: الروضة',
+          maxLength: 60,
+          validator: requiredText(
+            min: 2,
+            message: 'أدخل اسمًا من حرفين على الأقل.',
+          ),
+        ),
+        const DialogField(
+          id: 'code',
+          label: 'الكود',
+          hint: 'مثال: MARIB_RAWDA',
+          maxLength: 30,
+          textCapitalization: TextCapitalization.characters,
+          validator: StaffLabels.areaCodeError,
+        ),
+      ],
     );
-
-    if (!mounted) {
-      code.dispose();
-      name.dispose();
-      return;
-    }
-
-    if (ok == true) {
-      if (name.text.trim().length < 2 ||
-          code.text.trim().length < 2 ||
-          (kind == 'area' && parentId == null)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('أكمل بيانات المنطقة.')),
+    if (values == null || !mounted) return;
+    setState(() => _creating = true);
+    try {
+      await _repo.createServiceArea(
+        code: values['code'] ?? '',
+        nameAr: values['name'] ?? '',
+        kind: kind,
+        parentId: kind == 'area' ? parentId : null,
+      );
+      if (!mounted) return;
+      showInfoSnack(context, 'تم إنشاء نطاق الخدمة.');
+      await _refresh();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'تعذر إنشاء النطاق. تأكد أن الكود غير مستخدم ثم حاول مجددًا.',
         );
-      } else {
-        try {
-          await StaffRepository(Supabase.instance.client).createServiceArea(
-            code: code.text,
-            nameAr: name.text,
-            kind: kind,
-            parentId: parentId,
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم إنشاء نطاق الخدمة.')),
-            );
-            setState(_reload);
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('تعذر إنشاء النطاق: $e')),
-            );
-          }
-        }
       }
+    } finally {
+      if (mounted) setState(() => _creating = false);
     }
-
-    code.dispose();
-    name.dispose();
   }
 
   String _parentName(List<Map<String, dynamic>> rows, String? id) {
     if (id == null) return 'نطاق رئيسي';
     for (final row in rows) {
-      if (row['id'] == id) return '${row['name_ar']}';
+      if (row['id'] == id) return 'تتبع ${row['name_ar']}';
     }
-    return 'نطاق آخر';
+    return 'تتبع نطاقًا آخر';
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('المدن والمناطق'),
-          actions: [
-            IconButton(
-              tooltip: 'إضافة نطاق',
-              onPressed: _create,
-              icon: const Icon(Icons.add_location_alt_outlined),
-            ),
-          ],
-        ),
-        body: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return const Center(child: Text('تعذر تحميل المناطق. حاول مجددًا.'));
-            }
-            final rows = snapshot.data ?? const [];
-            if (rows.isEmpty) {
-              return const Center(child: Text('لا توجد نطاقات خدمة.'));
-            }
-            return RefreshIndicator(
-              onRefresh: () async => setState(_reload),
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: rows.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, i) {
-                  final a = rows[i];
-                  return Card(
-                    child: ListTile(
-                      leading: Icon(
-                        a['kind'] == 'city'
-                            ? Icons.location_city_outlined
-                            : Icons.place_outlined,
-                      ),
-                      title: Text('${a['name_ar']}'),
-                      subtitle: Text(
-                        '${a['code']} • ${a['kind'] == 'city' ? 'مدينة' : 'منطقة'} • ${_parentName(rows, a['parent_id'] as String?)}',
-                      ),
-                    ),
-                  );
-                },
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('المدن والمناطق'),
+        actions: [
+          IconButton(
+            tooltip: 'إضافة نطاق',
+            onPressed: _creating ? null : _create,
+            icon: const Icon(Icons.add_location_alt_outlined),
+          ),
+        ],
+      ),
+      body: RefreshableFuture<List<Map<String, dynamic>>>(
+        future: _future,
+        onRefresh: _refresh,
+        isEmpty: (rows) => rows.isEmpty,
+        emptyText: 'لا توجد نطاقات خدمة.',
+        builder: (context, rows) => ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          itemCount: rows.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, i) {
+            final area = rows[i];
+            final isCity = area['kind'] == 'city';
+            final parent = _parentName(rows, area['parent_id'] as String?);
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  isCity ? Icons.location_city_outlined : Icons.place_outlined,
+                ),
+                title: Text('${area['name_ar']}'),
+                subtitle: Text(
+                  '${area['code']} • ${isCity ? 'مدينة' : 'منطقة'} • $parent',
+                ),
               ),
             );
           },
         ),
-      );
+      ),
+    );
+  }
 }

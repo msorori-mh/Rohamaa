@@ -44,7 +44,8 @@ class ServiceIncidentRepository {
         .from('service_incidents')
         .select('id,service_match_id,reporter_user_id,incident_type,description,status,resolution,created_at,resolved_at')
         .inFilter('status', ['open', 'reviewing'])
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(200);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 

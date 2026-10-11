@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
 import '../../data/operations_repository.dart';
 import '../../data/recovery_repository.dart';
@@ -8,6 +9,7 @@ import '../../theme/ruhamaa_theme.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
+import 'account_deletion_screen.dart';
 import 'admin_dashboard_screen.dart' show ContributionReviewScreen;
 import 'create_staff_screen.dart';
 import 'delivery_operations_screen.dart';
@@ -78,7 +80,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Future<void> _refresh() async {
     final next = _load();
     setState(() => _future = next);
-    await next;
+    try {
+      await next;
+    } catch (_) {
+      // Rendered by the FutureBuilder as a retryable error state.
+    }
   }
 
   Future<void> _open(Widget screen) async {
@@ -98,6 +104,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       'needs' => const NeedDiscoveryAdminScreen(),
       'service_matching' => const ServiceMatchingScreen(),
       'recovery' => const RecoveryInventoryScreen(),
+      'account_deletions' => const AccountDeletionScreen(),
       _ => null,
     };
     if (screen != null) {
@@ -125,7 +132,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ],
       ),
     );
-    if (confirmed == true) await Supabase.instance.client.auth.signOut();
+    if (confirmed != true || !mounted) return;
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (error) {
+      if (mounted) showErrorSnack(context, error);
+    }
   }
 
   @override
@@ -138,10 +150,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           child: FutureBuilder<_AdminHomeData>(
             future: _future,
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
+              // Keep showing the loaded data while a refresh is running so the
+              // RefreshIndicator stays mounted and the page does not flash.
+              final waiting = snapshot.connectionState != ConnectionState.done;
+              if (waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (snapshot.hasError) {
+              if (!waiting && snapshot.hasError) {
                 return _AdminLoadError(onRetry: _refresh);
               }
               final data = snapshot.data!;
@@ -244,6 +259,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                 _Tool(Icons.map_outlined, 'المدن والمناطق', 'نطاقات الخدمة وإسناد المشرفين.', RuhamaaColors.blue, () => _open(const ServiceAreasScreen())),
                                 _Tool(Icons.person_add_alt_1_outlined, 'إضافة فريق', 'إنشاء حساب موصل أو مشرف تشغيل.', RuhamaaColors.vividGold, () => _open(const CreateStaffScreen())),
                                 _Tool(Icons.manage_accounts_outlined, 'المستخدمون والأدوار', 'إدارة الصلاحيات وتجميد الحسابات.', RuhamaaColors.rose, () => _open(const UserManagementScreen())),
+                                _Tool(Icons.person_remove_outlined, 'طلبات حذف الحسابات', 'مراجعة طلبات الحذف ثم تنفيذها أو رفضها.', RuhamaaColors.primaryBright, () => _open(const AccountDeletionScreen())),
                               ],
                             ),
                             const SizedBox(height: 28),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/report_repository.dart';
 import '../../data/staff_repository.dart';
+import '../admin/staff_widgets.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -22,7 +24,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<Map<String, dynamic>> _daily = const [];
   List<Map<String, dynamic>> _couriers = const [];
   bool _loading = true;
-  String? _error;
+  bool _contextLoaded = false;
+  bool _savingExpense = false;
+  Object? _error;
+
+  /// Guards against an older, slower response overwriting a newer one when
+  /// the range or area is changed quickly.
+  int _requestSerial = 0;
 
   @override
   void initState() {
@@ -30,29 +38,42 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final now = DateTime.now();
     _from = DateTime(now.year, now.month, 1);
     _to = DateTime(now.year, now.month, now.day);
-    _loadInitial();
+    _fetch();
   }
 
-  Future<void> _loadInitial() async {
-    try {
-      final staff = StaffRepository(Supabase.instance.client);
-      final status = await staff.myStatus();
-      final areas = await staff.reportAreas();
-      if (!mounted) return;
-      setState(() {
-        _role = status.role;
-        _areas = areas;
-        if (_role == 'supervisor' && areas.length == 1) _areaId = areas.first['id'] as String;
-      });
-      await _reload();
-    } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = '$e'; });
-    }
+  /// Loads the role and the areas once; the status RPC is called a single
+  /// time and reused for the area lookup.
+  Future<void> _loadContext() async {
+    final staff = StaffRepository(Supabase.instance.client);
+    final status = await staff.myStatus();
+    final areas = await staff.reportAreasFor(status);
+    if (!mounted) return;
+    setState(() {
+      _role = status.role;
+      _areas = areas;
+      if (_role == 'supervisor' && areas.length == 1) {
+        _areaId = areas.first['id'] as String;
+      }
+      _contextLoaded = true;
+    });
   }
 
+  /// Never throws: failures are stored in [_error] and rendered inline, so
+  /// it is safe to hand to the RefreshIndicator.
   Future<void> _reload() async {
-    setState(() { _loading = true; _error = null; });
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await _fetch();
+  }
+
+  Future<void> _fetch() async {
+    final serial = ++_requestSerial;
     try {
+      if (!_contextLoaded) await _loadContext();
+      if (!mounted || serial != _requestSerial) return;
       final repo = ReportRepository(Supabase.instance.client);
       final results = await Future.wait<dynamic>([
         repo.summary(from: _from, to: _to, areaId: _areaId),
@@ -60,7 +81,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         repo.daily(from: _from, to: _to, areaId: _areaId),
         repo.couriers(from: _from, to: _to, areaId: _areaId),
       ]);
-      if (!mounted) return;
+      if (!mounted || serial != _requestSerial) return;
       setState(() {
         _summary = results[0] as StaffReportSummary;
         _impact = results[1] as CommunityImpactSummary;
@@ -68,79 +89,148 @@ class _ReportsScreenState extends State<ReportsScreen> {
         _couriers = (results[3] as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
-    } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = '$e'; });
+    } catch (error) {
+      if (!mounted || serial != _requestSerial) return;
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
     }
   }
 
   Future<void> _pickRange() async {
+    final today = DateTime.now();
     final range = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2026),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
+      lastDate: DateTime(today.year, today.month, today.day)
+          .add(const Duration(days: 1)),
       initialDateRange: DateTimeRange(start: _from, end: _to),
     );
-    if (range == null) return;
-    setState(() { _from = range.start; _to = range.end; });
+    if (range == null || !mounted) return;
+    setState(() {
+      _from = range.start;
+      _to = range.end;
+    });
     await _reload();
   }
 
   Future<void> _addExpense() async {
-    if (_areas.isEmpty) return;
-    final category = TextEditingController();
-    final amount = TextEditingController();
-    final description = TextEditingController();
-    String selectedArea = _areaId ?? _areas.first['id'] as String;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('إضافة مصروف تشغيلي'),
-          content: SizedBox(
-            width: 460,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedArea,
-                    decoration: const InputDecoration(labelText: 'المدينة / المنطقة'),
-                    items: _areas.map((a) => DropdownMenuItem(value: a['id'] as String, child: Text('${a['name_ar']}'))).toList(),
-                    onChanged: (v) => setDialogState(() => selectedArea = v ?? selectedArea),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(controller: category, decoration: const InputDecoration(labelText: 'التصنيف', hintText: 'راتب، صيانة، شحن، اتصالات...')),
-                  const SizedBox(height: 12),
-                  TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'المبلغ بالريال')),
-                  const SizedBox(height: 12),
-                  TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'ملاحظات اختيارية')),
-                ],
+    if (_savingExpense) return;
+    if (_areas.isEmpty) {
+      showInfoSnack(
+        context,
+        'لا توجد مناطق مفعلة لتسجيل المصروف عليها. أضف منطقة من «المدن والمناطق».',
+      );
+      return;
+    }
+    var selectedArea = _areaId ?? _areas.first['id'] as String;
+    final values = await TextFieldsDialog.show(
+      context,
+      title: 'إضافة مصروف تشغيلي',
+      intro: 'يُسجَّل المصروف بتاريخ اليوم.',
+      confirmLabel: 'حفظ',
+      headerBuilder: (context, setDialogState) =>
+          DropdownButtonFormField<String>(
+        initialValue: selectedArea,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'المدينة / المنطقة'),
+        items: _areas
+            .map(
+              (area) => DropdownMenuItem(
+                value: area['id'] as String,
+                child: Text('${area['name_ar']}'),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ')),
-          ],
+            )
+            .toList(),
+        onChanged: (value) =>
+            setDialogState(() => selectedArea = value ?? selectedArea),
+      ),
+      fields: [
+        DialogField(
+          id: 'category',
+          label: 'التصنيف',
+          hint: 'راتب، صيانة، شحن، اتصالات...',
+          maxLength: 60,
+          validator: requiredText(min: 2, message: 'أدخل تصنيف المصروف.'),
         ),
+        DialogField(
+          id: 'amount',
+          label: 'المبلغ بالريال',
+          keyboardType: TextInputType.number,
+          digitsOnly: true,
+          maxLength: 9,
+          validator: (value) {
+            final parsed = int.tryParse(value);
+            return parsed == null || parsed <= 0
+                ? 'أدخل مبلغًا صحيحًا أكبر من صفر.'
+                : null;
+          },
+        ),
+        const DialogField(
+          id: 'description',
+          label: 'ملاحظات اختيارية',
+          maxLines: 3,
+          maxLength: 300,
+        ),
+      ],
+    );
+    if (values == null || !mounted) return;
+    final amount = int.tryParse(values['amount'] ?? '');
+    if (amount == null) return;
+    setState(() => _savingExpense = true);
+    try {
+      await ReportRepository(Supabase.instance.client).addExpense(
+        areaId: selectedArea,
+        date: DateTime.now(),
+        category: values['category'] ?? '',
+        amountYer: amount,
+        description: values['description'],
+      );
+      if (!mounted) return;
+      showInfoSnack(context, 'تم تسجيل المصروف.');
+      await _reload();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'تعذر تسجيل المصروف. حاول مرة أخرى.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingExpense = false);
+    }
+  }
+
+  Widget _errorBox(Object error) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Icon(
+            isNetworkError(error)
+                ? Icons.wifi_off_rounded
+                : Icons.error_outline_rounded,
+            size: 44,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            friendlyError(
+              error,
+              fallback: 'تعذر تحميل التقرير. حاول مرة أخرى.',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _reload,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+          ),
+        ],
       ),
     );
-    if (ok == true) {
-      final amountValue = int.tryParse(amount.text.trim());
-      if (category.text.trim().isEmpty || amountValue == null || amountValue <= 0) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل التصنيف والمبلغ بشكل صحيح')));
-      } else {
-        await ReportRepository(Supabase.instance.client).addExpense(
-          areaId: selectedArea,
-          date: DateTime.now(),
-          category: category.text.trim(),
-          amountYer: amountValue,
-          description: description.text.trim(),
-        );
-        await _reload();
-      }
-    }
-    category.dispose(); amount.dispose(); description.dispose();
   }
 
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -163,11 +253,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('التقارير الأساسية'),
-        actions: [if (_role == 'admin') IconButton(tooltip: 'إضافة مصروف', onPressed: _addExpense, icon: const Icon(Icons.add_card_outlined))],
+        actions: [
+          if (_role == 'admin')
+            IconButton(
+              tooltip: 'إضافة مصروف',
+              onPressed: _savingExpense ? null : _addExpense,
+              icon: const Icon(Icons.add_card_outlined),
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _reload,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: [
             Wrap(
@@ -182,10 +280,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     initialValue: _areaId,
                     decoration: const InputDecoration(labelText: 'النطاق'),
                     items: [
-                      if (_role == 'admin') const DropdownMenuItem<String?>(value: null, child: Text('كل المناطق')),
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(
+                          _role == 'admin' ? 'كل المناطق' : 'كل نطاقاتي',
+                        ),
+                      ),
                       ..._areas.map((a) => DropdownMenuItem<String?>(value: a['id'] as String, child: Text('${a['name_ar']}'))),
                     ],
-                    onChanged: (value) async { setState(() => _areaId = value); await _reload(); },
+                    onChanged: (value) async {
+                      setState(() => _areaId = value);
+                      await _reload();
+                    },
                   ),
                 ),
               ],
@@ -194,7 +300,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             if (_loading)
               const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
             else if (_error != null)
-              Center(child: Text('تعذر تحميل التقرير: $_error'))
+              _errorBox(_error!)
             else if (_summary != null && _impact != null) ...[
               Text('الأثر المجتمعي', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
