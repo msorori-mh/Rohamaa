@@ -65,7 +65,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل المخاطر: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المخاطر. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) return const Center(child: Text('لا توجد إشارات خطر مفتوحة.'));
           return RefreshIndicator(

@@ -10,6 +10,7 @@ import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
 import 'admin_dashboard_screen.dart' show ContributionReviewScreen;
 import 'create_staff_screen.dart';
+import 'delivery_operations_screen.dart';
 import 'item_matching_v2_screen.dart';
 import 'need_discovery_admin_screen.dart';
 import 'partner_management_screen.dart';
@@ -90,6 +91,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       'risks' => const RiskManagementScreen(),
       'incidents' => const ServiceIncidentManagementScreen(),
       'accepted_matches' => const AcceptedMatchesScreen(),
+      'deliveries' => const DeliveryOperationsScreen(),
       'contributions' => const ContributionReviewScreen(),
       'partners' => const PartnerManagementScreen(),
       'item_matching' => const ItemMatchingV2Screen(),
@@ -219,6 +221,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                 _Tool(Icons.join_inner_rounded, 'مطابقة الأشياء', 'مراجعة الملاءمة وإرسال عرض المطابقة.', RuhamaaColors.vividGold, () => _open(const ItemMatchingV2Screen())),
                                 _Tool(Icons.handyman_outlined, 'الوقت والمهارات', 'مطابقة عروض الأفراد بطلبات الخدمات.', RuhamaaColors.rose, () => _open(const ServiceMatchingScreen())),
                                 _Tool(Icons.delivery_dining_outlined, 'جاهز للتوصيل', 'إسناد الموصل والدراجة بعد قبول المستفيد.', RuhamaaColors.primary, () => _open(const AcceptedMatchesScreen())),
+                                _Tool(Icons.route_outlined, 'متابعة التوصيل', 'متابعة قبول المهام وإعادة إسناد المتعثر منها.', RuhamaaColors.blue, () => _open(const DeliveryOperationsScreen())),
                               ],
                             ),
                             _ToolGroup(

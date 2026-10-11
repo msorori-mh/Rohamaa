@@ -123,4 +123,17 @@ class AdminRepository {
     final rows = await _client.rpc('admin_create_delivery', params: {'p_match_id': matchId, 'p_courier_id': courierId, 'p_vehicle_id': vehicleId});
     return (rows as List).cast<Map<String, dynamic>>().single;
   }
+
+  Future<List<Map<String, dynamic>>> deliveryDispatchQueue() async {
+    final rows = await _client.rpc('admin_delivery_dispatch_queue');
+    return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> reassignDelivery({required String deliveryId, required String courierId, String? vehicleId}) async {
+    await _client.rpc('admin_reassign_delivery', params: {
+      'p_delivery_id': deliveryId,
+      'p_courier_id': courierId,
+      'p_vehicle_id': vehicleId,
+    });
+  }
 }

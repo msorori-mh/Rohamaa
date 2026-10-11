@@ -21,8 +21,8 @@ class SessionLandingScreen extends StatelessWidget {
         }
         if (snapshot.hasError) {
           return Scaffold(
-            appBar: AppBar(title: const Text('عطاء')),
-            body: Center(child: Text('تعذر التحقق من الحساب: ${snapshot.error}')),
+            appBar: AppBar(title: const Text('رحماء')),
+            body: const Center(child: Text('تعذر التحقق من الحساب. تحقق من اتصالك وحاول مجددًا.')),
           );
         }
         final status = snapshot.data ?? const StaffStatus(role: 'user', forcePasswordChange: false, isPrimaryAdmin: false);

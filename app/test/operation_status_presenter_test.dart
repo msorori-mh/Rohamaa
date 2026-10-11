@@ -17,7 +17,7 @@ void main() {
 
     test('gives fulfilled needs a completed outcome', () {
       final copy = OperationStatusPresenter.present('need', 'fulfilled');
-      expect(copy.label, 'تم تلبية الاحتياج');
+      expect(copy.label, 'تم تلبية الطلب');
       expect(copy.attention, isFalse);
     });
   });

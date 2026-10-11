@@ -18,6 +18,8 @@ revoke update, delete on public.contributions from authenticated;
 alter table public.couriers enable row level security;
 alter table public.vehicles enable row level security;
 
+-- 0003 already creates this policy. Replace it during a clean replay.
+drop policy if exists "courier_self_select" on public.couriers;
 create policy "courier_self_select" on public.couriers for select using (user_id=auth.uid());
 create policy "admin_couriers_select" on public.couriers for select using (public.is_admin());
 create policy "admin_vehicles_select" on public.vehicles for select using (public.is_admin());

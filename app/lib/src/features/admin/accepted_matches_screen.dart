@@ -44,7 +44,7 @@ class _AcceptedMatchesScreenState extends State<AcceptedMatchesScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('تعذر تحميل المطابقات: ${snapshot.error}'));
+          if (snapshot.hasError) return const Center(child: Text('تعذر تحميل المطابقات. حاول مجددًا.'));
           final rows = snapshot.data ?? const [];
           if (rows.isEmpty) return const Center(child: Text('لا توجد مطابقات مقبولة بانتظار الإسناد.'));
           return RefreshIndicator(

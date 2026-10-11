@@ -65,7 +65,7 @@ class _PendingOffersTabState extends State<_PendingOffersTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.pendingOffers();
+  void _reload() { _future = _repo.pendingOffers(); }
 
   Future<void> _decide(String id, bool approve) async {
     try {
@@ -95,7 +95,7 @@ class _PendingOffersTabState extends State<_PendingOffersTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل عروض المهارات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل عروض المهارات. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -210,7 +210,7 @@ class _OpenRequestsTabState extends State<_OpenRequestsTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.openRequests();
+  void _reload() { _future = _repo.openRequests(); }
 
   Future<void> _openCandidates(Map<String, dynamic> request) async {
     try {
@@ -239,7 +239,7 @@ class _OpenRequestsTabState extends State<_OpenRequestsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل طلبات الخدمات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل طلبات الخدمات. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -334,7 +334,7 @@ class _AcceptedServicesTabState extends State<_AcceptedServicesTab> {
     _reload();
   }
 
-  void _reload() => _future = _repo.acceptedMatches();
+  void _reload() { _future = _repo.acceptedMatches(); }
 
   Future<void> _schedule(Map<String, dynamic> row) async {
     final now = DateTime.now();
@@ -403,7 +403,7 @@ class _AcceptedServicesTabState extends State<_AcceptedServicesTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل الخدمات المقبولة: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل الخدمات المقبولة. حاول مجددًا.'));
         }
         final rows = snapshot.data ?? const [];
         if (rows.isEmpty) {
@@ -547,7 +547,7 @@ class _CandidateSheetState extends State<_CandidateSheet> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('تعذر تحميل المرشحين: ${snapshot.error}'));
+            return const Center(child: Text('تعذر تحميل المرشحين. حاول مجددًا.'));
           }
           final candidates = snapshot.data ?? const [];
           return ListView(

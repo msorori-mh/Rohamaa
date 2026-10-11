@@ -1,11 +1,17 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DeliveryTask {
-  const DeliveryTask({required this.id, required this.publicCode, required this.status});
+  const DeliveryTask({required this.id, required this.publicCode, required this.status, this.offerExpiresAt});
   final String id;
   final String publicCode;
   final String status;
-  factory DeliveryTask.fromJson(Map<String, dynamic> json) => DeliveryTask(id: json['id'] as String, publicCode: json['public_code'] as String, status: json['status'] as String);
+  final DateTime? offerExpiresAt;
+  factory DeliveryTask.fromJson(Map<String, dynamic> json) => DeliveryTask(
+    id: json['id'] as String,
+    publicCode: json['public_code'] as String,
+    status: json['status'] as String,
+    offerExpiresAt: json['offer_expires_at'] == null ? null : DateTime.parse('${json['offer_expires_at']}'),
+  );
 }
 
 class CourierTaskDetails {
@@ -29,7 +35,7 @@ class DeliveryRepository {
   final SupabaseClient _client;
 
   Future<List<DeliveryTask>> myTasks() async {
-    final rows = await _client.from('deliveries').select('id, public_code, status').neq('status','delivered').order('created_at');
+    final rows = await _client.from('deliveries').select('id, public_code, status, offer_expires_at').neq('status','delivered').order('created_at');
     return (rows as List).cast<Map<String,dynamic>>().map(DeliveryTask.fromJson).toList();
   }
 
@@ -43,6 +49,19 @@ class DeliveryRepository {
   Future<bool> verifyPin({required String deliveryId, required String pin, required String kind, double? latitude, double? longitude}) async {
     final result = await _client.rpc('verify_delivery_pin', params: {'p_delivery_id': deliveryId,'p_pin': pin,'p_kind': kind,'p_latitude': latitude,'p_longitude': longitude});
     return result == true;
+  }
+
+  Future<String> respond({required String deliveryId, required bool accept, String? reason}) async {
+    final result = await _client.rpc('courier_respond_delivery', params: {
+      'p_delivery_id': deliveryId,
+      'p_accept': accept,
+      'p_reason': reason,
+    });
+    return '$result';
+  }
+
+  Future<void> startDropoff(String deliveryId) async {
+    await _client.rpc('courier_start_dropoff', params: {'p_delivery_id': deliveryId});
   }
 
   Future<void> reportFailure({required String deliveryId, required String party, required String reasonCode, String? note, double? latitude, double? longitude}) async {

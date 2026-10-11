@@ -111,7 +111,7 @@ class _ReviewNeedsTabState extends State<_ReviewNeedsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل الاحتياجات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل الاحتياجات. حاول مجددًا.'));
         }
         final data = snapshot.data!;
         if (data.needs.isEmpty) {
@@ -229,6 +229,7 @@ class _PublishedCardsTab extends StatefulWidget {
 
 class _PublishedCardsTabState extends State<_PublishedCardsTab> {
   late Future<List<Map<String, dynamic>>> _future;
+  final Set<String> _busyIds = <String>{};
 
   NeedDiscoveryRepository get _repo => NeedDiscoveryRepository(Supabase.instance.client);
 
@@ -243,17 +244,38 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
   }
 
   Future<void> _unpublish(String id) async {
+    if (_busyIds.contains(id)) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إيقاف عرض البطاقة؟'),
+        content: const Text(
+          'ستختفي البطاقة من واجهة المتبرعين، وسيبقى الطلب محفوظًا ويمكن عرضه مرة أخرى لاحقًا.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إيقاف العرض')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busyIds.add(id));
     try {
       await _repo.unpublish(id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إخفاء البطاقة من واجهة المتبرعين.')),
+        const SnackBar(content: Text('توقف عرض البطاقة. يمكنك إعادة عرضها من تبويب «للمراجعة».')),
       );
-      setState(_reload);
-    } catch (e) {
+      setState(() {
+        _busyIds.remove(id);
+        _reload();
+      });
+    } catch (error) {
+      debugPrint('Need discovery unpublish failed: $error');
       if (!mounted) return;
+      setState(() => _busyIds.remove(id));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر إخفاء البطاقة: $e')),
+        const SnackBar(content: Text('تعذر إيقاف عرض البطاقة. حاول مجددًا.')),
       );
     }
   }
@@ -267,7 +289,7 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('تعذر تحميل البطاقات: ${snapshot.error}'));
+          return const Center(child: Text('تعذر تحميل البطاقات. حاول مجددًا.'));
         }
         final cards = (snapshot.data ?? const [])
             .where((card) => card['is_active'] == true)
@@ -283,21 +305,37 @@ class _PublishedCardsTabState extends State<_PublishedCardsTab> {
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final card = cards[index];
+              final id = '${card['id']}';
+              final busy = _busyIds.contains(id);
               return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  leading: const Icon(Icons.fact_check_outlined, color: RuhamaaColors.primary),
-                  title: Text('${card['display_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
-                  subtitle: Text(
-                    '${card['category']} • ${card['city_label']}\n${card['display_detail'] ?? ''}',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: IconButton(
-                    tooltip: 'إخفاء من المتبرعين',
-                    onPressed: () => _unpublish('${card['id']}'),
-                    icon: const Icon(Icons.visibility_off_outlined),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      leading: const Icon(Icons.fact_check_outlined, color: RuhamaaColors.primary),
+                      title: Text('${card['display_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                      subtitle: Text(
+                        '${card['category']} • ${card['city_label']}\n${card['display_detail'] ?? ''}',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: OutlinedButton.icon(
+                        key: Key('unpublish-need-card-$id'),
+                        onPressed: busy ? null : () => _unpublish(id),
+                        icon: busy
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.visibility_off_outlined),
+                        label: Text(busy ? 'جارٍ إيقاف العرض...' : 'إيقاف عرض البطاقة'),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -397,7 +435,7 @@ class _PublishNeedDialogState extends State<_PublishNeedDialog> {
               ),
             );
           },
-          child: const Text('اعرض البطاقة'),
+          child: const Text('حفظ وعرض البطاقة'),
         ),
       ],
     );
