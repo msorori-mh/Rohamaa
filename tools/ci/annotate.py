@@ -35,9 +35,13 @@ def main():
                 if 'was thrown' in line or 'Failed assertion' in line:
                     keep.update(range(index, min(len(lines), index + 12)))
         lines = [lines[i][:300] for i in sorted(keep)] or ['(no findings)']
-    text = SECRET.sub('[redacted]', '\n'.join(lines))[:LIMIT]
-    encoded = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-    print(f'::notice title={title}::{encoded}')
+    text = '\n'.join(lines) if full else SECRET.sub('[redacted]', '\n'.join(lines))[:LIMIT]
+    chunk = 30000
+    parts = [text[i:i + chunk] for i in range(0, len(text), chunk)] or ['']
+    for number, part in enumerate(parts, 1):
+        encoded = part.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+        label = title if len(parts) == 1 else f'{title} {number:02d}/{len(parts):02d}'
+        print(f'::notice title={label}::{encoded}')
 
 
 if __name__ == '__main__':

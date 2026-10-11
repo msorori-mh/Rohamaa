@@ -117,6 +117,9 @@ jobs:
         run: |
           python3 tools/ci/annotate.py "flutter analyze" "$RUNNER_TEMP/analyze.log"
           python3 tools/ci/annotate.py "flutter test" "$RUNNER_TEMP/test.log"
+          if ! git ls-files --error-unmatch app/pubspec.lock >/dev/null 2>&1; then
+            python3 tools/ci/annotate.py "pubspec.lock" app/pubspec.lock full
+          fi
 
       - name: Build Android debug APK
         timeout-minutes: 20
