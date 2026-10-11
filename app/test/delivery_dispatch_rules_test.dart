@@ -143,6 +143,99 @@ void main() {
       );
     });
 
+    test('pledges are still loaded after delivery', () {
+      expect(DeliveryDispatchRules.loadsCashPledges('delivered'), isTrue);
+      expect(DeliveryDispatchRules.loadsCashPledges('heading_to_recipient'), isTrue);
+      expect(DeliveryDispatchRules.loadsCashPledges('assigned'), isFalse);
+      expect(DeliveryDispatchRules.loadsCashPledges('rescheduled'), isFalse);
+      expect(DeliveryDispatchRules.loadsCashPledges('failed'), isFalse);
+    });
+
+    test('the task stays open after delivery only for unanswered pledges', () {
+      expect(DeliveryDispatchRules.staysOpenAfterDelivery(const <bool?>[]), isFalse);
+      expect(DeliveryDispatchRules.staysOpenAfterDelivery(const [true, false]), isFalse);
+      expect(DeliveryDispatchRules.staysOpenAfterDelivery(const [true, null]), isTrue);
+      expect(DeliveryDispatchRules.hasUnansweredPledge(const [null]), isTrue);
+    });
+
+    test('a pledge answer is write-once', () {
+      expect(DeliveryDispatchRules.canAnswerPledge(null), isTrue);
+      expect(DeliveryDispatchRules.canAnswerPledge(true), isFalse);
+      expect(DeliveryDispatchRules.canAnswerPledge(false), isFalse);
+    });
+
+    test('a task reassigned after pickup resumes at the dropoff phase', () {
+      expect(
+        DeliveryDispatchRules.resumesAtDropoff(
+          status: 'assigned',
+          pickupArea: null,
+          dropoffArea: 'الروضة',
+        ),
+        isTrue,
+      );
+      expect(
+        DeliveryDispatchRules.resumesAtDropoff(
+          status: 'assigned',
+          pickupArea: 'المجمع',
+          dropoffArea: null,
+        ),
+        isFalse,
+      );
+      expect(
+        DeliveryDispatchRules.resumesAtDropoff(
+          status: 'assigned',
+          pickupArea: null,
+          dropoffArea: null,
+        ),
+        isFalse,
+      );
+      expect(
+        DeliveryDispatchRules.resumesAtDropoff(
+          status: 'picked_up',
+          pickupArea: null,
+          dropoffArea: 'الروضة',
+        ),
+        isFalse,
+      );
+    });
+
+    test('the accept message follows the status the server returned', () {
+      expect(
+        DeliveryDispatchRules.acceptedMessage('heading_to_pickup'),
+        contains('موقع الاستلام'),
+      );
+      expect(
+        DeliveryDispatchRules.acceptedMessage('picked_up'),
+        contains('موقع التسليم'),
+      );
+      expect(
+        DeliveryDispatchRules.acceptedMessage('picked_up'),
+        isNot(contains('موقع الاستلام')),
+      );
+      expect(
+        DeliveryDispatchRules.acceptedMessage('unexpected'),
+        contains('موقع الاستلام'),
+      );
+    });
+
+    test('admin can pause only an active courier leg', () {
+      for (final status in ['heading_to_pickup', 'picked_up', 'heading_to_recipient']) {
+        expect(DeliveryDispatchRules.canAdminPause(status), isTrue, reason: status);
+        expect(DeliveryDispatchRules.canAdminReassign(status), isFalse, reason: status);
+      }
+      for (final status in ['assigned', 'rescheduled', 'delivered', 'failed', 'cancelled', 'x']) {
+        expect(DeliveryDispatchRules.canAdminPause(status), isFalse, reason: status);
+      }
+    });
+
+    test('a pause needs a reason of 3 to 500 characters', () {
+      expect(DeliveryDispatchRules.pauseReasonError(null), isNotNull);
+      expect(DeliveryDispatchRules.pauseReasonError('  ab '), isNotNull);
+      expect(DeliveryDispatchRules.pauseReasonError('تعطل المركبة'), isNull);
+      expect(DeliveryDispatchRules.pauseReasonError('س' * 500), isNull);
+      expect(DeliveryDispatchRules.pauseReasonError('س' * 501), isNotNull);
+    });
+
     test('rejection reasons match the server list and have labels', () {
       expect(DeliveryDispatchRules.rejectionReasons.keys.toSet(), {
         'unavailable',

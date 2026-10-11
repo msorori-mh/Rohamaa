@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import '../../data/handoff_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../auth/account_status_screens.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({
@@ -57,7 +58,11 @@ class _AccountScreenState extends State<AccountScreen> {
       }
       HandoffRepository.clearIssuedPins();
     } catch (error) {
-      if (mounted) {
+      // Only the real sign-out can leave the device signed out after an
+      // error; an injected handler is reported as it failed.
+      if (widget.onSignOut == null && signedOutDespiteError()) {
+        HandoffRepository.clearIssuedPins();
+      } else if (mounted) {
         showErrorSnack(
           context,
           error,

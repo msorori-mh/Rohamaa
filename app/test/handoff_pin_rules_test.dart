@@ -17,6 +17,41 @@ void main() {
       expect(HandoffPinRules.canIssue(kind: 'other', status: 'heading_to_pickup'), isFalse);
     });
 
+    test('cached PINs are dropped once their handoff leaves the issuable status', () {
+      final pickupKey = HandoffPinRules.cacheKey(userId: 'u1', deliveryId: 'd1', kind: 'pickup');
+      final deliveryKey = HandoffPinRules.cacheKey(userId: 'u1', deliveryId: 'd2', kind: 'delivery');
+      final otherUserKey = HandoffPinRules.cacheKey(userId: 'u2', deliveryId: 'd1', kind: 'pickup');
+      expect(pickupKey, 'u1:d1:pickup');
+
+      // d1 is still heading to pickup; d2 was reported failed / reassigned.
+      expect(
+        HandoffPinRules.staleKeys(
+          cachedKeys: [pickupKey, deliveryKey, otherUserKey],
+          userId: 'u1',
+          issuableKeys: {pickupKey},
+        ),
+        {deliveryKey},
+      );
+      // A handoff that disappeared from the list is dropped too.
+      expect(
+        HandoffPinRules.staleKeys(
+          cachedKeys: [pickupKey, deliveryKey],
+          userId: 'u1',
+          issuableKeys: const <String>{},
+        ),
+        {pickupKey, deliveryKey},
+      );
+      // Another account's PINs are never touched.
+      expect(
+        HandoffPinRules.staleKeys(
+          cachedKeys: [otherUserKey],
+          userId: 'u1',
+          issuableKeys: const <String>{},
+        ),
+        isEmpty,
+      );
+    });
+
     test('the PIN expires ten minutes after it was requested', () {
       expect(pin.expiresAt, issuedAt.add(const Duration(minutes: 10)));
       expect(HandoffPinRules.isExpired(pin, issuedAt), isFalse);

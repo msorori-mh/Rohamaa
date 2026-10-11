@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/main_tab_signal.dart';
 import '../../data/match_offer_repository.dart';
 import '../../data/service_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
@@ -9,51 +10,70 @@ import '../items/async_list_loader.dart';
 import '../items/form_guards.dart';
 import '../services/service_catalog.dart';
 
-class MatchOffersScreen extends StatelessWidget {
+class MatchOffersScreen extends StatefulWidget {
   /// [initialTab]: 0 opens the items tab, 1 opens the services tab.
-  const MatchOffersScreen({super.key, this.initialTab = 0});
+  const MatchOffersScreen({super.key, this.initialTab = 0, this.tabRequestId});
 
   final int initialTab;
 
+  /// Changes whenever a caller asks for [initialTab] again (the `t` query
+  /// parameter), so the same tab can be requested twice in a row.
+  final String? tabRequestId;
+
   @override
-  Widget build(BuildContext context) {
-    final tab = initialTab.clamp(0, 1).toInt();
-    return DefaultTabController(
-      // A new key rebuilds the controller when the route asks for another
-      // tab while this screen is already open (for example from a
-      // notification that links to the services tab).
-      key: ValueKey<int>(tab),
-      length: 2,
-      initialIndex: tab,
-      child: const Scaffold(
-        appBar: _MatchAppBar(),
-        body: TabBarView(
-          children: [
-            _ItemOffersTab(),
-            _ServiceOffersTab(),
-          ],
-        ),
-      ),
-    );
-  }
+  State<MatchOffersScreen> createState() => _MatchOffersScreenState();
 }
 
-class _MatchAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _MatchAppBar();
+class _MatchOffersScreenState extends State<MatchOffersScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs;
+
+  int get _requestedTab => widget.initialTab.clamp(0, 1).toInt();
 
   @override
-  Widget build(BuildContext context) => AppBar(
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 2, vsync: this, initialIndex: _requestedTab);
+  }
+
+  @override
+  void didUpdateWidget(covariant MatchOffersScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final requestChanged = oldWidget.initialTab != widget.initialTab ||
+        oldWidget.tabRequestId != widget.tabRequestId;
+    if (requestChanged && _tabs.index != _requestedTab) {
+      _tabs.animateTo(_requestedTab);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
         title: const Text('العروض المناسبة'),
-        bottom: const TabBar(
-          tabs: [
+        bottom: TabBar(
+          controller: _tabs,
+          tabs: const [
             Tab(text: 'الأشياء', icon: Icon(Icons.inventory_2_outlined)),
             Tab(text: 'الخدمات', icon: Icon(Icons.handyman_outlined)),
           ],
         ),
-      );
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + kTextTabBarHeight);
+      ),
+      body: TabBarView(
+        controller: _tabs,
+        children: const [
+          _ItemOffersTab(),
+          _ServiceOffersTab(),
+        ],
+      ),
+    );
+  }
 }
 
 class _ItemOffersTab extends StatefulWidget {
@@ -80,6 +100,21 @@ class _ItemOffersTabState extends State<_ItemOffersTab>
   @override
   void initState() {
     super.initState();
+    MainTabs.active.addListener(_onMainTabChanged);
+    reloadRows();
+  }
+
+  @override
+  void dispose() {
+    MainTabs.active.removeListener(_onMainTabChanged);
+    super.dispose();
+  }
+
+  /// The offers tab keeps its state while hidden, so reload when it is shown
+  /// again. Skipped while the first load is still running.
+  void _onMainTabChanged() {
+    if (MainTabs.active.value != MainTabs.offers) return;
+    if (loadedRows == null && loadError == null) return;
     reloadRows();
   }
 
@@ -254,6 +289,21 @@ class _ServiceOffersTabState extends State<_ServiceOffersTab>
   @override
   void initState() {
     super.initState();
+    MainTabs.active.addListener(_onMainTabChanged);
+    reloadRows();
+  }
+
+  @override
+  void dispose() {
+    MainTabs.active.removeListener(_onMainTabChanged);
+    super.dispose();
+  }
+
+  /// The offers tab keeps its state while hidden, so reload when it is shown
+  /// again. Skipped while the first load is still running.
+  void _onMainTabChanged() {
+    if (MainTabs.active.value != MainTabs.offers) return;
+    if (loadedRows == null && loadError == null) return;
     reloadRows();
   }
 

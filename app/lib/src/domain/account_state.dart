@@ -55,9 +55,11 @@ class AccountState {
   bool get isBlocked => isSuspended || deletionProcessing || deletionCompleted;
 
   AccountGate get gate {
-    if (isSuspended) return AccountGate.suspended;
+    // The server suspends the account while a deletion is being processed,
+    // so the deletion states must be tested before the suspension flag.
     if (deletionCompleted) return AccountGate.deleted;
     if (deletionProcessing) return AccountGate.deletionProcessing;
+    if (isSuspended) return AccountGate.suspended;
     if (forcePasswordChange && isStaff) return AccountGate.passwordChange;
     return switch (role) {
       'admin' => AccountGate.admin,

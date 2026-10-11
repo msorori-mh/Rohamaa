@@ -49,6 +49,52 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
     if (changed == true && mounted) await _refresh();
   }
 
+  /// Stops a delivery a courier is working on so it can be reassigned.
+  Future<void> _pause(Map<String, dynamic> row) async {
+    final id = '${row['delivery_id']}';
+    if (_busyIds.contains(id)) return;
+    final values = await TextFieldsDialog.show(
+      context,
+      title: 'إيقاف مؤقت لإعادة الإسناد',
+      intro:
+          'ستتوقف مهمة ${row['public_code']} لدى الموصل الحالي وتعود إلى قائمة إعادة الإسناد. اكتب السبب ليُحفظ في السجل.',
+      confirmLabel: 'إيقاف المهمة',
+      cancelLabel: 'رجوع',
+      // Every argument is a constant (the validator is a static tear-off).
+      fields: const [
+        DialogField(
+          id: 'reason',
+          label: 'سبب الإيقاف',
+          maxLines: 3,
+          maxLength: DeliveryDispatchRules.pauseReasonMaxLength,
+          validator: DeliveryDispatchRules.pauseReasonError,
+        ),
+      ],
+    );
+    final reason = values?['reason'];
+    if (reason == null || !mounted) return;
+    setState(() => _busyIds.add(id));
+    try {
+      await _repo.pauseDelivery(deliveryId: id, reason: reason);
+      if (!mounted) return;
+      showInfoSnack(
+        context,
+        'أُوقفت المهمة مؤقتًا. يمكنك الآن إسنادها إلى موصل آخر.',
+      );
+      await _refresh();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'لم تُوقف المهمة. حدّث القائمة ثم حاول مجددًا.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busyIds.remove(id));
+    }
+  }
+
   Future<void> _cancel(Map<String, dynamic> row) async {
     final id = '${row['delivery_id']}';
     if (_busyIds.contains(id)) return;
@@ -99,6 +145,7 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
     final rejection = row['rejection_reason'] as String?;
     final canReassign = DeliveryDispatchRules.canAdminReassign(status);
     final canCancel = DeliveryDispatchRules.canAdminCancel(status);
+    final canPause = DeliveryDispatchRules.canAdminPause(status);
     final busy = _busyIds.contains(id);
     return Card(
       child: Padding(
@@ -123,7 +170,7 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
               Text(
                 'سبب الاعتذار: ${DeliveryDispatchRules.rejectionReasonLabel(rejection)}',
               ),
-            if (canReassign || canCancel) ...[
+            if (canReassign || canCancel || canPause) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 10,
@@ -138,6 +185,13 @@ class _DeliveryOperationsScreenState extends State<DeliveryOperationsScreen> {
                             ? 'تغيير الموصل'
                             : 'إعادة إسناد المهمة',
                       ),
+                    ),
+                  if (canPause)
+                    FilledButton.tonalIcon(
+                      key: Key('pause-delivery-$id'),
+                      onPressed: busy ? null : () => _pause(row),
+                      icon: const Icon(Icons.pause_circle_outline_rounded),
+                      label: const Text('إيقاف مؤقت لإعادة الإسناد'),
                     ),
                   if (canCancel)
                     OutlinedButton.icon(

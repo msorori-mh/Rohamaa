@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/app_error.dart';
 import '../../data/service_repository.dart';
@@ -29,6 +30,10 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
   String _materialsMode = 'case_by_case';
   bool _saving = false;
   bool _touched = false;
+
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first row instead of adding one.
+  final String _operationId = const Uuid().v4();
 
   /// Set once the offer exists on the server, so that it is never sent twice.
   bool _created = false;
@@ -85,6 +90,7 @@ class _CreatePersonalServiceOfferScreenState extends State<CreatePersonalService
         final repo = ServiceRepository(Supabase.instance.client);
         if (!await _ensureArea(repo)) return;
         await repo.createServiceOffer(
+          id: _operationId,
           providerKind: 'person',
           category: _category,
           serviceType: _serviceType,

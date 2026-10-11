@@ -5,7 +5,9 @@ import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
 import '../../data/operations_repository.dart';
 import '../../data/recovery_repository.dart';
+import '../../domain/admin_queue_presenter.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../auth/account_status_screens.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
@@ -138,7 +140,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (error) {
-      if (mounted) showErrorSnack(context, error);
+      if (mounted && !signedOutDespiteError()) showErrorSnack(context, error);
     }
   }
 
@@ -308,7 +310,7 @@ enum _QueueFilter {
         _QueueFilter.urgent => item.priority >= 80,
         _QueueFilter.matching => const {'item_matching', 'needs', 'service_matching'}.contains(item.actionKey),
         _QueueFilter.delivery => item.actionKey == 'accepted_matches' || item.kind == 'delivery',
-        _QueueFilter.safeguards => const {'risks', 'incidents', 'contributions', 'partners'}.contains(item.actionKey),
+        _QueueFilter.safeguards => const {'risks', 'incidents', 'contributions', 'partners', 'account_deletions'}.contains(item.actionKey),
       };
 }
 
@@ -362,7 +364,7 @@ class _AdminHero extends StatelessWidget {
                 IconButton(
                   tooltip: 'العودة',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 ),
               PopupMenuButton<String>(
                 iconColor: Colors.white,
@@ -513,6 +515,13 @@ class _PriorityItem extends StatelessWidget {
     final urgent = item.priority >= 80;
     final age = item.ageHours < 24 ? '${item.ageHours.round()} ساعة' : '${(item.ageHours / 24).floor()} يوم';
     final accent = urgent ? RuhamaaColors.rose : RuhamaaColors.primaryBright;
+    // The server text of some queue kinds embeds raw database keys; the
+    // displayed copy is rebuilt from the row's kind.
+    final copy = AdminQueuePresenter.present(
+      kind: item.kind,
+      title: item.title,
+      subtitle: item.subtitle,
+    );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
@@ -535,12 +544,12 @@ class _PriorityItem extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                        Expanded(child: Text(copy.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
                         if (urgent) const Text('عاجل', style: TextStyle(color: RuhamaaColors.rose, fontWeight: FontWeight.w900, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(item.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35)),
+                    Text(copy.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35)),
                     const SizedBox(height: 7),
                     Text('${item.code} • منذ $age', style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w800)),
                   ],
@@ -548,7 +557,7 @@ class _PriorityItem extends StatelessWidget {
               ),
               const Padding(
                 padding: EdgeInsets.only(top: 13),
-                child: Icon(Icons.chevron_left_rounded, color: RuhamaaColors.textMuted),
+                child: Icon(Icons.chevron_right_rounded, color: RuhamaaColors.textMuted),
               ),
             ],
           ),

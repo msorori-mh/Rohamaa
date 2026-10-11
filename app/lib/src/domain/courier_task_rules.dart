@@ -57,6 +57,17 @@ abstract final class CourierTaskRules {
     'other': 'طرف آخر',
   };
 
+  /// Parties offered in the failure dialog for a delivery in [status]. Once
+  /// the item is collected the server no longer accepts 'donor'.
+  static Map<String, String> failurePartiesFor(String status) {
+    const afterPickup = {'picked_up', 'heading_to_recipient'};
+    if (!afterPickup.contains(status)) return failureParties;
+    return <String, String>{
+      for (final entry in failureParties.entries)
+        if (entry.key != 'donor') entry.key: entry.value,
+    };
+  }
+
   /// Reason codes accepted by `courier_report_delivery_failure`.
   static const failureReasons = <String, String>{
     'no_answer': 'لا يوجد رد',

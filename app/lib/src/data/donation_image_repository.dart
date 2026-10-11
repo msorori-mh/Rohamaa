@@ -46,7 +46,29 @@ class DonationImageRepository {
   /// Pass the picked file's [fileName] (and [mimeType] when known). The older
   /// [extension] argument is still accepted for callers that only know the
   /// extension.
+  ///
+  /// The whole upload of one photo is limited to
+  /// [DonationImageRules.uploadTimeout]; after that a `TimeoutException` is
+  /// thrown and the caller treats the photo as failed.
   Future<String> upload({
+    required String donationId,
+    required Uint8List bytes,
+    String? fileName,
+    String? extension,
+    String? mimeType,
+    int sortOrder = 0,
+  }) {
+    return _upload(
+      donationId: donationId,
+      bytes: bytes,
+      fileName: fileName,
+      extension: extension,
+      mimeType: mimeType,
+      sortOrder: sortOrder,
+    ).timeout(DonationImageRules.uploadTimeout);
+  }
+
+  Future<String> _upload({
     required String donationId,
     required Uint8List bytes,
     String? fileName,

@@ -2,6 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ruhamaa/src/domain/item_form_rules.dart';
 
 void main() {
+  test('only the unique-violation code means the row already exists', () {
+    expect(isUniqueViolationCode('23505'), isTrue);
+    expect(isUniqueViolationCode('23503'), isFalse);
+    expect(isUniqueViolationCode('42501'), isFalse);
+    expect(isUniqueViolationCode(''), isFalse);
+    expect(isUniqueViolationCode(null), isFalse);
+  });
+
   group('item attribute labels', () {
     test('choice attributes show Arabic labels, never raw keys', () {
       final text = describeItemAttributes('clothes', {

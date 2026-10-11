@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../catalog/item_category_catalog.dart';
 import '../../core/app_error.dart';
@@ -54,6 +55,11 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   final List<_PickedPhoto> _images = [];
   final Map<String, String> _attributes = {};
 
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first donation instead of adding
+  /// a second one.
+  final String _operationId = const Uuid().v4();
+
   String _category = 'clothes';
   String? _group;
   String? _itemTypeKey;
@@ -61,6 +67,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   bool _saving = false;
   bool _picking = false;
   bool _uploading = false;
+  bool _leaving = false;
   bool _touched = false;
   bool _selectionMissing = false;
   int _step = 0;
@@ -260,9 +267,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   /// System back and the on-screen back buttons: go to the previous step, or
   /// leave the form after confirming when data was entered.
   Future<void> _handleBack() async {
-    if (_saving || _uploading) return;
+    if (_saving) return;
     if (_created != null) {
-      leaveForm(context);
+      await _leaveResult();
       return;
     }
     if (_step > 0) {
@@ -277,6 +284,35 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
     leaveForm(context);
   }
 
+  /// Leaves the result view. The person is never held: while photos are
+  /// still uploading, or when some failed, leaving only asks for a
+  /// confirmation first.
+  Future<void> _leaveResult() async {
+    if (_leaving) return;
+    final title = DonationImageRules.leaveWarningTitle(
+      uploading: _uploading,
+      pending: _pendingPhotos,
+    );
+    final message = DonationImageRules.leaveWarningMessage(
+      uploading: _uploading,
+      pending: _pendingPhotos,
+    );
+    if (title != null && message != null) {
+      _leaving = true;
+      final leave = await confirmAction(
+        context,
+        title: title,
+        message: message,
+        confirmLabel: 'مغادرة',
+        cancelLabel: 'البقاء',
+        confirmKey: const Key('donation-leave-confirm'),
+      );
+      _leaving = false;
+      if (!mounted || !leave) return;
+    }
+    leaveForm(context);
+  }
+
   Future<void> _submit() async {
     if (_saving || _created != null) return;
     if (_group == null || _itemTypeKey == null) return;
@@ -285,6 +321,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
       if (!await _ensureProfile()) return;
       final repo = ItemRepositoryV2(Supabase.instance.client);
       final created = await repo.createDonation(
+        id: _operationId,
         category: _category,
         categoryGroup: _group!,
         itemTypeKey: _itemTypeKey!,
@@ -318,7 +355,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   }
 
   /// Uploads every photo that has not reached the server yet, each one on its
-  /// own, for the donation that was already created. Never throws.
+  /// own, for the donation that was already created. Never throws. A photo
+  /// that takes longer than [DonationImageRules.uploadTimeout] counts as
+  /// failed and can be retried. The loop keeps running if the person leaves.
   Future<void> _uploadPendingPhotos() async {
     final created = _created;
     if (created == null || _uploading || _pendingPhotos == 0) return;
@@ -328,7 +367,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
       final photo = _images[index];
       if (photo.uploaded) continue;
       try {
-        final bytes = await photo.file.readAsBytes();
+        final bytes = await photo.file
+            .readAsBytes()
+            .timeout(DonationImageRules.uploadTimeout);
         await repo.upload(
           donationId: created.id,
           bytes: bytes,
@@ -347,7 +388,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
 
   Future<void> _contribute() async {
     final created = _created;
-    if (created == null || _uploading) return;
+    if (created == null) return;
     await Navigator.push(
       context,
       MaterialPageRoute<void>(builder: (_) => ContributionScreen(donationId: created.id)),
@@ -358,7 +399,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
   Widget build(BuildContext context) {
     final done = _created != null;
     return PopScope<Object?>(
-      canPop: done ? !_uploading : _step == 0 && !_touched && !_saving,
+      canPop: done
+          ? !_uploading && _pendingPhotos == 0
+          : _step == 0 && !_touched && !_saving,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) _handleBack();
       },
@@ -430,7 +473,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
         const SizedBox(height: 26),
         FilledButton.icon(
           onPressed: _nextFromCategory,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_right_rounded),
           label: const Text('التالي: التفاصيل'),
         ),
       ],
@@ -521,7 +564,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
               flex: 2,
               child: FilledButton.icon(
                 onPressed: _picking ? null : _nextFromDetails,
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const Icon(Icons.chevron_right_rounded),
                 label: const Text('التالي: المراجعة'),
               ),
             ),
@@ -633,7 +676,8 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
               icon: Icons.cloud_upload_outlined,
               color: RuhamaaColors.softGreen,
               iconColor: RuhamaaColors.primary,
-              text: 'جارٍ رفع الصور (${total - pending} من $total)...',
+              text: 'جارٍ رفع الصور (${total - pending} من $total)... '
+                  'يمكنك المغادرة دون انتظار اكتمال الرفع.',
             ),
             const SizedBox(height: 8),
             const LinearProgressIndicator(),
@@ -664,14 +708,14 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
         ],
         const SizedBox(height: 22),
         OutlinedButton.icon(
-          onPressed: _uploading ? null : _contribute,
+          onPressed: _contribute,
           icon: const Icon(Icons.favorite_outline_rounded),
           label: const Text('المساهمة في التوصيل'),
         ),
         const SizedBox(height: 10),
         FilledButton.icon(
           key: const Key('donation-done'),
-          onPressed: _uploading ? null : () => leaveForm(context),
+          onPressed: _leaveResult,
           icon: const Icon(Icons.check_rounded),
           label: const Text('تم'),
         ),

@@ -67,6 +67,15 @@ void main() {
       expect(StaffLabels.canDecideDeletion(null), isFalse);
     });
 
+    test('a request being processed can only be retried, not rejected', () {
+      expect(StaffLabels.canRejectDeletion('pending'), isTrue);
+      expect(StaffLabels.canRejectDeletion('processing'), isFalse);
+      expect(StaffLabels.canRejectDeletion('completed'), isFalse);
+      expect(StaffLabels.canRejectDeletion(null), isFalse);
+      expect(StaffLabels.deletionApproveLabel('pending'), 'حذف الحساب');
+      expect(StaffLabels.deletionApproveLabel('processing'), 'إعادة محاولة الحذف');
+    });
+
     test('courier receipt label covers the three states', () {
       final labels = {
         StaffLabels.courierReceiptLabel(true),
@@ -135,6 +144,14 @@ void main() {
         'password_unchanged',
         'current_password_required',
         'current_password_invalid',
+        'profile_update_failed',
+        'password_too_long',
+        'temp_password_expired',
+        'too_many_attempts',
+        'verification_failed',
+        'invalid_body',
+        'invalid_user',
+        'not_staff',
       ];
       for (final code in codes) {
         final label = StaffLabels.functionErrorLabel(code);
@@ -143,6 +160,41 @@ void main() {
       }
       expect(StaffLabels.functionErrorLabel('never_seen'), isNull);
       expect(StaffLabels.functionErrorLabel(null), isNull);
+    });
+  });
+
+  group('StaffLabels password rules', () {
+    test('profile_update_failed means the password did change', () {
+      expect(StaffLabels.passwordChangedDespite('profile_update_failed'), isTrue);
+      expect(StaffLabels.passwordChangedDespite('password_update_failed'), isFalse);
+      expect(StaffLabels.passwordChangedDespite('too_many_attempts'), isFalse);
+      expect(StaffLabels.passwordChangedDespite(null), isFalse);
+      expect(
+        StaffLabels.functionErrorLabel('profile_update_failed'),
+        StaffLabels.passwordChangedMessage,
+      );
+    });
+
+    test('an expired temporary password points to a reset, not a new account', () {
+      final label = StaffLabels.functionErrorLabel('temp_password_expired')!;
+      expect(label, contains('إعادة تعيين كلمة المرور'));
+      expect(label, isNot(contains('حساب جديد')));
+    });
+
+    test('a half-finished reset tells the admin to repeat it', () {
+      final label = StaffLabels.resetPasswordErrorLabel('profile_update_failed');
+      expect(label, isNotNull);
+      expect(label, isNot(StaffLabels.passwordChangedMessage));
+      expect(StaffLabels.resetPasswordErrorLabel('not_staff'), isNull);
+      expect(StaffLabels.resetPasswordErrorLabel(null), isNull);
+    });
+
+    test('only couriers and supervisors can have their password reset', () {
+      expect(StaffLabels.canResetStaffPassword('courier'), isTrue);
+      expect(StaffLabels.canResetStaffPassword('supervisor'), isTrue);
+      expect(StaffLabels.canResetStaffPassword('admin'), isFalse);
+      expect(StaffLabels.canResetStaffPassword('user'), isFalse);
+      expect(StaffLabels.canResetStaffPassword(null), isFalse);
     });
   });
 

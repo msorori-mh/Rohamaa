@@ -1,3 +1,25 @@
+/// A donation's photos as loaded for a reviewer: how many exist on the
+/// server and the short-lived signed URLs that could be prepared.
+class DonationPhotoSet {
+  const DonationPhotoSet({required this.total, required this.urls});
+
+  /// Photos attached to the donation on the server.
+  final int total;
+
+  /// Signed URLs, one per photo that could be signed.
+  final List<String> urls;
+
+  /// The donation really has no photos.
+  bool get isEmpty => total == 0;
+
+  /// Photos exist but none could be signed: a loading problem, not "no
+  /// photos".
+  bool get signingFailed => total > 0 && urls.isEmpty;
+
+  /// Photos that exist but could not be signed.
+  int get missing => total > urls.length ? total - urls.length : 0;
+}
+
 /// Rules for donation photos. They mirror the storage bucket limits
 /// (`donation-images`: 5 MB, JPEG/PNG/WebP) so that a photo is rejected with
 /// a clear message on the phone instead of failing during upload.
@@ -79,6 +101,33 @@ class DonationImageRules {
     }
     if (sizeBytes <= 0) return emptyFileMessage;
     if (sizeBytes > maxBytes) return tooLargeMessage;
+    return null;
+  }
+
+  /// One photo that takes longer than this counts as a failed photo, so a
+  /// stalled connection never keeps the person waiting.
+  static const Duration uploadTimeout = Duration(seconds: 60);
+
+  /// Title of the confirmation shown before leaving the result view, or null
+  /// when the person can leave straight away.
+  static String? leaveWarningTitle({required bool uploading, required int pending}) {
+    if (uploading) return 'الصور ما زالت تُرفع';
+    if (pending > 0) return 'لم تُرفع كل الصور';
+    return null;
+  }
+
+  /// Body of the confirmation shown before leaving the result view, or null
+  /// when nothing is uploading and no photo is waiting for a retry.
+  static String? leaveWarningMessage({required bool uploading, required int pending}) {
+    if (uploading) {
+      return 'تبرعك مسجّل. إذا غادرت الآن يستمر رفع الصور ما دام التطبيق مفتوحًا، '
+          'وقد لا تكتمل بعض الصور.';
+    }
+    if (pending > 0) {
+      return pending == 1
+          ? 'تبرعك مسجّل، لكن صورة واحدة لم تُرفع. إذا غادرت الآن سيبقى التبرع بدونها.'
+          : 'تبرعك مسجّل، لكن $pending صور لم تُرفع. إذا غادرت الآن سيبقى التبرع بدونها.';
+    }
     return null;
   }
 

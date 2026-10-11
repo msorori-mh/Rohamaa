@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/account_state.dart';
+import '../domain/staff_labels.dart';
 
 /// The person's own contact details and default pickup/delivery address.
 class DeliveryProfile {
@@ -64,6 +65,11 @@ class AccountRepository {
 
   /// Calls the `staff-change-password` Edge Function. [currentPassword] may be
   /// omitted only when the server forces a password change.
+  ///
+  /// Returns normally whenever the password was changed, including the
+  /// `profile_update_failed` answer. The server ends the other sessions and
+  /// may end this one too, so the local session is always dropped afterwards
+  /// and the person signs in again with the new password.
   Future<void> changeStaffPassword({
     required String password,
     String? currentPassword,
@@ -74,20 +80,33 @@ class AccountRepository {
     if (currentPassword != null && currentPassword.isNotEmpty) {
       body['current_password'] = currentPassword;
     }
-    final response = await _client.functions.invoke(
-      'staff-change-password',
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-      body: body,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      // Carries only the server error code; mapped by friendlyError().
-      throw StateError('${response.data}');
-    }
     try {
-      await _client.auth.refreshSession();
+      final response = await _client.functions.invoke(
+        'staff-change-password',
+        headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        body: body,
+      );
+      if (response.status < 200 || response.status >= 300) {
+        final code = StaffLabels.functionErrorCode(response.data);
+        if (!StaffLabels.passwordChangedDespite(code)) {
+          // Carries only the server error code; mapped by friendlyError().
+          throw StateError('${response.data}');
+        }
+      }
+    } on FunctionException catch (error) {
+      final code = StaffLabels.functionErrorCode(error.details);
+      if (!StaffLabels.passwordChangedDespite(code)) rethrow;
+    }
+    await signOutLocally();
+  }
+
+  /// Drops the session on this device without calling the server (the
+  /// server-side session may already be gone). Never throws.
+  Future<void> signOutLocally() async {
+    try {
+      await _client.auth.signOut(scope: SignOutScope.local);
     } catch (_) {
-      // The password is already changed. If the session cannot be refreshed
-      // the auth listener signs the person out and the login screen appears.
+      // Nothing else can be done here; the caller checks the session.
     }
   }
 

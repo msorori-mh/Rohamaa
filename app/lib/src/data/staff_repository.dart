@@ -21,7 +21,8 @@ class StaffStatus {
 }
 
 /// Failure reported by a staff Edge Function (`admin-create-staff`,
-/// `staff-change-password`, `admin-delete-account`).
+/// `admin-reset-staff-password`, `staff-change-password`,
+/// `admin-delete-account`).
 ///
 /// [toString] carries the server error code and message, so
 /// `friendlyError` can match its known keys; [arabicMessage] gives copy for
@@ -151,6 +152,17 @@ class StaffRepository {
       'full_name': fullName.trim(),
       'role': role,
       'area_ids': areaIds,
+    });
+  }
+
+  /// Sets a new temporary password for a courier or supervisor through the
+  /// `admin-reset-staff-password` Edge Function. The staff member is forced
+  /// to change it at the next sign-in. Throws [StaffFunctionException] when
+  /// the function rejects the request.
+  Future<void> resetStaffPassword(String userId, String password) async {
+    await _invoke('admin-reset-staff-password', {
+      'user_id': userId,
+      'password': password,
     });
   }
 

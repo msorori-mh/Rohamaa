@@ -134,7 +134,7 @@ class _ServiceActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_left_rounded, color: accent),
+              Icon(Icons.chevron_right_rounded, color: accent),
             ],
           ),
         ),

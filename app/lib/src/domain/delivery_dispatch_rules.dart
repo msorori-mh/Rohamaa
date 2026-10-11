@@ -36,6 +36,66 @@ abstract final class DeliveryDispatchRules {
   /// (pickup or dropoff), never before accepting or after a failure report.
   static bool showsCashPledges(String status) => canReportProblem(status);
 
+  /// The server keeps accepting pledge answers for 24 hours after delivery,
+  /// so a delivered task still loads its pledges.
+  static bool loadsCashPledges(String status) =>
+      showsCashPledges(status) || status == 'delivered';
+
+  /// True when at least one pledge has no courier answer yet. [answers] are
+  /// the `courier_received` values (null = not answered).
+  static bool hasUnansweredPledge(Iterable<bool?> answers) =>
+      answers.any((answer) => answer == null);
+
+  /// After a successful dropoff PIN the task screen stays open only while a
+  /// cash pledge still needs the courier's answer.
+  static bool staysOpenAfterDelivery(Iterable<bool?> pledgeAnswers) =>
+      hasUnansweredPledge(pledgeAnswers);
+
+  /// A pledge answer is write-once on the server.
+  static bool canAnswerPledge(bool? courierReceived) => courierReceived == null;
+
+  /// `courier_task_details` hides the pickup area and returns the dropoff
+  /// area for an 'assigned' task that was reassigned after the item was
+  /// collected: accepting it resumes at the dropoff phase.
+  static bool resumesAtDropoff({
+    required String status,
+    String? pickupArea,
+    String? dropoffArea,
+  }) =>
+      canRespond(status) && pickupArea == null && dropoffArea != null;
+
+  /// Message after accepting an assignment. [nextStatus] is the status
+  /// returned by `courier_respond_delivery`.
+  static String acceptedMessage(String nextStatus) =>
+      dropoffPreviewStatuses.contains(nextStatus) ||
+              dropoffStatuses.contains(nextStatus)
+          ? 'تم قبول المهمة. الشيء مستلم مسبقًا، توجّه الآن إلى موقع التسليم.'
+          : 'تم قبول المهمة. يمكنك الآن التوجه إلى موقع الاستلام.';
+
+  /// Statuses `admin_pause_delivery` accepts: an active courier leg that the
+  /// admin stops so the task can be reassigned.
+  static const adminPausableStatuses = {
+    'heading_to_pickup',
+    'picked_up',
+    'heading_to_recipient',
+  };
+
+  static bool canAdminPause(String status) =>
+      adminPausableStatuses.contains(status);
+
+  static const pauseReasonMinLength = 3;
+  static const pauseReasonMaxLength = 500;
+
+  /// Inline message for the pause reason; null when acceptable.
+  static String? pauseReasonError(String? value) {
+    final text = (value ?? '').trim();
+    if (text.length < pauseReasonMinLength) return 'اكتب سببًا واضحًا للإيقاف.';
+    if (text.length > pauseReasonMaxLength) {
+      return 'السبب أطول من $pauseReasonMaxLength حرفًا.';
+    }
+    return null;
+  }
+
   static bool canAdminReassign(String status) =>
       adminReassignableStatuses.contains(status);
 

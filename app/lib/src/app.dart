@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/auth_callback_error.dart';
 import 'core/main_tab_signal.dart';
 import 'data/account_repository.dart';
 import 'domain/account_state.dart';
@@ -86,6 +87,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
                   path: '/offers',
                   builder: (_, state) => MatchOffersScreen(
                     initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                    tabRequestId: state.uri.queryParameters['t'],
                   ),
                 ),
               ],
@@ -390,6 +392,7 @@ class _AuthRefreshNotifier extends ChangeNotifier {
     _subscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       debugPrint('Ataa auth event: ${data.event}; session=${data.session != null}');
       final loggedIn = data.session != null;
+      if (loggedIn) AuthCallbackError.last.value = null;
       if (loggedIn == _loggedIn) return;
       _loggedIn = loggedIn;
       if (_notificationScheduled) return;
@@ -398,6 +401,11 @@ class _AuthRefreshNotifier extends ChangeNotifier {
         _notificationScheduled = false;
         if (!_disposed) notifyListeners();
       });
+    }, onError: (Object error) {
+      // A failed OAuth callback arrives here as a stream error. Keep it for
+      // the login screen, which may not be on screen yet.
+      debugPrint('Ataa auth callback failed: ${error.runtimeType}');
+      if (!_disposed) AuthCallbackError.last.value = error;
     });
   }
 

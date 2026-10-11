@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/auth_callback_error.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 const _authRedirectUrl = String.fromEnvironment(
@@ -31,9 +32,36 @@ class _LoginScreenState extends State<LoginScreen> {
     _authSubscription = auth.onAuthStateChange.listen((data) {
       debugPrint('Login auth event: ${data.event}; session=${data.session != null}');
       if (data.session != null) _openApp();
+    }, onError: (Object error) {
+      debugPrint('Login auth callback failed: ${error.runtimeType}');
+      _showCallbackError(error);
     });
+    AuthCallbackError.last.addListener(_onCallbackError);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (auth.currentSession != null) _openApp();
+      if (auth.currentSession != null) {
+        _openApp();
+        return;
+      }
+      // A callback that failed before this screen was built.
+      _onCallbackError();
+    });
+  }
+
+  void _onCallbackError() {
+    final error = AuthCallbackError.last.value;
+    if (error == null) return;
+    AuthCallbackError.last.value = null;
+    _showCallbackError(error);
+  }
+
+  void _showCallbackError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _error = friendlyError(
+        error,
+        fallback: AuthCallbackError.fallbackMessage,
+      );
     });
   }
 
@@ -44,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    AuthCallbackError.last.removeListener(_onCallbackError);
     _authSubscription.cancel();
     super.dispose();
   }

@@ -26,15 +26,41 @@ void main() {
       expect(state.gate, AccountGate.community);
     });
 
-    test('suspension wins over every other state', () {
+    test('suspension wins over role routing and password change', () {
       const state = AccountState(
         role: 'admin',
         isSuspended: true,
         forcePasswordChange: true,
-        deletionStatus: 'processing',
       );
       expect(state.isBlocked, isTrue);
       expect(state.gate, AccountGate.suspended);
+      expect(
+        const AccountState(role: 'user', isSuspended: true, deletionStatus: 'pending').gate,
+        AccountGate.suspended,
+      );
+      expect(
+        const AccountState(role: 'user', isSuspended: true, deletionStatus: 'rejected').gate,
+        AccountGate.suspended,
+      );
+    });
+
+    test('deletion states are tested before the suspension flag', () {
+      // The server suspends the account while its deletion is processed.
+      const processing = AccountState(
+        role: 'user',
+        isSuspended: true,
+        deletionStatus: 'processing',
+      );
+      const completed = AccountState(
+        role: 'courier',
+        isSuspended: true,
+        forcePasswordChange: true,
+        deletionStatus: 'completed',
+      );
+      expect(processing.gate, AccountGate.deletionProcessing);
+      expect(completed.gate, AccountGate.deleted);
+      expect(processing.isBlocked, isTrue);
+      expect(completed.isBlocked, isTrue);
     });
 
     test('deletion in progress or completed blocks the account', () {
@@ -113,6 +139,74 @@ void main() {
         OperationRules.actionRoute(kind: 'item_match', status: 'offered', serverRoute: '/offers'),
         '/offers',
       );
+    });
+
+    test('delivered and cancelled deliveries are closed for the community', () {
+      expect(OperationRules.closedDeliveryStatuses, {'delivered', 'failed'});
+      expect(OperationRules.isDeliveryClosed('delivered'), isTrue);
+      expect(OperationRules.isDeliveryClosed('failed'), isTrue);
+      for (final status in ['assigned', 'heading_to_pickup', 'picked_up', 'heading_to_recipient', 'rescheduled']) {
+        expect(OperationRules.isDeliveryClosed(status), isFalse, reason: status);
+      }
+    });
+
+    test('the continue button is shown only when there is somewhere to go', () {
+      bool shows(String kind, String status, {bool requires = true, String route = '/my-services'}) =>
+          OperationRules.showsAction(
+            kind: kind,
+            status: status,
+            requiresAction: requires,
+            serverRoute: route,
+          );
+      expect(shows('item_match', 'offered', route: '/offers'), isTrue);
+      expect(shows('service_match', 'proposed'), isTrue);
+      expect(shows('service_match', 'proposed', requires: false), isFalse);
+      expect(shows('delivery', 'rescheduled', route: '/handoffs'), isFalse);
+      expect(shows('service_offer', 'rejected'), isFalse);
+      expect(shows('service_offer', 'cancelled'), isFalse);
+      expect(shows('service_offer', 'withdrawn'), isFalse);
+      expect(shows('service_request', 'rejected'), isFalse);
+      expect(shows('service_request', 'cancelled'), isFalse);
+      expect(shows('service_request', 'matched'), isTrue);
+    });
+
+    test('a notification about a proposed service match opens the offers screen', () {
+      expect(
+        OperationRules.notificationRoute(
+          entityType: 'service_matches',
+          dedupeKey: 'service_matches:provider:1b2c:proposed',
+          serverRoute: '/my-services',
+        ),
+        '/offers?tab=1',
+      );
+      expect(
+        OperationRules.notificationRoute(
+          entityType: 'service_matches',
+          dedupeKey: 'service_matches:requester:1b2c:scheduled',
+          serverRoute: '/my-services',
+        ),
+        '/my-services',
+      );
+      expect(
+        OperationRules.notificationRoute(
+          entityType: 'service_offers',
+          dedupeKey: 'service_offers:1b2c:proposed',
+          serverRoute: '/my-services',
+        ),
+        '/my-services',
+      );
+      expect(
+        OperationRules.notificationRoute(entityType: null, dedupeKey: null, serverRoute: '/handoffs'),
+        '/handoffs',
+      );
+    });
+
+    test('a request id is added to tab routes that take one', () {
+      expect(OperationRules.withRequestId('/offers?tab=1', 7), '/offers?tab=1&t=7');
+      expect(OperationRules.withRequestId('/offers', 7), '/offers?t=7');
+      expect(OperationRules.withRequestId('/handoffs?tab=2&t=1', 9), '/handoffs?tab=2&t=9');
+      expect(OperationRules.withRequestId('/my-services', 7), '/my-services');
+      expect(OperationRules.withRequestId('/home', 7), '/home');
     });
 
     test('greeting follows the local hour', () {

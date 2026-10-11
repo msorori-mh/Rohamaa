@@ -2,6 +2,56 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ruhamaa/src/domain/donation_image_rules.dart';
 
 void main() {
+  group('DonationPhotoSet', () {
+    test('no photos is different from photos that could not be signed', () {
+      const none = DonationPhotoSet(total: 0, urls: <String>[]);
+      expect(none.isEmpty, isTrue);
+      expect(none.signingFailed, isFalse);
+      expect(none.missing, 0);
+
+      const failed = DonationPhotoSet(total: 3, urls: <String>[]);
+      expect(failed.isEmpty, isFalse);
+      expect(failed.signingFailed, isTrue);
+      expect(failed.missing, 3);
+
+      const partial = DonationPhotoSet(total: 3, urls: <String>['a', 'b']);
+      expect(partial.isEmpty, isFalse);
+      expect(partial.signingFailed, isFalse);
+      expect(partial.missing, 1);
+    });
+  });
+
+  group('leaving the donation result view', () {
+    test('no confirmation when every photo is uploaded', () {
+      expect(DonationImageRules.leaveWarningTitle(uploading: false, pending: 0), isNull);
+      expect(DonationImageRules.leaveWarningMessage(uploading: false, pending: 0), isNull);
+    });
+
+    test('an upload in progress is confirmed, never blocked', () {
+      expect(DonationImageRules.leaveWarningTitle(uploading: true, pending: 2), isNotNull);
+      expect(
+        DonationImageRules.leaveWarningMessage(uploading: true, pending: 2),
+        contains('يستمر رفع الصور'),
+      );
+    });
+
+    test('failed photos are confirmed with their count', () {
+      expect(DonationImageRules.leaveWarningTitle(uploading: false, pending: 3), isNotNull);
+      expect(
+        DonationImageRules.leaveWarningMessage(uploading: false, pending: 3),
+        contains('3'),
+      );
+      expect(
+        DonationImageRules.leaveWarningMessage(uploading: false, pending: 1),
+        contains('صورة واحدة'),
+      );
+    });
+
+    test('a photo upload times out after one minute', () {
+      expect(DonationImageRules.uploadTimeout, const Duration(seconds: 60));
+    });
+  });
+
   group('DonationImageRules', () {
     test('accepts JPEG, PNG and WebP by extension regardless of case', () {
       for (final name in ['a.jpg', 'a.JPEG', 'photo.final.png', 'x.WebP']) {

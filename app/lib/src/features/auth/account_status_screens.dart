@@ -9,6 +9,17 @@ import '../../theme/ruhamaa_theme.dart';
 
 const String kSupportEmail = 'support@ruhamaa.com';
 
+/// True when a sign-out that reported an error still removed the session on
+/// this device. Offline, the server call fails after the local session is
+/// already cleared: the person is signed out and must not see an error.
+bool signedOutDespiteError() {
+  try {
+    return Supabase.instance.client.auth.currentSession == null;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Signs out and reports a friendly message on failure. The router sends the
 /// person to the login screen as soon as the session is gone.
 class SignOutButton extends StatefulWidget {
@@ -30,7 +41,9 @@ class _SignOutButtonState extends State<SignOutButton> {
       await Supabase.instance.client.auth.signOut();
       HandoffRepository.clearIssuedPins();
     } catch (error) {
-      if (mounted) {
+      if (signedOutDespiteError()) {
+        HandoffRepository.clearIssuedPins();
+      } else if (mounted) {
         showErrorSnack(
           context,
           error,
