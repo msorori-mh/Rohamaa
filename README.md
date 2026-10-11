@@ -2,7 +2,7 @@
 
 > **الهوية المعتمدة: عطاء (Ataa)** — [دليل الهوية والتوافق وتسليم الفروع القديمة](docs/ATAA_IDENTITY.md). الاسم الظاهر تغيّر؛ معرّفات Android والنطاق والتوقيع الحالية محفوظة للتوافق.
 
-> **تسليم المشروع لأحمد فتحي:** ابدأ من [دليل الاستلام والاستكمال حتى Google Play](docs/HANDOVER_AHMED_FATHI.md). يتضمن حالة الفروع والإنتاج، الأدلة، والمراحل المتبقية. آخر نسخة مختبرة موجودة في PR #11 وليست main وحده.
+> **الحالة في 11 أكتوبر 2026:** التطبيق في مرحلة تجريبية مغلقة في مأرب و**غير منشور** في Google Play. يضم هذا الفرع السلسلة التي اختُبرت سابقًا (تبسيط العربية، Courier Dispatch V2، الاختبارات المعزولة وترحيل إغلاق الأمان) مع إصلاحات تدقيق أكتوبر 2026. لم يُبنَ بعد AAB موقّع للإنتاج، وقاعدة الإنتاج لم تُطابَق بعد مع كل ترحيلات المستودع. ما تغيّر وما بقي على المالك تنفيذه يدويًا في لوحات التحكم موثّق في [تدقيق أكتوبر 2026](docs/AUDIT_2026-10.md).
 
 منصة مجتمعية في مدينة مأرب تربط الأشياء والوقت والمهارات غير المستغلة بالاحتياجات المناسبة، مع الحفاظ على الخصوصية والكرامة وفصل الأطراف بقدر ما تسمح به طبيعة كل عملية.
 
@@ -10,14 +10,16 @@
 
 - Application ID: `com.ruhamaa.app`
 - Production domain: `https://ruhamaa.com`
-- Local/internal OAuth callback: `com.ruhamaa.app://login-callback`
-- Production App Link callback after verification: `https://ruhamaa.com/login-callback`
+- OAuth callback used by current builds: `com.ruhamaa.app://login-callback`
+- HTTPS App Link callback, only after App Link verification: `https://ruhamaa.com/login-callback/` (the site serves this page as a directory, with the trailing slash; `https` only)
+
+The four names that appear in this repository (Ataa, the `ruhamaa` identifiers, the repository name and the legacy "Sanad" comments) are explained in [docs/NAMING.md](docs/NAMING.md).
 
 ## V1 Scope
 
 - Google Sign-In عبر Supabase Auth
 - حساب مستخدم واحد يمكنه التبرع، تسجيل احتياج، تقديم وقت/مهارة، أو طلب خدمة
-- عناوين متعددة مع موقع جغرافي
+- عنوان افتراضي مع موقع جغرافي يحدده المستخدم
 - **Category System V2** للأشياء: فئة رئيسية → قسم → نوع دقيق → خصائص مثل المقاس/العمر/الصف/المادة/الأبعاد
 - توافق مع التبرعات والاحتياجات القديمة عبر canonical category mapping
 - مطابقة V2 تعطي وزنًا للنوع الدقيق والخصائص مع بقاء العمر/المسافة/الثقة/العدالة ضمن القرار
@@ -32,7 +34,7 @@
 - بلاغات خدمات خاصة بفريق عطاء بدل التقييمات العامة والنجوم
 - إخفاء هوية المتبرع والمستفيد عن بعضهما في عمليات الأشياء
 - الخدمات الحضورية تكشف فقط الحد الأدنى الضروري بعد الموافقة والتنسيق
-- Workflow للموصلين مع PIN للاستلام والتسليم
+- Courier Dispatch V2: إسناد المهمة كعرض ينتهي بعد 30 دقيقة، قبول أو اعتذار المندوب، ثم استلام وتسليم برمز PIN يصدره الطرف الآخر (صالح 10 دقائق وبحد 5 محاولات)، وبيانات اتصال تظهر للمندوب حسب المرحلة فقط
 - مساهمات تشغيلية اختيارية مرتبطة بالعمليات
 - Risk Flags ومراجعة يدوية للحالات المشبوهة، بما فيها كثافة طلبات غير اعتيادية دون عقوبة تلقائية
 - تقارير أثر تشمل الأشياء المسلمة، تصنيفات V2، الخدمات المكتملة، ساعات الخدمة التقديرية، خدمات الشركاء، أثر بطاقات الاحتياج، وبلاغات السلامة
@@ -95,7 +97,9 @@ Project ref: `vclicpejajxadsbuakdw`
 
 لا يتم حفظ مفاتيح Supabase السرية داخل المستودع. استخدم متغيرات البيئة أو `--dart-define` للقيم العميلية المسموح بها.
 
-سلسلة migrations تُفحص في CI للتأكد من عدم تكرار أرقام الإصدارات؛ لا تضف ملفين بنفس البادئة الرقمية.
+سلسلة migrations تُفحص في CI للتأكد من عدم تكرار أرقام الإصدارات؛ لا تضف ملفين بنفس البادئة الرقمية. البادئات المقبولة: الشكل التسلسلي القديم `00NN_` أو الطابع الزمني من 14 رقمًا الذي يولده Supabase CLI. الترحيلات الجديدة تستخدم الطابع الزمني.
+
+قاعدة الإنتاج لا تُحدَّث تلقائيًا من المستودع. قبل أي تطبيق: طابق السجل بـ`supabase migration list`، ولا تشغّل `db push` قبل حل الفروق (أرقام الإنتاج التاريخية تختلف عن بادئات الملفات المحلية).
 
 ## Release documentation
 
@@ -109,7 +113,12 @@ Project ref: `vclicpejajxadsbuakdw`
 - [Account deletion page](site/delete-account/index.html)
 - `site/.well-known/assetlinks.json.template` is a template only; publish the real `assetlinks.json` after Google Play supplies the App Signing SHA-256.
 
-The manual `Android Release Bundle` GitHub Actions workflow builds a signed AAB only when the upload-keystore secrets are configured. Signing secrets are never committed, and CI keeps signing passwords in the build environment rather than writing them to a plaintext `key.properties` file.
+- [October 2026 audit: what changed and the owner's manual console steps](docs/AUDIT_2026-10.md)
+- [Delivery, donation and need state machines](docs/state-machines.md)
+- [Time, skills and community resources model](docs/TIME_AND_SKILLS.md)
+- [Why four names appear in this repository](docs/NAMING.md)
+
+The manual `Android Release Bundle` workflow builds a signed, obfuscated AAB. It runs only from `main` or a `v*` tag, inside the GitHub Environment `release` (required reviewers), and stops early unless the signing secrets and the `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `AUTH_REDIRECT_URL` variables are set. Signing secrets are never committed, and CI keeps signing passwords in the build environment rather than writing them to a plaintext `key.properties` file. There is no record of a signed production bundle yet.
 
 ## Repository structure
 
@@ -120,6 +129,10 @@ supabase/
   functions/         Edge Functions
   seed.sql           development seed data
 site/                ruhamaa.com static site
+tests/
+  e2e/               isolated local-stack API, security and UI tests
+  site/              static and browser checks for the site
+tools/branding/      display-identity guard and migration tool
 docs/                architecture and release documentation
 ```
 
