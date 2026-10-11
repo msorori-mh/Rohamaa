@@ -63,16 +63,14 @@ Rules that hold at each step:
 - **Completion updates the item chain.** Pickup sets the donation to `picked_up`; delivery sets the donation to `delivered` and the need to `fulfilled`.
 - Every transition writes a `delivery_events` row and an `audit_logs` row; `dispatch_attempt` increases on each reassignment.
 
-Exception/recovery states:
+Exception/recovery states (as refined by `20261011090000_audit_hardening.sql` and `20261011120000_review_fixes.sql`):
 
-- `rescheduled` — the courier declined the offer, or reported a failure with `courier_report_delivery_failure` (party and reason code, optional note and coordinates). The courier can take no further action; an admin must call `admin_reassign_delivery`, which is allowed from `assigned`, `failed` or `rescheduled` and starts a new 30-minute offer.
+- `rescheduled` — reached when the courier declines the offer, reports a failure with `courier_report_delivery_failure` (allowed only in `heading_to_pickup`, `picked_up`, `heading_to_recipient`; after pickup the party cannot be the donor), or an admin pauses an accepted delivery with `admin_pause_delivery`. PIN material is cleared. The courier can take no action until an admin reassigns.
+- `admin_reassign_delivery` is allowed from `assigned` and `rescheduled`, starts a new 30-minute offer and, on acceptance, resumes at the right phase: `heading_to_pickup` if the item was never collected, `picked_up` if it was. Once an item has been collected it cannot be reassigned to a different courier; the admin cancels instead so the item returns through intake.
+- `failed` — terminal. Written only by `admin_cancel_delivery(delivery, reason)`: the match is cancelled, the need returns to `waiting`, and the donation returns to `available` (never collected) or `under_review` (already collected). `delivered` deliveries cannot be cancelled.
+- PIN hashes are salted with the delivery id. A missing or expired PIN returns `false` without raising a risk flag; only a wrong guess against a live PIN raises `INVALID_DELIVERY_PIN`.
+- Cash pledges (`cash_to_courier` contributions by the two parties) are shown to the assigned courier during the active legs and for 24 hours after delivery; the courier's received / not-received answer is write-once and an admin cannot verify a pledge the courier marked as not received.
 - Repeated no-show style failures by the same donor or beneficiary within 60 days raise a `REPEATED_DELIVERY_NO_SHOW` risk flag for human review; they do not change eligibility automatically.
-
-Reserved, never set:
-
-- `failed` — reports and the admin queue read it, and reassignment accepts it, but every failure path currently writes `rescheduled`.
-
-The October 2026 audit-fix backend migrations refine failure handling (reassignment resuming at the correct phase, and courier confirmation of cash pledges). When they are merged, re-check this section against them.
 
 ## Operational contribution (`contribution_status`)
 
