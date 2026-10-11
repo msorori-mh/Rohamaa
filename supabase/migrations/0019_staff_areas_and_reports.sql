@@ -47,7 +47,8 @@ create policy service_areas_authenticated_select on public.service_areas for sel
 create policy staff_assignments_self_or_admin_select on public.staff_area_assignments for select to authenticated using((select auth.uid())=user_id or public.is_admin());
 
 create or replace function public.is_supervisor() returns boolean language sql stable security definer set search_path=public as $$
-  select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='supervisor' and not p.is_suspended)
+  -- Compare as text while the enum value is new in this migration transaction.
+  select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role::text='supervisor' and not p.is_suspended)
 $$;
 create or replace function public.area_is_within(p_child uuid,p_parent uuid) returns boolean language sql stable security definer set search_path=public as $$
   with recursive chain as (select id,parent_id from public.service_areas where id=p_child union all select a.id,a.parent_id from public.service_areas a join chain c on c.parent_id=a.id)

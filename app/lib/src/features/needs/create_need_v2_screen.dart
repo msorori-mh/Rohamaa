@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../catalog/item_category_catalog.dart';
+import '../../core/app_error.dart';
 import '../../data/item_repository_v2.dart';
+import '../../domain/item_form_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
 import '../contributions/contribution_screen.dart';
+import '../items/form_guards.dart';
 import '../items/item_form_components.dart';
 
 class CreateNeedV2Screen extends StatefulWidget {
@@ -21,13 +25,27 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
   final _privateDetails = TextEditingController();
   final Map<String, String> _attributes = {};
 
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first need instead of adding one.
+  final String _operationId = const Uuid().v4();
+
   String _category = 'clothes';
   String? _group;
   String? _itemTypeKey;
   bool _acceptsUsed = true;
   bool _sizeFlexible = false;
   bool _saving = false;
+  bool _touched = false;
+  bool _selectionMissing = false;
   int _step = 0;
+
+  /// Title that was filled from the selected item, if any. A title that
+  /// differs from it was typed by the person and is never overwritten.
+  String? _autoTitle;
+
+  /// Set once the need exists on the server, so that pressing send again can
+  /// never create a second need.
+  CreatedOperation? _created;
 
   @override
   void dispose() {
@@ -40,46 +58,60 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
     final repo = ItemRepositoryV2(Supabase.instance.client);
     if (await repo.hasOperationalProfile()) return true;
     if (!mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')),
-    );
+    showInfoSnack(context, 'أكمل رقم الهاتف وعنوان التوصيل أولًا.');
     await context.push('/onboarding');
     return repo.hasOperationalProfile();
   }
 
+  void _clearAutoTitle() {
+    if (!isCustomItemTitle(title: _title.text, autoTitle: _autoTitle)) {
+      _title.clear();
+    }
+    _autoTitle = null;
+  }
+
   void _changeCategory(String value) {
+    if (value == _category) return;
     setState(() {
+      _touched = true;
       _category = value;
       _group = null;
       _itemTypeKey = null;
       _attributes.clear();
-      _title.clear();
+      _clearAutoTitle();
       _sizeFlexible = false;
     });
   }
 
   void _changeGroup(String value) {
+    if (value == _group) return;
     setState(() {
+      _touched = true;
       _group = value;
       _itemTypeKey = null;
-      _title.clear();
+      _clearAutoTitle();
     });
   }
 
   void _changeItem(String value) {
     final category = itemCategoryByKey(_category);
-    final item = itemTypeByKey(category, value);
+    final label = itemTypeByKey(category, value)?.label ?? '';
     setState(() {
+      _touched = true;
+      _selectionMissing = false;
       _itemTypeKey = value;
-      _title.text = item?.label ?? '';
+      _title.text = titleAfterItemChange(
+        currentTitle: _title.text,
+        previousAutoTitle: _autoTitle,
+        newItemLabel: label,
+      );
+      _autoTitle = label;
     });
   }
 
   void _nextFromCategory() {
     if (_group == null || _itemTypeKey == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('اختر القسم ثم نوع الشيء بالتحديد.')),
-      );
+      setState(() => _selectionMissing = true);
       return;
     }
     setState(() => _step = 1);
@@ -87,45 +119,74 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
 
   void _nextFromDetails() {
     if (!_formKey.currentState!.validate()) return;
+    // A field scrolled far out of view is not built, so the form cannot show
+    // its message: check the values themselves as well.
+    final problem = validateItemTitle(_title.text, emptyMessage: 'اكتب احتياجًا واضحًا') ??
+        validateRequiredText(
+          _privateDetails.text,
+          min: 8,
+          emptyMessage: 'أضف تفاصيل مختصرة تساعدنا في البحث',
+        );
+    if (problem != null) {
+      showInfoSnack(context, problem);
+      return;
+    }
+    FocusScope.of(context).unfocus();
     setState(() => _step = 2);
   }
 
-  void _back() {
-    if (_step == 0) {
-      Navigator.of(context).pop();
-    } else {
+  /// System back and the on-screen back buttons: go to the previous step, or
+  /// leave the form after confirming when data was entered.
+  Future<void> _handleBack() async {
+    if (_saving) return;
+    if (_step > 0) {
       setState(() => _step -= 1);
+      return;
     }
+    if (_touched) {
+      final discard = await confirmDiscardChanges(context);
+      if (!mounted) return;
+      if (!discard) return;
+    }
+    leaveForm(context);
   }
 
   Future<void> _submit() async {
-    if (_group == null || _itemTypeKey == null) return;
+    if (_saving || _group == null || _itemTypeKey == null) return;
     setState(() => _saving = true);
     try {
-      if (!await _ensureProfile()) return;
-      if (_category == 'clothes') {
-        _attributes['size_flexible'] = _sizeFlexible ? 'true' : 'false';
+      var created = _created;
+      if (created == null) {
+        if (!await _ensureProfile()) return;
+        if (_category == 'clothes') {
+          _attributes['size_flexible'] = _sizeFlexible ? 'true' : 'false';
+        }
+        final repo = ItemRepositoryV2(Supabase.instance.client);
+        created = await repo.createNeed(
+          id: _operationId,
+          category: _category,
+          categoryGroup: _group!,
+          itemTypeKey: _itemTypeKey!,
+          title: _title.text.trim(),
+          attributes: _attributes,
+          privateDetails: _privateDetails.text.trim(),
+          acceptsUsed: _acceptsUsed,
+          addressId: await repo.defaultAddressId(),
+        );
+        _created = created;
       }
-      final repo = ItemRepositoryV2(Supabase.instance.client);
-      final needId = await repo.createNeed(
-        category: _category,
-        categoryGroup: _group!,
-        itemTypeKey: _itemTypeKey!,
-        title: _title.text.trim(),
-        attributes: _attributes,
-        privateDetails: _privateDetails.text.trim(),
-        acceptsUsed: _acceptsUsed,
-        addressId: await repo.defaultAddressId(),
-      );
+      final need = created;
+      const intro =
+          'سنراجع طلبك ونبحث عن شيء مناسب. المساهمة في التوصيل اختيارية ولا تؤثر في قبول طلبك أو أولويته.';
+      final message = need.publicCode.isEmpty ? intro : 'رقم الطلب: ${need.publicCode}\n\n$intro';
 
       if (!mounted) return;
       final contribute = await showDialog<bool>(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل احتياجك'),
-          content: const Text(
-            'طلبك مستمر سواء ساهمت أم لا. عدم القدرة على المساهمة لا يقلل أولوية الاستحقاق. إن رغبت، يمكنك المساهمة بجزء من تكلفة التوصيل نقدًا للموصل عند التسليم؛ لا يوجد دفع داخل التطبيق.',
-          ),
+          title: const Text('تم تسجيل طلبك'),
+          content: Text(message),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('بدون مساهمة')),
             FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أرغب بالمساهمة')),
@@ -136,13 +197,17 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
       if (contribute == true) {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ContributionScreen(needId: needId)),
+          MaterialPageRoute<void>(builder: (_) => ContributionScreen(needId: need.id)),
         );
       }
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
+      if (mounted) leaveForm(context);
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الاحتياج: $e')));
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'تعذر إرسال الطلب. تحقق من اتصالك وحاول مرة أخرى.',
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -151,24 +216,33 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('أحتاج شيئًا')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            _Progress(current: _step + 1),
-            const SizedBox(height: 18),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: switch (_step) {
-                0 => _categoryStep(),
-                1 => _detailsStep(),
-                _ => _reviewStep(),
-              },
-            ),
-          ],
+    return PopScope<Object?>(
+      canPop: _step == 0 && !_touched && !_saving,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('اطلب ما تحتاجه')),
+        body: Form(
+          key: _formKey,
+          onChanged: () {
+            if (!_touched) setState(() => _touched = true);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            children: [
+              _Progress(current: _step + 1),
+              const SizedBox(height: 18),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: switch (_step) {
+                  0 => _categoryStep(),
+                  1 => _detailsStep(),
+                  _ => _reviewStep(),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -183,7 +257,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.warmGoldSoft,
           iconColor: RuhamaaColors.warmGold,
-          text: 'اختر ما تحتاجه بدقة. أنت لا تتصفح تبرعات الناس؛ عطاء يستخدم هذه التفاصيل للبحث عن الشيء الأنسب لك بخصوصية.',
+          text: 'اختر ما تحتاجه بدقة لنبحث لك عن الشيء الأنسب بخصوصية.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -194,10 +268,17 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           onGroupChanged: _changeGroup,
           onItemTypeChanged: _changeItem,
         ),
+        if (_selectionMissing) ...[
+          const SizedBox(height: 12),
+          Text(
+            'اختر القسم ثم نوع الشيء بالتحديد.',
+            style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w700),
+          ),
+        ],
         const SizedBox(height: 26),
         FilledButton.icon(
           onPressed: _nextFromCategory,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_right_rounded),
           label: const Text('التالي: التفاصيل'),
         ),
       ],
@@ -217,11 +298,13 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
         const SizedBox(height: 14),
         TextFormField(
           controller: _title,
+          maxLength: ItemFormLimits.title,
           decoration: const InputDecoration(
-            labelText: 'اسم مختصر للاحتياج',
+            labelText: 'اسم مختصر للطلب',
             hintText: 'يمكنك جعله أدق من النوع المختار',
+            counterText: '',
           ),
-          validator: (value) => value == null || value.trim().length < 3 ? 'اكتب احتياجًا واضحًا' : null,
+          validator: (value) => validateItemTitle(value, emptyMessage: 'اكتب احتياجًا واضحًا'),
         ),
         const SizedBox(height: 16),
         ItemAttributesEditor(
@@ -229,7 +312,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           values: _attributes,
           onChanged: (key, value) {
             _attributes[key] = value;
-            if (category.attributes.firstWhere((attribute) => attribute.key == key).isChoice) setState(() {});
+            if (category.attributes.any((attribute) => attribute.key == key && attribute.isChoice)) setState(() {});
           },
         ),
         if (_category == 'clothes') ...[
@@ -243,7 +326,10 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
               title: const Text('أقبل مقاسًا قريبًا', style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text('فعّلها فقط إذا كان الفرق البسيط في المقاس مناسبًا لك.'),
               value: _sizeFlexible,
-              onChanged: (value) => setState(() => _sizeFlexible = value),
+              onChanged: (value) => setState(() {
+                _touched = true;
+                _sizeFlexible = value;
+              }),
             ),
           ),
           const SizedBox(height: 14),
@@ -258,37 +344,45 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
             title: const Text('أقبل المستعمل بحالة جيدة', style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: const Text('يساعد ذلك على توسيع فرص العثور على شيء مناسب.'),
             value: _acceptsUsed,
-            onChanged: (value) => setState(() => _acceptsUsed = value),
+            onChanged: (value) => setState(() {
+              _touched = true;
+              _acceptsUsed = value;
+            }),
           ),
         ),
         const SizedBox(height: 14),
         TextFormField(
           controller: _privateDetails,
           maxLines: 4,
+          maxLength: ItemFormLimits.description,
           decoration: const InputDecoration(
-            labelText: 'تفاصيل خاصة تساعد عطاء',
+            labelText: 'تفاصيل تساعدنا',
             hintText: 'أي معلومات مهمة لفهم المطلوب أو شروط الملاءمة',
             helperText: 'هذه التفاصيل خاصة بفريق عطاء ولا تظهر للمتبرعين كما كتبتها.',
           ),
-          validator: (value) => value == null || value.trim().length < 8 ? 'أضف تفاصيل مختصرة تساعدنا في المطابقة' : null,
+          validator: (value) => validateRequiredText(
+            value,
+            min: 8,
+            emptyMessage: 'أضف تفاصيل مختصرة تساعدنا في البحث',
+          ),
         ),
         const SizedBox(height: 14),
         const _InfoBox(
           icon: Icons.lock_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'إذا قرر فريق عطاء عرض احتياجك لتحفيز العطاء، سيكتب بطاقة محايدة منفصلة لا تحتوي اسمك أو رقمك أو عنوانك أو قصتك الخاصة.',
+          text: 'قد نعرض بطاقة مختصرة عن الطلب دون اسمك أو رقمك أو عنوانك.',
         ),
         const SizedBox(height: 26),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: _back, child: const Text('السابق'))),
+            Expanded(child: OutlinedButton(onPressed: _handleBack, child: const Text('السابق'))),
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
               child: FilledButton.icon(
                 onPressed: _nextFromDetails,
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const Icon(Icons.chevron_right_rounded),
                 label: const Text('التالي: المراجعة'),
               ),
             ),
@@ -300,16 +394,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
 
   Widget _reviewStep() {
     final path = itemPathLabel(categoryKey: _category, groupKey: _group, itemTypeKey: _itemTypeKey);
-    final category = itemCategoryByKey(_category);
-    final attributeLabels = <String, String>{for (final attribute in category.attributes) attribute.key: attribute.label};
-    final attributeText = _attributes.entries
-        .where((entry) => entry.value.trim().isNotEmpty)
-        .map((entry) {
-          final spec = category.attributes.where((attribute) => attribute.key == entry.key).firstOrNull;
-          final value = spec?.choices[entry.value] ?? entry.value;
-          return '${attributeLabels[entry.key] ?? entry.key}: $value';
-        })
-        .join(' • ');
+    final attributeText = describeItemAttributes(_category, _attributes);
     return Column(
       key: const ValueKey('need-v2-review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,10 +405,10 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('راجع احتياجك قبل التسجيل', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                const Text('راجع طلبك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
                 const SizedBox(height: 14),
                 _ReviewRow('التصنيف', path),
-                _ReviewRow('الاحتياج', _title.text.trim()),
+                _ReviewRow('الطلب', _title.text.trim()),
                 if (attributeText.isNotEmpty) _ReviewRow('الخصائص', attributeText),
                 _ReviewRow('المستعمل', _acceptsUsed ? 'أقبل المستعمل بحالة جيدة' : 'أفضل غير المستعمل'),
                 if (_category == 'clothes') _ReviewRow('المقاس', _sizeFlexible ? 'أقبل مقاسًا قريبًا' : 'المقاس المذكور مهم'),
@@ -336,32 +421,25 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
           icon: Icons.balance_outlined,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'المطابقة تعتمد على الملاءمة والأولوية والعدالة. عدم المساهمة في التوصيل وعدم تقديمك لعطاء أو خدمة لا يخفضان أولوية احتياجك.',
+          text: 'نرتّب الطلبات حسب الحاجة والملاءمة. المساهمة في التوصيل أو التبرع ليست شرطًا ولا تغيّر الأولوية.',
         ),
         const SizedBox(height: 24),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: _saving ? null : _back, child: const Text('تعديل'))),
+            Expanded(child: OutlinedButton(onPressed: _saving ? null : _handleBack, child: const Text('تعديل'))),
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
               child: FilledButton.icon(
                 onPressed: _saving ? null : _submit,
                 icon: const Icon(Icons.favorite_outline_rounded),
-                label: Text(_saving ? 'جارٍ الحفظ...' : 'تسجيل الاحتياج'),
+                label: Text(_saving ? 'جارٍ الإرسال...' : 'إرسال الطلب'),
               ),
             ),
           ],
         ),
       ],
     );
-  }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull {
-    final iterator = this.iterator;
-    return iterator.moveNext() ? iterator.current : null;
   }
 }
 

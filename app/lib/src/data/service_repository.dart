@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../domain/item_form_rules.dart';
+
 class ServiceMatchOffer {
   const ServiceMatchOffer({
     required this.matchId,
@@ -68,7 +70,30 @@ class ServiceRepository {
     return rows.first['service_area_id'] as String?;
   }
 
+  /// After an insert that sent the client-generated [id] failed with a
+  /// unique violation, returns the id of the row an earlier attempt already
+  /// created (its response was lost). Null when the failure is something
+  /// else, e.g. a public-code collision.
+  Future<String?> _existingRowId(
+    String table,
+    String? id,
+    PostgrestException error,
+  ) async {
+    if (id == null || !isUniqueViolationCode(error.code)) return null;
+    final rows = await _client
+        .from(table)
+        .select('id')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .limit(1);
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    return list.isEmpty ? null : list.first['id'] as String;
+  }
+
+  /// [id] is a UUID generated once per form instance; sending it again
+  /// returns the offer the first attempt created instead of adding one.
   Future<String> createServiceOffer({
+    String? id,
     required String providerKind,
     required String category,
     required String serviceType,
@@ -80,7 +105,8 @@ class ServiceRepository {
     required String materialsMode,
     required String pricingMode,
   }) async {
-    final row = await _client.from('service_offers').insert({
+    final payload = <String, dynamic>{
+      if (id != null) 'id': id,
       'public_code': _publicCode('SVC'),
       'user_id': userId,
       'service_area_id': await defaultServiceAreaId(),
@@ -96,11 +122,24 @@ class ServiceRepository {
       'pricing_mode': pricingMode,
       'verification_status': 'pending',
       'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    };
+    try {
+      final row = await _client
+          .from('service_offers')
+          .insert(payload)
+          .select('id')
+          .single();
+      return row['id'] as String;
+    } on PostgrestException catch (error) {
+      final existing = await _existingRowId('service_offers', id, error);
+      if (existing == null) rethrow;
+      return existing;
+    }
   }
 
+  /// [id] works as in [createServiceOffer].
   Future<String> createServiceRequest({
+    String? id,
     required String category,
     required String serviceType,
     required String title,
@@ -109,7 +148,8 @@ class ServiceRepository {
     required String preferredTimeNote,
     required bool materialsAvailable,
   }) async {
-    final row = await _client.from('service_requests').insert({
+    final payload = <String, dynamic>{
+      if (id != null) 'id': id,
       'public_code': _publicCode('SRQ'),
       'user_id': userId,
       'service_area_id': await defaultServiceAreaId(),
@@ -121,8 +161,19 @@ class ServiceRepository {
       'preferred_time_note': preferredTimeNote.trim().isEmpty ? null : preferredTimeNote.trim(),
       'materials_available': materialsAvailable,
       'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    };
+    try {
+      final row = await _client
+          .from('service_requests')
+          .insert(payload)
+          .select('id')
+          .single();
+      return row['id'] as String;
+    } on PostgrestException catch (error) {
+      final existing = await _existingRowId('service_requests', id, error);
+      if (existing == null) rethrow;
+      return existing;
+    }
   }
 
   Future<List<Map<String, dynamic>>> myServiceOffers() async {
@@ -141,6 +192,20 @@ class ServiceRepository {
         .eq('user_id', userId)
         .order('created_at', ascending: false);
     return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  /// Withdraws the person's own offer while it is not tied to a match.
+  Future<void> withdrawServiceOffer(String offerId) async {
+    await _client.rpc('user_withdraw_service_offer', params: {
+      'p_offer_id': offerId,
+    });
+  }
+
+  /// Cancels the person's own request while it is not tied to a match.
+  Future<void> cancelServiceRequest(String requestId) async {
+    await _client.rpc('user_cancel_service_request', params: {
+      'p_request_id': requestId,
+    });
   }
 
   Future<List<ServiceMatchOffer>> pendingServiceMatches() async {

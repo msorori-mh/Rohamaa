@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/service_incident_repository.dart';
 import '../../data/service_repository.dart';
+import '../../domain/service_flow_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../items/async_list_loader.dart';
+import '../items/form_guards.dart';
 import 'service_catalog.dart';
 
 class MyServicesScreen extends StatelessWidget {
@@ -20,7 +24,7 @@ class MyServicesScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'ما أقدّمه', icon: Icon(Icons.handyman_outlined)),
               Tab(text: 'ما أحتاجه', icon: Icon(Icons.support_agent_outlined)),
-              Tab(text: 'العمليات', icon: Icon(Icons.history_rounded)),
+              Tab(text: 'المتابعة', icon: Icon(Icons.history_rounded)),
             ],
           ),
         ),
@@ -43,65 +47,89 @@ class _MyOffersList extends StatefulWidget {
   State<_MyOffersList> createState() => _MyOffersListState();
 }
 
-class _MyOffersListState extends State<_MyOffersList> {
-  late Future<List<Map<String, dynamic>>> _future;
+class _MyOffersListState extends State<_MyOffersList>
+    with
+        AutomaticKeepAliveClientMixin<_MyOffersList>,
+        AsyncListLoader<_MyOffersList, Map<String, dynamic>> {
+  final Set<String> _busy = <String>{};
+
+  ServiceRepository get _repo => ServiceRepository(Supabase.instance.client);
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRows() => _repo.myServiceOffers();
 
   @override
   void initState() {
     super.initState();
-    _reload();
+    reloadRows();
   }
 
-  void _reload() {
-    _future = ServiceRepository(Supabase.instance.client).myServiceOffers();
+  Future<void> _withdraw(Map<String, dynamic> row) async {
+    final id = '${row['id']}';
+    if (_busy.contains(id)) return;
+    final confirmed = await confirmAction(
+      context,
+      title: 'سحب هذه الخدمة؟',
+      message: 'لن نعرض خدمتك «${row['title']}» على أي طلب بعد سحبها. يمكنك تسجيل خدمة جديدة في أي وقت.',
+      confirmLabel: 'نعم، اسحبها',
+    );
+    if (!confirmed || !mounted) return;
+    setState(() => _busy.add(id));
+    try {
+      await _repo.withdrawServiceOffer(id);
+      if (mounted) showInfoSnack(context, 'تم سحب الخدمة.');
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(context, error, fallback: 'لم نتمكن من سحب الخدمة. حاول مرة أخرى.');
+      }
+    }
+    await reloadRows();
+    if (mounted) setState(() => _busy.remove(id));
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل ما تقدمه: ${snapshot.error}'));
-        final rows = snapshot.data ?? const [];
-        if (rows.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.handyman_outlined,
-            title: 'لم تسجل وقتًا أو مهارة بعد',
-            subtitle: 'يمكنك تقديم ساعات من وقتك أو خدمة مجانية عندما تكون قادرًا على ذلك.',
+    super.build(context);
+    return buildAsyncList(
+      empty: const _EmptyState(
+        icon: Icons.handyman_outlined,
+        title: 'لم تسجّل خدمة بعد',
+        subtitle: 'يمكنك التبرع بوقتك أو تقديم خدمة مجانًا.',
+      ),
+      builder: (rows) => ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final id = '${row['id']}';
+          final status = row['status'] as String?;
+          final category = serviceCategoryByKey('${row['category']}');
+          final label = ServiceFlowRules.offerStatusLabel(
+            status,
+            row['verification_status'] as String?,
           );
-        }
-        return RefreshIndicator(
-          onRefresh: () async => setState(_reload),
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final row = rows[index];
-              final category = serviceCategoryByKey('${row['category']}');
-              final status = _offerStatus('${row['status']}', '${row['verification_status']}');
-              final hours = row['available_hours'];
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  leading: CircleAvatar(
-                    backgroundColor: RuhamaaColors.softGreen,
-                    foregroundColor: RuhamaaColors.primary,
-                    child: Icon(category.icon),
-                  ),
-                  title: Text('${row['title']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Text('${category.label} • ${row['service_type']}\n$hours ساعة • $status'),
-                  ),
-                  isThreeLine: true,
-                ),
-              );
-            },
-          ),
-        );
-      },
+          final busy = _busy.contains(id);
+          return _ServiceRowCard(
+            icon: category.icon,
+            background: RuhamaaColors.softGreen,
+            foreground: RuhamaaColors.primary,
+            title: '${row['title']}',
+            lines: [
+              '${category.label} • ${row['service_type']}',
+              '${_hoursText(row['available_hours'])} • $label',
+            ],
+            actionLabel: ServiceFlowRules.canWithdrawOffer(status)
+                ? (busy ? 'جارٍ السحب...' : 'سحب الخدمة')
+                : null,
+            onAction: busy ? null : () => _withdraw(row),
+          );
+        },
+      ),
     );
   }
 }
@@ -113,63 +141,160 @@ class _MyRequestsList extends StatefulWidget {
   State<_MyRequestsList> createState() => _MyRequestsListState();
 }
 
-class _MyRequestsListState extends State<_MyRequestsList> {
-  late Future<List<Map<String, dynamic>>> _future;
+class _MyRequestsListState extends State<_MyRequestsList>
+    with
+        AutomaticKeepAliveClientMixin<_MyRequestsList>,
+        AsyncListLoader<_MyRequestsList, Map<String, dynamic>> {
+  final Set<String> _busy = <String>{};
+
+  ServiceRepository get _repo => ServiceRepository(Supabase.instance.client);
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRows() => _repo.myServiceRequests();
 
   @override
   void initState() {
     super.initState();
-    _reload();
+    reloadRows();
   }
 
-  void _reload() {
-    _future = ServiceRepository(Supabase.instance.client).myServiceRequests();
+  Future<void> _cancel(Map<String, dynamic> row) async {
+    final id = '${row['id']}';
+    if (_busy.contains(id)) return;
+    final confirmed = await confirmAction(
+      context,
+      title: 'إلغاء طلب الخدمة؟',
+      message: 'سنوقف البحث عن خدمة لطلبك «${row['title']}». يمكنك تسجيل طلب جديد في أي وقت.',
+      confirmLabel: 'نعم، ألغِ الطلب',
+    );
+    if (!confirmed || !mounted) return;
+    setState(() => _busy.add(id));
+    try {
+      await _repo.cancelServiceRequest(id);
+      if (mounted) showInfoSnack(context, 'تم إلغاء طلب الخدمة.');
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(context, error, fallback: 'لم نتمكن من إلغاء الطلب. حاول مرة أخرى.');
+      }
+    }
+    await reloadRows();
+    if (mounted) setState(() => _busy.remove(id));
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل احتياجات الخدمة: ${snapshot.error}'));
-        final rows = snapshot.data ?? const [];
-        if (rows.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.support_agent_outlined,
-            title: 'لا يوجد طلب خدمة مسجل',
-            subtitle: 'إذا احتجت سباكة أو كهرباء أو صيانة أو أي مهارة أخرى، سجّلها من الرئيسية.',
+    super.build(context);
+    return buildAsyncList(
+      empty: const _EmptyState(
+        icon: Icons.support_agent_outlined,
+        title: 'لا يوجد طلب خدمة',
+        subtitle: 'اطلب الخدمة التي تحتاجها من الصفحة الرئيسية.',
+      ),
+      builder: (rows) => ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final id = '${row['id']}';
+          final status = row['status'] as String?;
+          final category = serviceCategoryByKey('${row['category']}');
+          final busy = _busy.contains(id);
+          return _ServiceRowCard(
+            icon: category.icon,
+            background: RuhamaaColors.warmGoldSoft,
+            foreground: RuhamaaColors.warmGold,
+            title: '${row['title']}',
+            lines: [
+              '${category.label} • ${row['service_type']}',
+              ServiceFlowRules.requestStatusLabel(status),
+            ],
+            actionLabel: ServiceFlowRules.canCancelRequest(status)
+                ? (busy ? 'جارٍ الإلغاء...' : 'إلغاء الطلب')
+                : null,
+            onAction: busy ? null : () => _cancel(row),
           );
-        }
-        return RefreshIndicator(
-          onRefresh: () async => setState(_reload),
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final row = rows[index];
-              final category = serviceCategoryByKey('${row['category']}');
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  leading: CircleAvatar(
-                    backgroundColor: RuhamaaColors.warmGoldSoft,
-                    foregroundColor: RuhamaaColors.warmGold,
-                    child: Icon(category.icon),
-                  ),
-                  title: Text('${row['title']}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Text('${category.label} • ${row['service_type']}\n${_requestStatus('${row['status']}')}'),
-                  ),
-                  isThreeLine: true,
+        },
+      ),
+    );
+  }
+}
+
+String _hoursText(Object? hours) {
+  final value = hours is num ? hours : num.tryParse('$hours');
+  if (value == null) return 'ساعات غير محددة';
+  final text = value % 1 == 0 ? value.toInt().toString() : value.toString();
+  return '$text ساعة';
+}
+
+class _ServiceRowCard extends StatelessWidget {
+  const _ServiceRowCard({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+    required this.title,
+    required this.lines,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+  final String title;
+  final List<String> lines;
+
+  /// Null hides the action: the row is no longer eligible for it.
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = actionLabel;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 13, 16, 11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  backgroundColor: background,
+                  foregroundColor: foreground,
+                  child: Icon(icon),
                 ),
-              );
-            },
-          ),
-        );
-      },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 5),
+                      for (final line in lines)
+                        Text(line, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (label != null)
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.undo_rounded, size: 18),
+                  label: Text(label),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -181,10 +306,150 @@ class _ServiceHistoryList extends StatefulWidget {
   State<_ServiceHistoryList> createState() => _ServiceHistoryListState();
 }
 
-class _ServiceHistoryListState extends State<_ServiceHistoryList> {
-  late Future<List<Map<String, dynamic>>> _future;
+class _ServiceHistoryListState extends State<_ServiceHistoryList>
+    with
+        AutomaticKeepAliveClientMixin<_ServiceHistoryList>,
+        AsyncListLoader<_ServiceHistoryList, Map<String, dynamic>> {
+  final Set<String> _reporting = <String>{};
+
   ServiceIncidentRepository get _repo => ServiceIncidentRepository(Supabase.instance.client);
 
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRows() => _repo.serviceHistory();
+
+  @override
+  void initState() {
+    super.initState();
+    reloadRows();
+  }
+
+  Future<void> _report(Map<String, dynamic> row) async {
+    final matchId = '${row['match_id']}';
+    if (_reporting.contains(matchId)) return;
+    final draft = await showDialog<_IncidentDraft>(
+      context: context,
+      builder: (_) => const _IncidentDialog(),
+    );
+    if (draft == null || !mounted) return;
+    setState(() => _reporting.add(matchId));
+    try {
+      await _repo.report(
+        serviceMatchId: matchId,
+        incidentType: draft.type,
+        description: draft.details,
+      );
+      if (mounted) showInfoSnack(context, 'تم إرسال البلاغ لفريق عطاء للمراجعة.');
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(context, error, fallback: 'لم نتمكن من إرسال البلاغ. حاول مرة أخرى.');
+      }
+    } finally {
+      if (mounted) setState(() => _reporting.remove(matchId));
+    }
+  }
+
+  String _dateText(DateTime value) {
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${value.year}-${two(value.month)}-${two(value.day)} ${two(value.hour)}:${two(value.minute)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return buildAsyncList(
+      empty: const _EmptyState(
+        icon: Icons.history_rounded,
+        title: 'لا توجد خدمات قيد المتابعة',
+        subtitle: 'بعد موافقة الطرفين ستظهر تفاصيل الخدمة هنا.',
+      ),
+      builder: (rows) => ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final matchId = '${row['match_id']}';
+          final status = row['status'] as String?;
+          final category = serviceCategoryByKey('${row['category']}');
+          final scheduledRaw = row['scheduled_at'];
+          final scheduled = scheduledRaw == null ? null : DateTime.tryParse('$scheduledRaw')?.toLocal();
+          final reporting = _reporting.contains(matchId);
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: RuhamaaColors.softGreen,
+                        foregroundColor: RuhamaaColors.primary,
+                        child: Icon(category.icon),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${row['service_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                            Text('${category.label} • ${row['service_type']}', style: const TextStyle(color: RuhamaaColors.textMuted)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 9),
+                  Text(
+                    ServiceFlowRules.matchStatusLabel(status),
+                    style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w700),
+                  ),
+                  if (scheduled != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      'الموعد: ${_dateText(scheduled)}',
+                      style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
+                    ),
+                  ],
+                  if (status != 'cancelled') ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: reporting ? null : () => _report(row),
+                      icon: const Icon(Icons.report_outlined),
+                      label: Text(reporting ? 'جارٍ الإرسال...' : 'إبلاغ عطاء عن مشكلة'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _IncidentDraft {
+  const _IncidentDraft({required this.type, required this.details});
+
+  final String type;
+  final String details;
+}
+
+/// Owns its text controller so it is disposed with the dialog route, not
+/// while the dialog is still animating out.
+class _IncidentDialog extends StatefulWidget {
+  const _IncidentDialog();
+
+  @override
+  State<_IncidentDialog> createState() => _IncidentDialogState();
+}
+
+class _IncidentDialogState extends State<_IncidentDialog> {
   static const incidentTypes = <String, String>{
     'unexpected_charge': 'طلب مبلغ غير متفق عليه',
     'privacy': 'مشكلة خصوصية',
@@ -195,209 +460,68 @@ class _ServiceHistoryListState extends State<_ServiceHistoryList> {
     'other': 'أخرى',
   };
 
+  final _formKey = GlobalKey<FormState>();
+  final _details = TextEditingController();
+  String _type = 'unexpected_charge';
+
   @override
-  void initState() {
-    super.initState();
-    _reload();
+  void dispose() {
+    _details.dispose();
+    super.dispose();
   }
 
-  void _reload() => _future = _repo.serviceHistory();
-
-  String _status(String value) {
-    switch (value) {
-      case 'accepted':
-        return 'وافق الطرفان ويجري التنسيق';
-      case 'scheduled':
-        return 'تم ترتيب الموعد';
-      case 'completed':
-        return 'اكتملت الخدمة';
-      case 'cancelled':
-        return 'أُلغيت العملية';
-      default:
-        return value;
-    }
-  }
-
-  Future<void> _report(Map<String, dynamic> row) async {
-    var type = 'unexpected_charge';
-    final details = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('إبلاغ عطاء عن مشكلة'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'البلاغ خاص بفريق عطاء ولا ينشر كتقييم أو تعليق عام. استخدمه إذا حدثت مشكلة أثناء الخدمة أو بعدها.',
-                  style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: type,
-                  decoration: const InputDecoration(labelText: 'نوع المشكلة'),
-                  items: incidentTypes.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
-                  onChanged: (value) => setDialogState(() => type = value ?? 'other'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: details,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'اشرح ما حدث',
-                    hintText: 'اذكر الوقائع التي تساعد فريق عطاء على المراجعة.',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('إرسال البلاغ')),
-          ],
-        ),
-      ),
-    );
-    if (ok != true) {
-      details.dispose();
-      return;
-    }
-    if (details.text.trim().length < 8) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف وصفًا مختصرًا لما حدث.')));
-      details.dispose();
-      return;
-    }
-    try {
-      await _repo.report(
-        serviceMatchId: '${row['match_id']}',
-        incidentType: type,
-        description: details.text,
-      );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال البلاغ لفريق عطاء للمراجعة.')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال البلاغ: $e')));
-    } finally {
-      details.dispose();
-    }
+  void _send() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(context, _IncidentDraft(type: _type, details: _details.text.trim()));
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('تعذر تحميل عمليات الخدمات: ${snapshot.error}'));
-        final rows = snapshot.data ?? const [];
-        if (rows.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.history_rounded,
-            title: 'لا توجد عمليات خدمة بعد',
-            subtitle: 'بعد موافقة الطرفين على مطابقة خدمة ستظهر هنا للمتابعة والرجوع إليها.',
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: () async => setState(_reload),
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final row = rows[index];
-              final category = serviceCategoryByKey('${row['category']}');
-              final scheduledRaw = row['scheduled_at'];
-              final scheduled = scheduledRaw == null ? null : DateTime.tryParse('$scheduledRaw')?.toLocal();
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(15),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: RuhamaaColors.softGreen,
-                            foregroundColor: RuhamaaColors.primary,
-                            child: Icon(category.icon),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${row['service_title']}', style: const TextStyle(fontWeight: FontWeight.w900)),
-                                Text('${category.label} • ${row['service_type']}', style: const TextStyle(color: RuhamaaColors.textMuted)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 9),
-                      Text(_status('${row['status']}'), style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w700)),
-                      if (scheduled != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          'الموعد: ${scheduled.year}-${scheduled.month.toString().padLeft(2, '0')}-${scheduled.day.toString().padLeft(2, '0')} ${scheduled.hour.toString().padLeft(2, '0')}:${scheduled.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
-                        ),
-                      ],
-                      if ('${row['status']}' != 'cancelled') ...[
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => _report(row),
-                          icon: const Icon(Icons.report_outlined),
-                          label: const Text('إبلاغ عطاء عن مشكلة'),
-                        ),
-                      ],
-                    ],
-                  ),
+    return AlertDialog(
+      title: const Text('إبلاغ عطاء عن مشكلة'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'البلاغ خاص بفريق عطاء ولا ينشر كتقييم أو تعليق عام. استخدمه إذا حدثت مشكلة أثناء الخدمة أو بعدها.',
+                style: TextStyle(color: RuhamaaColors.textMuted, height: 1.45),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _type,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'نوع المشكلة'),
+                items: incidentTypes.entries
+                    .map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value)))
+                    .toList(),
+                onChanged: (value) => setState(() => _type = value ?? 'other'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _details,
+                maxLines: 4,
+                maxLength: ServiceFlowRules.detailsMax,
+                decoration: const InputDecoration(
+                  labelText: 'اشرح ما حدث',
+                  hintText: 'اذكر الوقائع التي تساعد فريق عطاء على المراجعة.',
                 ),
-              );
-            },
+                validator: (value) => ServiceFlowRules.validateDetails(
+                  value,
+                  emptyMessage: 'أضف وصفًا مختصرًا لما حدث.',
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+        FilledButton(onPressed: _send, child: const Text('إرسال البلاغ')),
+      ],
     );
-  }
-}
-
-String _offerStatus(String status, String verification) {
-  if (verification == 'pending') return 'قيد مراجعة عطاء';
-  if (verification == 'rejected') return 'يحتاج مراجعة أو تعديل';
-  switch (status) {
-    case 'approved':
-      return 'متاح للمطابقة';
-    case 'matched':
-      return 'تم العثور على احتياج مناسب';
-    case 'completed':
-      return 'اكتملت الخدمة';
-    case 'paused':
-      return 'متوقف مؤقتًا';
-    case 'cancelled':
-      return 'ملغي';
-    default:
-      return 'قيد المراجعة';
-  }
-}
-
-String _requestStatus(String status) {
-  switch (status) {
-    case 'reviewing':
-      return 'يراجع عطاء الاحتياج';
-    case 'matched':
-      return 'تم العثور على مهارة مناسبة';
-    case 'scheduled':
-      return 'تم ترتيب الموعد';
-    case 'completed':
-      return 'اكتملت الخدمة';
-    case 'rejected':
-      return 'يحتاج الطلب إلى مراجعة';
-    case 'cancelled':
-      return 'ملغي';
-    default:
-      return 'تم التسجيل ويجري البحث';
   }
 }
 
@@ -410,35 +534,33 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 92,
-              height: 92,
-              decoration: const BoxDecoration(color: RuhamaaColors.softGreen, shape: BoxShape.circle),
-              child: Icon(icon, size: 45, color: RuhamaaColors.primary),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: RuhamaaColors.primaryDark,
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 92,
+            height: 92,
+            decoration: const BoxDecoration(color: RuhamaaColors.softGreen, shape: BoxShape.circle),
+            child: Icon(icon, size: 45, color: RuhamaaColors.primary),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: RuhamaaColors.primaryDark,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+          ),
+        ],
       ),
     );
   }

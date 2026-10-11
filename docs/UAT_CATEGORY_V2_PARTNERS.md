@@ -36,7 +36,7 @@ adb shell pm list packages -3 | Select-String "com.ruhamaa.app"
 
 ```powershell
 adb shell pm get-app-links com.ruhamaa.app
-adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
+adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback/"
 ```
 
 **النتيجة المطلوبة:** النطاق يظهر Verified ويفتح رابط HTTPS داخل عطاء. لا نحول OAuth الإنتاجي إلى HTTPS قبل نجاح هذا الاختبار.
@@ -207,4 +207,4 @@ adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/logi
 - اختبار `com.ruhamaa.app` + Google OAuth على جهاز فعلي للمستخدم والإدارة.
 - UAT الأساسي أعلاه على جهاز فعلي، مع تسجيل أي ملاحظة UI/RTL/overflow وإغلاق المشاكل الحرجة.
 
-ولا يتحول OAuth الإنتاجي إلى `https://ruhamaa.com/login-callback` حتى تُنشر بصمة Play App Signing في `assetlinks.json` وينجح تحقق Android App Links على جهاز فعلي.
+ولا يتحول OAuth الإنتاجي إلى `https://ruhamaa.com/login-callback/` حتى تُنشر بصمة Play App Signing في `assetlinks.json` وينجح تحقق Android App Links على جهاز فعلي.

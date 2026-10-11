@@ -10,7 +10,8 @@ class ServiceAdminRepository {
         .from('service_offers')
         .select('id,public_code,provider_kind,category,service_type,title,description,available_hours,availability_note,materials_mode,pricing_mode,status,verification_status,created_at')
         .inFilter('verification_status', ['pending', 'rejected'])
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(200);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
@@ -35,7 +36,8 @@ class ServiceAdminRepository {
         .from('service_requests')
         .select('id,public_code,category,service_type,title,details,estimated_hours,preferred_time_note,materials_available,status,created_at')
         .inFilter('status', ['submitted', 'reviewing'])
-        .order('created_at', ascending: true);
+        .order('created_at', ascending: true)
+        .limit(200);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
@@ -76,7 +78,8 @@ class ServiceAdminRepository {
           'service_requests!inner(id,title,details,service_type,category,preferred_time_note)',
         )
         .inFilter('status', ['accepted', 'scheduled'])
-        .order('updated_at', ascending: true);
+        .order('updated_at', ascending: true)
+        .limit(200);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 

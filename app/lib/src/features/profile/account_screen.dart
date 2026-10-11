@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
+import '../../data/handoff_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../auth/account_status_screens.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({
@@ -27,7 +30,7 @@ class _AccountScreenState extends State<AccountScreen> {
       builder: (context) => AlertDialog(
         title: const Text('تسجيل الخروج؟'),
         content: const Text(
-          'سيتم إنهاء جلسة عطاء على هذا الجهاز، ويمكنك بعد ذلك الدخول بحساب Google آخر.',
+          'سيتم تسجيل خروجك من هذا الجهاز، ويمكنك الدخول بحساب آخر.',
         ),
         actions: [
           TextButton(
@@ -43,7 +46,7 @@ class _AccountScreenState extends State<AccountScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || _signingOut) return;
 
     setState(() => _signingOut = true);
     try {
@@ -53,16 +56,19 @@ class _AccountScreenState extends State<AccountScreen> {
       } else {
         await Supabase.instance.client.auth.signOut();
       }
-    } on AuthException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تسجيل الخروج: ${error.message}')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر تسجيل الخروج. تحقق من اتصالك ثم حاول مرة أخرى.')),
-      );
+      HandoffRepository.clearIssuedPins();
+    } catch (error) {
+      // Only the real sign-out can leave the device signed out after an
+      // error; an injected handler is reported as it failed.
+      if (widget.onSignOut == null && signedOutDespiteError()) {
+        HandoffRepository.clearIssuedPins();
+      } else if (mounted) {
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'لم يكتمل تسجيل الخروج. تحقق من اتصالك ثم حاول مرة أخرى.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _signingOut = false);
     }
@@ -123,33 +129,33 @@ class _AccountScreenState extends State<AccountScreen> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.location_on_outlined, color: RuhamaaColors.primary),
-                  title: const Text('بيانات التوصيل', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('رقم الهاتف، نطاق الخدمة، العنوان والموقع الخاص.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  title: const Text('عنوان الاستلام والتسليم', style: TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: const Text('حدّث رقم الهاتف والعنوان والموقع.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/onboarding'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.handyman_outlined, color: RuhamaaColors.primary),
                   title: const Text('وقتي ومهاراتي', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('شاهد ما تقدمه من وقت أو مهارة وما سجلته من احتياجات للخدمات.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  subtitle: const Text('تابع الخدمات التي تقدمها أو تطلبها.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/my-services'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded, color: RuhamaaColors.primary),
                   title: const Text('كيف يعمل عطاء؟', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('راجع بطاقات التعريف والخصوصية والمساهمة في التوصيل.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  subtitle: const Text('تعرّف على التبرع والطلبات والتوصيل.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/intro'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined, color: RuhamaaColors.primary),
                   title: const Text('الخصوصية والحساب', style: TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: const Text('سياسة الخصوصية، الشروط وطلب حذف الحساب.'),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  subtitle: const Text('اقرأ السياسة والشروط أو اطلب حذف حسابك.'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.push('/legal'),
                 ),
               ],
@@ -169,7 +175,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'في عطاء لا توجد هوية ثابتة باسم «متبرع» أو «محتاج». يمكنك تسجيل احتياجك، وفي الوقت نفسه تقديم شيء أو وقت أو مهارة عندما تستطيع.',
+                    'يمكنك طلب المساعدة والتبرع في الوقت نفسه؛ لا يصنّفك عطاء في دور ثابت.',
                     style: TextStyle(color: RuhamaaColors.primaryDark, height: 1.5),
                   ),
                 ),

@@ -1,15 +1,18 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../catalog/item_category_catalog.dart';
+import '../../core/app_error.dart';
 import '../../data/donation_image_repository.dart';
 import '../../data/item_repository_v2.dart';
+import '../../domain/donation_image_rules.dart';
+import '../../domain/item_form_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
 import '../contributions/contribution_screen.dart';
+import '../items/form_guards.dart';
 import '../items/item_form_components.dart';
 
 class CreateDonationV2Screen extends StatefulWidget {
@@ -34,20 +37,48 @@ class CreateDonationV2Screen extends StatefulWidget {
   State<CreateDonationV2Screen> createState() => _CreateDonationV2ScreenState();
 }
 
+/// A photo the person picked, and whether it has reached the server.
+class _PickedPhoto {
+  _PickedPhoto(this.file);
+
+  final XFile file;
+  bool uploaded = false;
+}
+
 class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
+  static const int _doneStep = 3;
+
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _description = TextEditingController();
   final _picker = ImagePicker();
-  final List<XFile> _images = [];
+  final List<_PickedPhoto> _images = [];
   final Map<String, String> _attributes = {};
+
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first donation instead of adding
+  /// a second one.
+  final String _operationId = const Uuid().v4();
 
   String _category = 'clothes';
   String? _group;
   String? _itemTypeKey;
   String _condition = 'good';
   bool _saving = false;
+  bool _picking = false;
+  bool _uploading = false;
+  bool _leaving = false;
+  bool _touched = false;
+  bool _selectionMissing = false;
   int _step = 0;
+
+  /// Title that was filled from the selected item, if any. A title that
+  /// differs from it was typed by the person and is never overwritten.
+  String? _autoTitle;
+
+  /// Set as soon as the donation exists on the server. From then on the form
+  /// is replaced by the result view, so a second donation cannot be created.
+  CreatedOperation? _created;
 
   static const conditions = <String, String>{
     'new': 'جديد',
@@ -58,23 +89,12 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
 
   bool get _inspired => widget.inspiredByDiscoveryCardId != null;
 
-  String _normalizeCategory(String? value) {
-    switch (value) {
-      case 'books':
-        return 'education';
-      case 'furniture':
-      case 'home':
-        return 'home_furniture';
-      default:
-        final raw = value ?? 'clothes';
-        return itemCategoriesV2.any((category) => category.key == raw) ? raw : 'other';
-    }
-  }
+  int get _pendingPhotos => _images.where((photo) => !photo.uploaded).length;
 
   @override
   void initState() {
     super.initState();
-    _category = _normalizeCategory(widget.prefillCategory);
+    _category = canonicalItemCategoryKey(widget.prefillCategory ?? 'clothes');
     final category = itemCategoryByKey(_category);
     final groupCandidate = widget.prefillGroup;
     if (groupCandidate != null && category.groups.any((group) => group.key == groupCandidate)) {
@@ -92,7 +112,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
     if (prefillTitle != null && prefillTitle.isNotEmpty) {
       _title.text = prefillTitle;
     } else if (_itemTypeKey != null) {
-      _title.text = itemTypeByKey(category, _itemTypeKey)?.label ?? '';
+      final label = itemTypeByKey(category, _itemTypeKey)?.label ?? '';
+      _title.text = label;
+      _autoTitle = label;
     }
     if (_inspired) _step = _itemTypeKey == null ? 0 : 1;
   }
@@ -108,64 +130,121 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
     final repo = ItemRepositoryV2(Supabase.instance.client);
     if (await repo.hasOperationalProfile()) return true;
     if (!mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('أكمل رقم الهاتف وعنوان التوصيل أولًا.')),
-    );
+    showInfoSnack(context, 'أكمل رقم الهاتف وعنوان التوصيل أولًا.');
     await context.push('/onboarding');
     return repo.hasOperationalProfile();
   }
 
+  void _clearAutoTitle() {
+    if (!isCustomItemTitle(title: _title.text, autoTitle: _autoTitle)) {
+      _title.clear();
+    }
+    _autoTitle = null;
+  }
+
   void _changeCategory(String value) {
+    if (value == _category) return;
     setState(() {
+      _touched = true;
       _category = value;
       _group = null;
       _itemTypeKey = null;
       _attributes.clear();
-      _title.clear();
+      _clearAutoTitle();
     });
   }
 
   void _changeGroup(String value) {
+    if (value == _group) return;
     setState(() {
+      _touched = true;
       _group = value;
       _itemTypeKey = null;
-      _title.clear();
+      _clearAutoTitle();
     });
   }
 
   void _changeItem(String value) {
     final category = itemCategoryByKey(_category);
-    final item = itemTypeByKey(category, value);
+    final label = itemTypeByKey(category, value)?.label ?? '';
     setState(() {
+      _touched = true;
+      _selectionMissing = false;
       _itemTypeKey = value;
-      if (_title.text.trim().isEmpty || _title.text == itemTypeByKey(category, _itemTypeKey)?.label) {
-        _title.text = item?.label ?? '';
-      } else if (!_inspired) {
-        _title.text = item?.label ?? _title.text;
-      }
+      _title.text = titleAfterItemChange(
+        currentTitle: _title.text,
+        previousAutoTitle: _autoTitle,
+        newItemLabel: label,
+      );
+      _autoTitle = label;
     });
   }
 
+  /// Replaces the selection with up to [DonationImageRules.maxImages] valid
+  /// photos. Photos of an unsupported type or above the size limit are left
+  /// out and the reason is shown.
   Future<void> _pickImages() async {
-    final picked = await _picker.pickMultiImage(
-      maxWidth: 1440,
-      maxHeight: 1440,
-      imageQuality: 72,
-      limit: 4,
-    );
-    if (!mounted) return;
-    setState(() {
-      _images
-        ..clear()
-        ..addAll(picked.take(4));
-    });
+    if (_picking || _saving || _created != null) return;
+    setState(() => _picking = true);
+    try {
+      final picked = await _picker.pickMultiImage(
+        maxWidth: 1440,
+        maxHeight: 1440,
+        imageQuality: 72,
+        limit: DonationImageRules.maxImages,
+      );
+      if (picked.isEmpty) return;
+      final accepted = <_PickedPhoto>[];
+      String? problem;
+      var rejected = 0;
+      for (final file in picked) {
+        if (accepted.length >= DonationImageRules.maxImages) {
+          problem ??= DonationImageRules.tooManyMessage;
+          rejected += 1;
+          continue;
+        }
+        final reason = DonationImageRules.validate(
+          fileName: file.name,
+          sizeBytes: await file.length(),
+          mimeType: file.mimeType,
+        );
+        if (reason != null) {
+          problem ??= reason;
+          rejected += 1;
+          continue;
+        }
+        accepted.add(_PickedPhoto(file));
+      }
+      if (!mounted) return;
+      setState(() {
+        _touched = true;
+        _images
+          ..clear()
+          ..addAll(accepted);
+      });
+      final message = problem;
+      if (message != null) {
+        showInfoSnack(
+          context,
+          rejected > 1 ? 'لم تُضف $rejected صور. $message' : message,
+        );
+      }
+    } catch (error) {
+      debugPrint('Donation photo picking failed: ${error.runtimeType}');
+      if (mounted) showInfoSnack(context, 'لم نتمكن من فتح الصور. حاول مرة أخرى.');
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  void _clearImages() {
+    if (_saving || _created != null) return;
+    setState(_images.clear);
   }
 
   void _nextFromCategory() {
     if (_group == null || _itemTypeKey == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('اختر القسم ثم نوع الشيء بالتحديد.')),
-      );
+      setState(() => _selectionMissing = true);
       return;
     }
     setState(() => _step = 1);
@@ -173,24 +252,76 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
 
   void _nextFromDetails() {
     if (!_formKey.currentState!.validate()) return;
+    // A field scrolled far out of view is not built, so the form cannot show
+    // its message: check the values themselves as well.
+    final problem = validateItemTitle(_title.text, emptyMessage: 'اكتب اسمًا واضحًا للشيء') ??
+        validateOptionalText(_description.text);
+    if (problem != null) {
+      showInfoSnack(context, problem);
+      return;
+    }
+    FocusScope.of(context).unfocus();
     setState(() => _step = 2);
   }
 
-  void _back() {
-    if (_step == 0) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => _step -= 1);
+  /// System back and the on-screen back buttons: go to the previous step, or
+  /// leave the form after confirming when data was entered.
+  Future<void> _handleBack() async {
+    if (_saving) return;
+    if (_created != null) {
+      await _leaveResult();
+      return;
     }
+    if (_step > 0) {
+      setState(() => _step -= 1);
+      return;
+    }
+    if (_touched) {
+      final discard = await confirmDiscardChanges(context);
+      if (!mounted) return;
+      if (!discard) return;
+    }
+    leaveForm(context);
+  }
+
+  /// Leaves the result view. The person is never held: while photos are
+  /// still uploading, or when some failed, leaving only asks for a
+  /// confirmation first.
+  Future<void> _leaveResult() async {
+    if (_leaving) return;
+    final title = DonationImageRules.leaveWarningTitle(
+      uploading: _uploading,
+      pending: _pendingPhotos,
+    );
+    final message = DonationImageRules.leaveWarningMessage(
+      uploading: _uploading,
+      pending: _pendingPhotos,
+    );
+    if (title != null && message != null) {
+      _leaving = true;
+      final leave = await confirmAction(
+        context,
+        title: title,
+        message: message,
+        confirmLabel: 'مغادرة',
+        cancelLabel: 'البقاء',
+        confirmKey: const Key('donation-leave-confirm'),
+      );
+      _leaving = false;
+      if (!mounted || !leave) return;
+    }
+    leaveForm(context);
   }
 
   Future<void> _submit() async {
+    if (_saving || _created != null) return;
     if (_group == null || _itemTypeKey == null) return;
     setState(() => _saving = true);
     try {
       if (!await _ensureProfile()) return;
       final repo = ItemRepositoryV2(Supabase.instance.client);
-      final donationId = await repo.createDonation(
+      final created = await repo.createDonation(
+        id: _operationId,
         category: _category,
         categoryGroup: _group!,
         itemTypeKey: _itemTypeKey!,
@@ -201,80 +332,112 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
         addressId: await repo.defaultAddressId(),
         inspiredByDiscoveryCardId: widget.inspiredByDiscoveryCardId,
       );
-
-      final imageRepo = DonationImageRepository(Supabase.instance.client);
-      for (var i = 0; i < _images.length; i++) {
-        final x = _images[i];
-        final Uint8List bytes = await x.readAsBytes();
-        final ext = x.name.contains('.') ? x.name.split('.').last : 'jpg';
-        await imageRepo.upload(
-          donationId: donationId,
-          bytes: bytes,
-          extension: ext,
-          sortOrder: i,
-        );
-      }
-
+      // The donation exists from here on. Photo problems are reported on the
+      // result view and never turn the donation into a failure.
+      _created = created;
       if (!mounted) return;
-      final contribute = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('تم تسجيل عطائك'),
-          content: const Text(
-            'تبرعك بالشيء هو الأهم. وإذا استطعت يمكنك أيضًا المساهمة في تكلفة الاستلام والتوصيل. لا يوجد دفع داخل التطبيق، والمبلغ يُسلَّم نقدًا للموصل عند الاستلام.',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('أكتفي بالتبرع')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('أساهم في التوصيل')),
-          ],
-        ),
-      );
-      if (!mounted) return;
-      if (contribute == true) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ContributionScreen(donationId: donationId)),
-        );
-      }
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
+      setState(() {
+        _step = _doneStep;
+        _saving = false;
+      });
+      await _uploadPendingPhotos();
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ العطاء: $e')));
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'تعذر إرسال التبرع. تحقق من اتصالك وحاول مرة أخرى.',
+        );
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted && _saving) setState(() => _saving = false);
     }
+  }
+
+  /// Uploads every photo that has not reached the server yet, each one on its
+  /// own, for the donation that was already created. Never throws. A photo
+  /// that takes longer than [DonationImageRules.uploadTimeout] counts as
+  /// failed and can be retried. The loop keeps running if the person leaves.
+  Future<void> _uploadPendingPhotos() async {
+    final created = _created;
+    if (created == null || _uploading || _pendingPhotos == 0) return;
+    setState(() => _uploading = true);
+    final repo = DonationImageRepository(Supabase.instance.client);
+    for (var index = 0; index < _images.length; index++) {
+      final photo = _images[index];
+      if (photo.uploaded) continue;
+      try {
+        final bytes = await photo.file
+            .readAsBytes()
+            .timeout(DonationImageRules.uploadTimeout);
+        await repo.upload(
+          donationId: created.id,
+          bytes: bytes,
+          fileName: photo.file.name,
+          mimeType: photo.file.mimeType,
+          sortOrder: index,
+        );
+        photo.uploaded = true;
+      } catch (error) {
+        debugPrint('Donation photo upload failed: ${error.runtimeType}');
+      }
+      if (mounted) setState(() {});
+    }
+    if (mounted) setState(() => _uploading = false);
+  }
+
+  Future<void> _contribute() async {
+    final created = _created;
+    if (created == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => ContributionScreen(donationId: created.id)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('أعطي شيئًا')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-          children: [
-            _Progress(current: _step + 1),
-            const SizedBox(height: 18),
-            if (_inspired) ...[
-              _InfoBox(
-                icon: Icons.lightbulb_outline_rounded,
-                color: RuhamaaColors.warmGoldSoft,
-                iconColor: RuhamaaColors.warmGold,
-                text: 'هذه الحاجة ألهمت عطائك، لذلك ملأنا ما توفر من البيانات. البطاقة ليست حجزًا لشخص بعينه؛ عطاء يوجّه العطاء للحاجة الأعلى أولوية من الحالات المتوافقة.',
+    final done = _created != null;
+    return PopScope<Object?>(
+      canPop: done
+          ? !_uploading && _pendingPhotos == 0
+          : _step == 0 && !_touched && !_saving,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('تبرّع بشيء')),
+        body: Form(
+          key: _formKey,
+          onChanged: () {
+            if (!_touched) setState(() => _touched = true);
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            children: [
+              _Progress(current: _step + 1),
+              const SizedBox(height: 18),
+              if (_inspired && !done) ...[
+                const _InfoBox(
+                  icon: Icons.lightbulb_outline_rounded,
+                  color: RuhamaaColors.warmGoldSoft,
+                  iconColor: RuhamaaColors.warmGold,
+                  text: 'ملأنا بعض البيانات من الطلب الذي اخترته. سنوجّه تبرعك إلى الطلب الأنسب والأعلى أولوية.',
+                ),
+                const SizedBox(height: 16),
+              ],
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: done
+                    ? _doneView()
+                    : switch (_step) {
+                        0 => _categoryStep(),
+                        1 => _detailsStep(),
+                        _ => _reviewStep(),
+                      },
               ),
-              const SizedBox(height: 16),
             ],
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: switch (_step) {
-                0 => _categoryStep(),
-                1 => _detailsStep(),
-                _ => _reviewStep(),
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -289,7 +452,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           icon: Icons.favorite_outline_rounded,
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
-          text: 'اختر النوع بدقة حتى يستطيع عطاء مطابقة عطائك مع الاحتياج المناسب بدون أن تتصفح أو تختار الأشخاص.',
+          text: 'اختر النوع الأقرب حتى نصل تبرعك بالشخص المناسب.',
         ),
         const SizedBox(height: 18),
         ItemClassificationSelector(
@@ -300,10 +463,17 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           onGroupChanged: _changeGroup,
           onItemTypeChanged: _changeItem,
         ),
+        if (_selectionMissing) ...[
+          const SizedBox(height: 12),
+          Text(
+            'اختر القسم ثم نوع الشيء بالتحديد.',
+            style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w700),
+          ),
+        ],
         const SizedBox(height: 26),
         FilledButton.icon(
           onPressed: _nextFromCategory,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_right_rounded),
           label: const Text('التالي: التفاصيل'),
         ),
       ],
@@ -323,11 +493,13 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
         const SizedBox(height: 14),
         TextFormField(
           controller: _title,
+          maxLength: ItemFormLimits.title,
           decoration: const InputDecoration(
             labelText: 'اسم مختصر للشيء',
             hintText: 'يمكنك إضافة وصف مختصر أدق',
+            counterText: '',
           ),
-          validator: (value) => value == null || value.trim().length < 3 ? 'اكتب اسمًا واضحًا للشيء' : null,
+          validator: (value) => validateItemTitle(value, emptyMessage: 'اكتب اسمًا واضحًا للشيء'),
         ),
         const SizedBox(height: 16),
         ItemAttributesEditor(
@@ -335,7 +507,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           values: _attributes,
           onChanged: (key, value) {
             _attributes[key] = value;
-            if (category.attributes.firstWhere((attribute) => attribute.key == key).isChoice) setState(() {});
+            if (category.attributes.any((attribute) => attribute.key == key && attribute.isChoice)) setState(() {});
           },
         ),
         const SizedBox(height: 4),
@@ -347,34 +519,52 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           children: conditions.entries.map((entry) => ChoiceChip(
                 label: Text(entry.value),
                 selected: _condition == entry.key,
-                onSelected: (_) => setState(() => _condition = entry.key),
+                onSelected: (_) => setState(() {
+                  _touched = true;
+                  _condition = entry.key;
+                }),
               )).toList(),
         ),
         const SizedBox(height: 16),
         TextFormField(
           controller: _description,
           maxLines: 3,
+          maxLength: ItemFormLimits.description,
           decoration: const InputDecoration(
             labelText: 'ملاحظات إضافية (اختياري)',
             hintText: 'أي تفاصيل لا تغطيها الحقول السابقة',
           ),
+          validator: validateOptionalText,
         ),
         const SizedBox(height: 18),
         OutlinedButton.icon(
-          onPressed: _saving ? null : _pickImages,
+          onPressed: _saving || _picking ? null : _pickImages,
           icon: const Icon(Icons.add_a_photo_outlined),
           label: Text(_images.isEmpty ? 'إضافة صور (حتى 4)' : 'تم اختيار ${_images.length} صورة — تغيير'),
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 4),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: _back, child: const Text('السابق'))),
+            const Expanded(
+              child: Text(
+                'صور JPG أو PNG أو WebP، وحجم كل صورة حتى 5 ميجابايت.',
+                style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.4),
+              ),
+            ),
+            if (_images.isNotEmpty)
+              TextButton(onPressed: _clearImages, child: const Text('إزالة الصور')),
+          ],
+        ),
+        const SizedBox(height: 22),
+        Row(
+          children: [
+            Expanded(child: OutlinedButton(onPressed: _handleBack, child: const Text('السابق'))),
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
               child: FilledButton.icon(
-                onPressed: _nextFromDetails,
-                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: _picking ? null : _nextFromDetails,
+                icon: const Icon(Icons.chevron_right_rounded),
                 label: const Text('التالي: المراجعة'),
               ),
             ),
@@ -386,11 +576,9 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
 
   Widget _reviewStep() {
     final path = itemPathLabel(categoryKey: _category, groupKey: _group, itemTypeKey: _itemTypeKey);
-    final condition = conditions[_condition] ?? _condition;
-    final attributeText = _attributes.entries
-        .where((entry) => entry.value.trim().isNotEmpty)
-        .map((entry) => '${entry.key}: ${entry.value}')
-        .join(' • ');
+    final condition = conditions[_condition] ?? 'غير محددة';
+    final attributeText = describeItemAttributes(_category, _attributes);
+    final notes = _description.text.trim();
     return Column(
       key: const ValueKey('donation-v2-review'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -401,12 +589,13 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('راجع عطائك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                const Text('راجع تبرعك قبل الإرسال', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
                 const SizedBox(height: 14),
                 _ReviewRow('التصنيف', path),
                 _ReviewRow('الشيء', _title.text.trim()),
                 _ReviewRow('الحالة', condition),
                 if (attributeText.isNotEmpty) _ReviewRow('الخصائص', attributeText),
+                if (notes.isNotEmpty) _ReviewRow('ملاحظات', notes),
                 _ReviewRow('الصور', _images.isEmpty ? 'بدون صور' : '${_images.length} صورة'),
               ],
             ),
@@ -418,23 +607,117 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
           color: RuhamaaColors.softGreen,
           iconColor: RuhamaaColors.primary,
           text: _inspired
-              ? 'البطاقة التي رأيتها تحفّز العطاء فقط. المطابقة النهائية تتم وفق الملاءمة والأولوية والعدالة، وليس وفق اختيار المتبرع.'
-              : 'يراجع عطاء العطاء ويطابقه بخصوصية. لا تختار المستفيد ولا تظهر هوية أي طرف للآخر.',
+              ? 'سنوجّه تبرعك إلى الطلب الأنسب والأعلى أولوية.'
+              : 'يراجع عطاء التبرع ويوجهه بخصوصية. لا تظهر هوية أي طرف للآخر.',
         ),
         const SizedBox(height: 24),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: _saving ? null : _back, child: const Text('تعديل'))),
+            Expanded(child: OutlinedButton(onPressed: _saving ? null : _handleBack, child: const Text('تعديل'))),
             const SizedBox(width: 10),
             Expanded(
               flex: 2,
               child: FilledButton.icon(
                 onPressed: _saving ? null : _submit,
                 icon: const Icon(Icons.volunteer_activism_outlined),
-                label: Text(_saving ? 'جارٍ الحفظ...' : 'أرسل عطائي'),
+                label: Text(_saving ? 'جارٍ الإرسال...' : 'إرسال التبرع'),
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  /// Result view shown once the donation exists. The form and its send
+  /// button are gone, so the same donation is the only one photos can go to.
+  Widget _doneView() {
+    final code = _created?.publicCode ?? '';
+    final total = _images.length;
+    final pending = _pendingPhotos;
+    return Column(
+      key: const ValueKey('donation-v2-done'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                const Icon(Icons.task_alt_rounded, color: RuhamaaColors.primary, size: 54),
+                const SizedBox(height: 10),
+                const Text(
+                  'تم تسجيل تبرعك',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900, fontSize: 20),
+                ),
+                if (code.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    'رقم التبرع: $code',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                const Text(
+                  'سنراجع التبرع ونتواصل معك لترتيب الاستلام. يمكنك أيضًا المساهمة في تكلفة التوصيل إن رغبت.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (total > 0) ...[
+          const SizedBox(height: 14),
+          if (_uploading) ...[
+            _InfoBox(
+              icon: Icons.cloud_upload_outlined,
+              color: RuhamaaColors.softGreen,
+              iconColor: RuhamaaColors.primary,
+              text: 'جارٍ رفع الصور (${total - pending} من $total)... '
+                  'يمكنك المغادرة دون انتظار اكتمال الرفع.',
+            ),
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
+          ] else if (pending == 0)
+            _InfoBox(
+              icon: Icons.photo_library_outlined,
+              color: RuhamaaColors.softGreen,
+              iconColor: RuhamaaColors.primary,
+              text: total == 1 ? 'رُفعت الصورة مع التبرع.' : 'رُفعت $total صور مع التبرع.',
+            )
+          else ...[
+            _InfoBox(
+              icon: Icons.warning_amber_rounded,
+              color: RuhamaaColors.warmGoldSoft,
+              iconColor: RuhamaaColors.warmGold,
+              text: pending == total
+                  ? 'تبرعك مسجّل، لكن لم تُرفع الصور ($total). يمكنك إعادة المحاولة الآن دون تسجيل تبرع جديد.'
+                  : 'تبرعك مسجّل، لكن لم تُرفع $pending من $total صور. يمكنك إعادة المحاولة الآن دون تسجيل تبرع جديد.',
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              key: const Key('donation-retry-photos'),
+              onPressed: _uploadPendingPhotos,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة رفع الصور التي لم تُرفع'),
+            ),
+          ],
+        ],
+        const SizedBox(height: 22),
+        OutlinedButton.icon(
+          onPressed: _contribute,
+          icon: const Icon(Icons.favorite_outline_rounded),
+          label: const Text('المساهمة في التوصيل'),
+        ),
+        const SizedBox(height: 10),
+        FilledButton.icon(
+          key: const Key('donation-done'),
+          onPressed: _leaveResult,
+          icon: const Icon(Icons.check_rounded),
+          label: const Text('تم'),
         ),
       ],
     );

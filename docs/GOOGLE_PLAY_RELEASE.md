@@ -5,9 +5,9 @@ This is the release checklist for the current Marib pilot build. Detailed signin
 ## 1. Fixed Android identity
 
 - Application ID: `com.ruhamaa.app`
-- Internal/mobile OAuth callback: `com.ruhamaa.app://login-callback`
+- OAuth callback used by current builds: `com.ruhamaa.app://login-callback`
 - Production domain: `https://ruhamaa.com`
-- Future verified App Link callback: `https://ruhamaa.com/login-callback`
+- Future verified App Link callback: `https://ruhamaa.com/login-callback/`
 - Google Web OAuth callback through Supabase: `https://vclicpejajxadsbuakdw.supabase.co/auth/v1/callback`
 - Current Android target SDK configured by the project: API 36
 
@@ -21,12 +21,12 @@ The release expects these public URLs:
 - `https://ruhamaa.com/privacy/`
 - `https://ruhamaa.com/terms/`
 - `https://ruhamaa.com/delete-account/`
-- `https://ruhamaa.com/login-callback`
+- `https://ruhamaa.com/login-callback/`
 - `https://ruhamaa.com/.well-known/assetlinks.json` — only after the Play App Signing SHA-256 is known
 
 The repository contains the static site under `site/`. GitHub Pages is configured to deploy production content from `main` after merge.
 
-Before store submission, verify the URLs in a normal unauthenticated browser and verify `support@ruhamaa.com` / `privacy@ruhamaa.com` receive mail.
+Before store submission, verify the URLs in a normal unauthenticated browser and verify both mailboxes receive mail: `privacy@ruhamaa.com` (privacy questions and account-deletion requests; this is the address the privacy policy and the deletion page give) and `support@ruhamaa.com` (support). Use `privacy@ruhamaa.com` as the privacy contact in Play Console.
 
 ## 3. Google Auth Platform
 
@@ -57,22 +57,31 @@ Required before first Play upload/reviewer use:
 
 Follow `docs/ANDROID_RELEASE.md`.
 
-Repository safeguards already in place:
+Repository safeguards in place:
 
 - release Gradle tasks fail without complete signing configuration;
-- keystore and `key.properties` are gitignored;
-- CI signing passwords/alias are injected through environment variables;
-- `.github/workflows/android_release_bundle.yml` builds a signed AAB only when the documented GitHub Actions secrets are configured.
+- keystore and `key.properties` are gitignored, as are `*.aab`, `*.apk`, `google-services.json` and service-account JSON files;
+- the release workflow runs only from `main` or a `v*` tag, inside the GitHub Environment `release`;
+- signing secrets are environment secrets of `release`, readable only after a required reviewer approves the run;
+- the workflow stops before building when `SUPABASE_URL`, `SUPABASE_ANON_KEY` or `AUTH_REDIRECT_URL` is empty, and rejects a service-role key;
+- the bundle is obfuscated; symbols are uploaded as a separate artifact;
+- in the release, CI, Pages and website workflows every action is pinned to a commit SHA and Flutter is pinned to 3.47.3.
+
+Owner setup that the repository cannot do (details in `docs/ANDROID_RELEASE.md` section 2):
+
+1. create the `release` environment with required reviewers, self-review prevented, and deployment limited to `main` and `v*`;
+2. add the four signing secrets to that environment;
+3. add the three variables.
 
 The upload keystore must be generated once on a trusted machine, stored outside the repository and backed up securely. Never paste private-key material or passwords into issues, PR comments or source files.
 
 ## 6. First Internal Testing AAB
 
-After the release workflow exists on the default branch and signing secrets are configured:
+After the release workflow exists on the default branch and the `release` environment, its secrets and the three variables are configured:
 
-1. Run **Android Release Bundle** manually.
+1. Run **Android Release Bundle** manually from `main`; a reviewer approves the `release` environment.
 2. Use a monotonically increasing `build_number` / Android versionCode.
-3. Download the resulting signed AAB artifact and verify its SHA-256.
+3. Download the signed AAB artifact within its 3-day retention and verify its SHA-256. Download and privately archive the symbols artifact for the same build.
 4. Create/select the Play Console app with package `com.ruhamaa.app`.
 5. Upload the AAB to Internal Testing and enroll in Play App Signing as required by the current Play flow.
 6. Install the Play-distributed build and repeat login/UAT smoke tests.
@@ -91,14 +100,16 @@ After the first Play upload:
 ```powershell
 adb shell pm verify-app-links --re-verify com.ruhamaa.app
 adb shell pm get-app-links com.ruhamaa.app
-adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
+adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback/"
 ```
 
 5. Only after the domain reports verified and the HTTPS link opens Ataa should the production build use:
 
 ```text
-AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback
+AUTH_REDIRECT_URL=https://ruhamaa.com/login-callback/
 ```
+
+`AUTH_REDIRECT_URL` is the repository/environment variable read by the release workflow. Change it there, add the same string to the Supabase Auth redirect allow-list, and build a new bundle; the value is compiled into the app.
 
 Keep the custom scheme available as an internal/fallback path until the HTTPS callback has been proven in the Play-distributed build.
 
@@ -152,7 +163,9 @@ Current product behavior also includes:
 - private safety incident records;
 - optional cash-to-courier contribution amount/status records;
 - no targeted advertising and no data sale;
-- account-deletion request in-app and on the public site.
+- staff email/password accounts, in-app notifications, and warehouse/inspection records attached to donations;
+- **precise location** (fine-location permission; coordinates saved with an address and at courier handoff events);
+- account-deletion request in-app and on the public site, reviewed by the team, with anonymised operation records retained (target handling time 30 days).
 
 Do **not** hard-code “no data shared” or “no financial information” without checking Google Play’s current definitions. In-person verified-partner services can involve user-initiated disclosure of minimum contact/location/scheduling data, and contribution amount/status may fall into a Play data category depending on the current form wording.
 
@@ -176,7 +189,9 @@ Testing/production-access requirements can vary by Play developer-account type a
 
 Do not submit for review until all are true:
 
-- latest branch/default-branch CI passes migration-version validation, analyze, tests and Android build;
+- latest branch/default-branch CI passes migration-version validation, analyze, tests and Android build, and the isolated E2E and security workflow passes on the commit being released;
+- production migration history is reconciled with the repository and the security-closure and later migrations are applied (`docs/AUDIT_2026-10.md`);
+- `app/pubspec.lock` is committed and enforced;
 - PR/release source is conflict-free;
 - public privacy/terms/delete-account pages load over HTTPS;
 - support/privacy contact mailboxes work;

@@ -18,6 +18,21 @@ app/android/*.jks
 app/android/*.keystore
 app/android/app/*.jks
 app/android/app/*.keystore
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Build outputs and store/service credentials
+*.aab
+*.apk
+google-services.json
+*service-account*.json
+
+# Local test and deployment evidence
+site-results/
+test-results/
+deployment-results.json
 
 # Node / web admin
 node_modules/
@@ -26,6 +41,7 @@ dist/
 
 # IDE / OS
 .idea/
+*.iml
 .vscode/
 .DS_Store
 Thumbs.db

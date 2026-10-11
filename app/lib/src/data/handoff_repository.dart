@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../domain/handoff_pin_rules.dart';
+
 class UserHandoff {
   const UserHandoff({
     required this.deliveryId,
@@ -33,17 +35,76 @@ class HandoffRepository {
 
   Future<List<UserHandoff>> myHandoffs() async {
     final rows = await _client.rpc('user_my_handoffs');
-    return (rows as List)
+    final handoffs = (rows as List)
         .cast<Map<String, dynamic>>()
         .map(UserHandoff.fromJson)
         .toList();
+    dropStalePins(handoffs);
+    return handoffs;
   }
 
-  Future<String> issuePin({required String deliveryId, required String kind}) async {
+  /// Forgets cached PINs whose handoff is no longer in the status where a
+  /// PIN can be issued, so a failure report, reassignment or cancellation on
+  /// the server never leaves an invalid PIN on screen.
+  void dropStalePins(Iterable<UserHandoff> handoffs) {
+    final issuable = <String>{
+      for (final row in handoffs)
+        if (HandoffPinRules.canIssue(kind: row.kind, status: row.status))
+          _pinKey(row.deliveryId, row.kind),
+    };
+    final stale = HandoffPinRules.staleKeys(
+      cachedKeys: _issuedPins.keys.toList(),
+      userId: _client.auth.currentUser?.id,
+      issuableKeys: issuable,
+    );
+    for (final key in stale) {
+      _issuedPins.remove(key);
+    }
+  }
+
+  /// PINs issued during this app run. The server stores only a hash, so the
+  /// app keeps the plain PIN in memory to show the same one until it expires.
+  static final Map<String, IssuedHandoffPin> _issuedPins = <String, IssuedHandoffPin>{};
+
+  String _pinKey(String deliveryId, String kind) => HandoffPinRules.cacheKey(
+        userId: _client.auth.currentUser?.id,
+        deliveryId: deliveryId,
+        kind: kind,
+      );
+
+  /// The PIN already issued for this handoff when it is still valid.
+  IssuedHandoffPin? activePin({required String deliveryId, required String kind, DateTime? now}) {
+    final key = _pinKey(deliveryId, kind);
+    final pin = _issuedPins[key];
+    if (pin == null) return null;
+    if (HandoffPinRules.isExpired(pin, now ?? DateTime.now())) {
+      _issuedPins.remove(key);
+      return null;
+    }
+    return pin;
+  }
+
+  /// Asks the server for a new PIN. This invalidates any earlier PIN.
+  Future<IssuedHandoffPin> issueNewPin({required String deliveryId, required String kind}) async {
+    // Taken before the request so the local countdown never outlives the
+    // server-side expiry.
+    final requestedAt = DateTime.now();
     final result = await _client.rpc('user_issue_handoff_pin', params: {
       'p_delivery_id': deliveryId,
       'p_kind': kind,
     });
-    return result as String;
+    final issued = IssuedHandoffPin(pin: '$result', issuedAt: requestedAt);
+    _issuedPins[_pinKey(deliveryId, kind)] = issued;
+    return issued;
   }
+
+  /// Returns the still-valid PIN, or issues one when there is none.
+  Future<IssuedHandoffPin> currentOrNewPin({required String deliveryId, required String kind}) async {
+    final existing = activePin(deliveryId: deliveryId, kind: kind);
+    if (existing != null) return existing;
+    return issueNewPin(deliveryId: deliveryId, kind: kind);
+  }
+
+  /// Forgets cached PINs, e.g. when the person signs out.
+  static void clearIssuedPins() => _issuedPins.clear();
 }

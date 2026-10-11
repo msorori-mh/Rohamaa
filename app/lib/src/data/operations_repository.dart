@@ -20,8 +20,15 @@ class OperationItem {
 }
 
 class UserNotificationItem {
-  const UserNotificationItem({required this.id, required this.title, required this.body, required this.actionRoute, required this.createdAt, required this.isRead});
+  const UserNotificationItem({required this.id, required this.title, required this.body, required this.actionRoute, required this.createdAt, required this.isRead, this.entityType, this.dedupeKey});
   final String id;
+
+  /// Table the notification is about (e.g. 'service_matches'), when loaded.
+  final String? entityType;
+
+  /// Server dedupe key; for status notifications it ends with the status the
+  /// notification was written for.
+  final String? dedupeKey;
   final String title;
   final String body;
   final String actionRoute;
@@ -32,6 +39,8 @@ class UserNotificationItem {
     id: '${json['id']}', title: _notificationBrand('${json['title']}'), body: _notificationBrand('${json['body']}'),
     actionRoute: '${json['action_route']}', createdAt: DateTime.parse('${json['created_at']}'),
     isRead: json['read_at'] != null,
+    entityType: json['entity_type'] as String?,
+    dedupeKey: json['dedupe_key'] as String?,
   );
 }
 
@@ -65,7 +74,7 @@ class OperationsRepository {
   }
 
   Future<List<UserNotificationItem>> myNotifications() async {
-    final rows = await _client.from('user_notifications').select('id,title,body,action_route,read_at,created_at').order('created_at', ascending: false).limit(100);
+    final rows = await _client.from('user_notifications').select('id,title,body,action_route,read_at,created_at,entity_type,dedupe_key').order('created_at', ascending: false).limit(100);
     return (rows as List).cast<Map<String, dynamic>>().map(UserNotificationItem.fromJson).toList();
   }
 
@@ -75,6 +84,16 @@ class OperationsRepository {
 
   Future<void> markAllRead() async {
     await _client.from('user_notifications').update({'read_at': DateTime.now().toUtc().toIso8601String()}).isFilter('read_at', null);
+  }
+
+  /// Withdraws the person's own donation while it is still cancellable.
+  Future<void> cancelDonation(String donationId) async {
+    await _client.rpc('user_cancel_donation', params: {'p_donation_id': donationId});
+  }
+
+  /// Withdraws the person's own need while it is still cancellable.
+  Future<void> cancelNeed(String needId) async {
+    await _client.rpc('user_cancel_need', params: {'p_need_id': needId});
   }
 
   Future<List<AdminQueueItem>> adminQueue() async {

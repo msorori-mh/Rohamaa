@@ -1,21 +1,24 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
+
+import '../domain/item_form_rules.dart';
+
+/// A row the server just created: its id and the server-generated code.
+class CreatedOperation {
+  const CreatedOperation({required this.id, required this.publicCode});
+
+  final String id;
+  final String publicCode;
+}
 
 class ItemRepositoryV2 {
   ItemRepositoryV2(this._client);
 
   final SupabaseClient _client;
-  static const _uuid = Uuid();
 
   String get userId {
     final id = _client.auth.currentUser?.id;
     if (id == null) throw StateError('User must be authenticated');
     return id;
-  }
-
-  String _publicCode(String prefix) {
-    final suffix = _uuid.v4().replaceAll('-', '').substring(0, 10).toUpperCase();
-    return 'RHM-MRB-$prefix-$suffix';
   }
 
   Future<String?> defaultAddressId() async {
@@ -42,7 +45,37 @@ class ItemRepositoryV2 {
     return phone.isNotEmpty && (addresses as List).isNotEmpty;
   }
 
-  Future<String> createDonation({
+  /// After an insert that sent the client-generated [id] failed with a
+  /// unique violation, returns the row an earlier attempt already created
+  /// (its response was lost). Null when the failure is something else.
+  Future<CreatedOperation?> _existingRow(
+    String table,
+    String? id,
+    PostgrestException error,
+  ) async {
+    if (id == null || !isUniqueViolationCode(error.code)) return null;
+    final rows = await _client
+        .from(table)
+        .select('id,public_code')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .limit(1);
+    final list = (rows as List).cast<Map<String, dynamic>>();
+    if (list.isEmpty) return null;
+    final row = list.first;
+    return CreatedOperation(
+      id: row['id'] as String,
+      publicCode: '${row['public_code'] ?? ''}',
+    );
+  }
+
+  /// Creates a donation. `public_code` and `status` are set by the server
+  /// and read back from the insert response.
+  ///
+  /// [id] is a UUID generated once per form instance. Sending the same id
+  /// again returns the donation the first attempt created.
+  Future<CreatedOperation> createDonation({
+    String? id,
     required String category,
     required String categoryGroup,
     required String itemTypeKey,
@@ -56,8 +89,8 @@ class ItemRepositoryV2 {
     final cleanAttributes = Map<String, String>.fromEntries(
       attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
     );
-    final row = await _client.from('donations').insert({
-      'public_code': _publicCode('DON'),
+    final payload = <String, dynamic>{
+      if (id != null) 'id': id,
       'user_id': userId,
       'category': category,
       'category_version': 2,
@@ -69,12 +102,28 @@ class ItemRepositoryV2 {
       'description': description == null || description.trim().isEmpty ? null : description.trim(),
       'address_id': addressId,
       'inspired_by_discovery_card_id': inspiredByDiscoveryCardId,
-      'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    };
+    try {
+      final row = await _client
+          .from('donations')
+          .insert(payload)
+          .select('id,public_code')
+          .single();
+      return CreatedOperation(
+        id: row['id'] as String,
+        publicCode: '${row['public_code'] ?? ''}',
+      );
+    } on PostgrestException catch (error) {
+      final existing = await _existingRow('donations', id, error);
+      if (existing == null) rethrow;
+      return existing;
+    }
   }
 
-  Future<String> createNeed({
+  /// Creates a need. `public_code` and `status` are set by the server and
+  /// read back from the insert response. [id] works as in [createDonation].
+  Future<CreatedOperation> createNeed({
+    String? id,
     required String category,
     required String categoryGroup,
     required String itemTypeKey,
@@ -87,8 +136,8 @@ class ItemRepositoryV2 {
     final cleanAttributes = Map<String, String>.fromEntries(
       attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
     );
-    final row = await _client.from('needs').insert({
-      'public_code': _publicCode('NEED'),
+    final payload = <String, dynamic>{
+      if (id != null) 'id': id,
       'user_id': userId,
       'category': category,
       'category_version': 2,
@@ -99,8 +148,21 @@ class ItemRepositoryV2 {
       'reason': privateDetails.trim(),
       'accepts_used': acceptsUsed,
       'address_id': addressId,
-      'status': 'submitted',
-    }).select('id').single();
-    return row['id'] as String;
+    };
+    try {
+      final row = await _client
+          .from('needs')
+          .insert(payload)
+          .select('id,public_code')
+          .single();
+      return CreatedOperation(
+        id: row['id'] as String,
+        publicCode: '${row['public_code'] ?? ''}',
+      );
+    } on PostgrestException catch (error) {
+      final existing = await _existingRow('needs', id, error);
+      if (existing == null) rethrow;
+      return existing;
+    }
   }
 }

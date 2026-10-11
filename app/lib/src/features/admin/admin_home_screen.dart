@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
 import '../../data/operations_repository.dart';
 import '../../data/recovery_repository.dart';
+import '../../domain/admin_queue_presenter.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../auth/account_status_screens.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 import 'accepted_matches_screen.dart';
+import 'account_deletion_screen.dart';
 import 'admin_dashboard_screen.dart' show ContributionReviewScreen;
 import 'create_staff_screen.dart';
+import 'delivery_operations_screen.dart';
 import 'item_matching_v2_screen.dart';
 import 'need_discovery_admin_screen.dart';
 import 'partner_management_screen.dart';
@@ -76,8 +81,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   Future<void> _refresh() async {
     final next = _load();
-    setState(() => _future = next);
-    await next;
+    setState(() {
+      _future = next;
+    });
+    try {
+      await next;
+    } catch (_) {
+      // Rendered by the FutureBuilder as a retryable error state.
+    }
   }
 
   Future<void> _open(Widget screen) async {
@@ -90,12 +101,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       'risks' => const RiskManagementScreen(),
       'incidents' => const ServiceIncidentManagementScreen(),
       'accepted_matches' => const AcceptedMatchesScreen(),
+      'deliveries' => const DeliveryOperationsScreen(),
       'contributions' => const ContributionReviewScreen(),
       'partners' => const PartnerManagementScreen(),
       'item_matching' => const ItemMatchingV2Screen(),
       'needs' => const NeedDiscoveryAdminScreen(),
       'service_matching' => const ServiceMatchingScreen(),
       'recovery' => const RecoveryInventoryScreen(),
+      'account_deletions' => const AccountDeletionScreen(),
       _ => null,
     };
     if (screen != null) {
@@ -123,7 +136,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ],
       ),
     );
-    if (confirmed == true) await Supabase.instance.client.auth.signOut();
+    if (confirmed != true || !mounted) return;
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (error) {
+      if (mounted && !signedOutDespiteError()) showErrorSnack(context, error);
+    }
   }
 
   @override
@@ -136,10 +154,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           child: FutureBuilder<_AdminHomeData>(
             future: _future,
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
+              // Keep showing the loaded data while a refresh is running so the
+              // RefreshIndicator stays mounted and the page does not flash.
+              final waiting = snapshot.connectionState != ConnectionState.done;
+              if (waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (snapshot.hasError) {
+              if (!waiting && snapshot.hasError) {
                 return _AdminLoadError(onRetry: _refresh);
               }
               final data = snapshot.data!;
@@ -219,6 +240,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                 _Tool(Icons.join_inner_rounded, 'مطابقة الأشياء', 'مراجعة الملاءمة وإرسال عرض المطابقة.', RuhamaaColors.vividGold, () => _open(const ItemMatchingV2Screen())),
                                 _Tool(Icons.handyman_outlined, 'الوقت والمهارات', 'مطابقة عروض الأفراد بطلبات الخدمات.', RuhamaaColors.rose, () => _open(const ServiceMatchingScreen())),
                                 _Tool(Icons.delivery_dining_outlined, 'جاهز للتوصيل', 'إسناد الموصل والدراجة بعد قبول المستفيد.', RuhamaaColors.primary, () => _open(const AcceptedMatchesScreen())),
+                                _Tool(Icons.route_outlined, 'متابعة التوصيل', 'متابعة قبول المهام وإعادة إسناد المتعثر منها.', RuhamaaColors.blue, () => _open(const DeliveryOperationsScreen())),
                               ],
                             ),
                             _ToolGroup(
@@ -241,6 +263,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                 _Tool(Icons.map_outlined, 'المدن والمناطق', 'نطاقات الخدمة وإسناد المشرفين.', RuhamaaColors.blue, () => _open(const ServiceAreasScreen())),
                                 _Tool(Icons.person_add_alt_1_outlined, 'إضافة فريق', 'إنشاء حساب موصل أو مشرف تشغيل.', RuhamaaColors.vividGold, () => _open(const CreateStaffScreen())),
                                 _Tool(Icons.manage_accounts_outlined, 'المستخدمون والأدوار', 'إدارة الصلاحيات وتجميد الحسابات.', RuhamaaColors.rose, () => _open(const UserManagementScreen())),
+                                _Tool(Icons.person_remove_outlined, 'طلبات حذف الحسابات', 'مراجعة طلبات الحذف ثم تنفيذها أو رفضها.', RuhamaaColors.primaryBright, () => _open(const AccountDeletionScreen())),
                               ],
                             ),
                             const SizedBox(height: 28),
@@ -287,7 +310,7 @@ enum _QueueFilter {
         _QueueFilter.urgent => item.priority >= 80,
         _QueueFilter.matching => const {'item_matching', 'needs', 'service_matching'}.contains(item.actionKey),
         _QueueFilter.delivery => item.actionKey == 'accepted_matches' || item.kind == 'delivery',
-        _QueueFilter.safeguards => const {'risks', 'incidents', 'contributions', 'partners'}.contains(item.actionKey),
+        _QueueFilter.safeguards => const {'risks', 'incidents', 'contributions', 'partners', 'account_deletions'}.contains(item.actionKey),
       };
 }
 
@@ -341,7 +364,7 @@ class _AdminHero extends StatelessWidget {
                 IconButton(
                   tooltip: 'العودة',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 ),
               PopupMenuButton<String>(
                 iconColor: Colors.white,
@@ -492,6 +515,13 @@ class _PriorityItem extends StatelessWidget {
     final urgent = item.priority >= 80;
     final age = item.ageHours < 24 ? '${item.ageHours.round()} ساعة' : '${(item.ageHours / 24).floor()} يوم';
     final accent = urgent ? RuhamaaColors.rose : RuhamaaColors.primaryBright;
+    // The server text of some queue kinds embeds raw database keys; the
+    // displayed copy is rebuilt from the row's kind.
+    final copy = AdminQueuePresenter.present(
+      kind: item.kind,
+      title: item.title,
+      subtitle: item.subtitle,
+    );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
@@ -514,12 +544,12 @@ class _PriorityItem extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                        Expanded(child: Text(copy.title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
                         if (urgent) const Text('عاجل', style: TextStyle(color: RuhamaaColors.rose, fontWeight: FontWeight.w900, fontSize: 12)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(item.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35)),
+                    Text(copy.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35)),
                     const SizedBox(height: 7),
                     Text('${item.code} • منذ $age', style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w800)),
                   ],
@@ -527,7 +557,7 @@ class _PriorityItem extends StatelessWidget {
               ),
               const Padding(
                 padding: EdgeInsets.only(top: 13),
-                child: Icon(Icons.chevron_left_rounded, color: RuhamaaColors.textMuted),
+                child: Icon(Icons.chevron_right_rounded, color: RuhamaaColors.textMuted),
               ),
             ],
           ),

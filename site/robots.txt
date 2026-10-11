@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
-Disallow: /login-callback/
 Sitemap: https://ruhamaa.com/sitemap.xml

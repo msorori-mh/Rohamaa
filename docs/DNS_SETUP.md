@@ -139,7 +139,7 @@ $Urls = @(
   'https://ruhamaa.com/privacy/',
   'https://ruhamaa.com/terms/',
   'https://ruhamaa.com/delete-account/',
-  'https://ruhamaa.com/login-callback'
+  'https://ruhamaa.com/login-callback/'
 )
 
 foreach ($Url in $Urls) {
@@ -171,10 +171,10 @@ After that fingerprint is placed into the real `assetlinks.json` and deployed, v
 ```powershell
 adb shell pm verify-app-links --re-verify com.ruhamaa.app
 adb shell pm get-app-links com.ruhamaa.app
-adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback"
+adb shell am start -W -a android.intent.action.VIEW -d "https://ruhamaa.com/login-callback/"
 ```
 
-Only after the domain is verified by Android and the HTTPS callback opens Ataa should production OAuth be switched from the internal custom scheme to `https://ruhamaa.com/login-callback`, if desired.
+Only after the domain is verified by Android and the HTTPS callback opens Ataa should production OAuth be switched from the internal custom scheme to `https://ruhamaa.com/login-callback/`, if desired.
 
 ## 8. DNS / Pages checklist
 

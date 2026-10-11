@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
+import '../../core/auth_callback_error.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 const _authRedirectUrl = String.fromEnvironment(
@@ -30,9 +32,36 @@ class _LoginScreenState extends State<LoginScreen> {
     _authSubscription = auth.onAuthStateChange.listen((data) {
       debugPrint('Login auth event: ${data.event}; session=${data.session != null}');
       if (data.session != null) _openApp();
+    }, onError: (Object error) {
+      debugPrint('Login auth callback failed: ${error.runtimeType}');
+      _showCallbackError(error);
     });
+    AuthCallbackError.last.addListener(_onCallbackError);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (auth.currentSession != null) _openApp();
+      if (auth.currentSession != null) {
+        _openApp();
+        return;
+      }
+      // A callback that failed before this screen was built.
+      _onCallbackError();
+    });
+  }
+
+  void _onCallbackError() {
+    final error = AuthCallbackError.last.value;
+    if (error == null) return;
+    AuthCallbackError.last.value = null;
+    _showCallbackError(error);
+  }
+
+  void _showCallbackError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _error = friendlyError(
+        error,
+        fallback: AuthCallbackError.fallbackMessage,
+      );
     });
   }
 
@@ -43,11 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    AuthCallbackError.last.removeListener(_onCallbackError);
     _authSubscription.cancel();
     super.dispose();
   }
 
   Future<void> _googleSignIn() async {
+    if (_loading) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -57,99 +88,29 @@ class _LoginScreenState extends State<LoginScreen> {
         OAuthProvider.google,
         redirectTo: _authRedirectUrl,
       );
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول: ${e.message}');
-    } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تسجيل الدخول بحساب Google. حاول مرة أخرى.');
-      debugPrint('Google OAuth launch error: $e');
+    } catch (error) {
+      debugPrint('Google sign-in failed: ${error.runtimeType}');
+      if (mounted) {
+        setState(
+          () => _error = friendlyError(
+            error,
+            fallback: 'لم يكتمل تسجيل الدخول بحساب Google. حاول مرة أخرى أو استخدم حسابًا آخر.',
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _staffLogin() async {
-    final email = TextEditingController();
-    final password = TextEditingController();
-    bool busy = false;
-    bool obscure = true;
-    String? dialogError;
-
     await showDialog<void>(
       context: context,
-      barrierDismissible: !busy,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('دخول فريق عطاء'),
-          content: SizedBox(
-            width: 430,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('للإدارة، مشرفي المدن/المناطق، والموصلين.'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: email,
-                  enabled: !busy,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: password,
-                  enabled: !busy,
-                  obscureText: obscure,
-                  decoration: InputDecoration(
-                    labelText: 'كلمة المرور',
-                    suffixIcon: IconButton(
-                      onPressed: busy ? null : () => setDialogState(() => obscure = !obscure),
-                      icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                    ),
-                  ),
-                ),
-                if (dialogError != null) ...[
-                  const SizedBox(height: 10),
-                  Text(dialogError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('إلغاء')),
-            FilledButton(
-              onPressed: busy
-                  ? null
-                  : () async {
-                      if (email.text.trim().isEmpty || password.text.isEmpty) return;
-                      setDialogState(() {
-                        busy = true;
-                        dialogError = null;
-                      });
-                      try {
-                        await Supabase.instance.client.auth.signInWithPassword(
-                          email: email.text.trim(),
-                          password: password.text,
-                        );
-                        if (context.mounted) Navigator.pop(context);
-                      } on AuthException catch (e) {
-                        setDialogState(() {
-                          busy = false;
-                          dialogError = e.message;
-                        });
-                      } catch (_) {
-                        setDialogState(() {
-                          busy = false;
-                          dialogError = 'تعذر تسجيل الدخول. تحقق من البيانات.';
-                        });
-                      }
-                    },
-              child: Text(busy ? 'جارٍ الدخول...' : 'دخول'),
-            ),
-          ],
-        ),
-      ),
+      // The dialog owns its busy state; it is closed only by its own buttons
+      // so a sign-in in progress is never interrupted by a stray tap.
+      barrierDismissible: false,
+      builder: (_) => const _StaffLoginDialog(),
     );
-    email.dispose();
-    password.dispose();
   }
 
   @override
@@ -194,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Icon(Icons.handshake_rounded, color: RuhamaaColors.primary, size: 46),
                       SizedBox(height: 10),
                       Text(
-                        'من الناس إلى الناس، بخصوصية وكرامة',
+                        'تبرّع أو اطلب المساعدة بخصوصية',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: RuhamaaColors.primaryDark,
@@ -204,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'عطاء يتولى المطابقة والتنسيق والتوصيل دون كشف هوية المتبرع والمستفيد لبعضهما.',
+                        'يراجع عطاء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
                       ),
@@ -246,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(width: 7),
                     Flexible(
                       child: Text(
-                        'نستخدم بيانات Google الأساسية لتسجيل الدخول فقط؛ لا نطلب الوصول إلى Gmail أو Drive.',
+                        'نستخدم بيانات حساب Google لتسجيل الدخول فقط، ولا نصل إلى Gmail أو Drive.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.5),
                       ),
@@ -256,12 +217,131 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.push('/legal'),
-                  child: const Text('الخصوصية والشروط وحذف الحساب'),
+                  child: const Text('الخصوصية والشروط'),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StaffLoginDialog extends StatefulWidget {
+  const _StaffLoginDialog();
+
+  @override
+  State<_StaffLoginDialog> createState() => _StaffLoginDialogState();
+}
+
+class _StaffLoginDialogState extends State<_StaffLoginDialog> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _busy = false;
+  bool _obscure = true;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'أدخل البريد الإلكتروني وكلمة المرور.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      // A successful sign-in may already have replaced the login page (and
+      // this dialog with it) through the router redirect.
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (error) {
+      debugPrint('Staff sign-in failed: ${error.runtimeType}');
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = friendlyError(
+          error,
+          fallback: 'لم يكتمل تسجيل الدخول. تحقق من البيانات ثم حاول مرة أخرى.',
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_busy,
+      child: AlertDialog(
+        title: const Text('دخول فريق عطاء'),
+        content: SizedBox(
+          width: 430,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('للإدارة، مشرفي المدن/المناطق، والموصلين.'),
+                const SizedBox(height: 16),
+                TextField(
+                  key: const Key('staff-login-email'),
+                  controller: _email,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  textDirection: TextDirection.ltr,
+                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('staff-login-password'),
+                  controller: _password,
+                  enabled: !_busy,
+                  obscureText: _obscure,
+                  textDirection: TextDirection.ltr,
+                  onSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    labelText: 'كلمة المرور',
+                    suffixIcon: IconButton(
+                      onPressed: _busy ? null : () => setState(() => _obscure = !_obscure),
+                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                    ),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _busy ? null : () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            key: const Key('staff-login-submit'),
+            onPressed: _busy ? null : _submit,
+            child: Text(_busy ? 'جارٍ الدخول...' : 'دخول'),
+          ),
+        ],
       ),
     );
   }
