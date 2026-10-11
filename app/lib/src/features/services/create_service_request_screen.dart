@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
 import '../../data/service_repository.dart';
+import '../../domain/service_flow_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
+import '../items/form_guards.dart';
 import 'service_catalog.dart';
 
 class CreateServiceRequestScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class CreateServiceRequestScreen extends StatefulWidget {
 }
 
 class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _details = TextEditingController();
   final _preferredTime = TextEditingController();
@@ -24,6 +28,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   double? _estimatedHours = 3;
   bool _materialsAvailable = false;
   bool _saving = false;
+  bool _touched = false;
+
+  /// Set once the request exists on the server, so that it is never sent twice.
+  bool _created = false;
 
   ServiceCategoryOption get _categoryData => serviceCategoryByKey(_category);
 
@@ -39,55 +47,88 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
     final repo = ServiceRepository(Supabase.instance.client);
     if (await repo.defaultServiceAreaId() != null) return true;
     if (!mounted) return false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('أكمل بيانات التوصيل ونطاق الخدمة أولًا.')),
-    );
+    showInfoSnack(context, 'أكمل بيانات التوصيل ونطاق الخدمة أولًا.');
     await context.push('/onboarding');
     return await repo.defaultServiceAreaId() != null;
   }
 
-  bool _validateDetails() {
-    if (_title.text.trim().length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('اكتب وصفًا واضحًا للخدمة التي تحتاجها.')),
+  String? _titleError(String? value) => ServiceFlowRules.validateTitle(
+        value,
+        emptyMessage: 'اكتب وصفًا واضحًا للخدمة التي تحتاجها.',
       );
-      return false;
-    }
-    if (_details.text.trim().length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أضف تفاصيل مختصرة تساعدنا في البحث.')),
+
+  String? _detailsError(String? value) => ServiceFlowRules.validateDetails(
+        value,
+        emptyMessage: 'أضف تفاصيل مختصرة تساعدنا في البحث.',
       );
-      return false;
-    }
-    return true;
-  }
+
+  bool get _detailsValid =>
+      _titleError(_title.text) == null &&
+      _detailsError(_details.text) == null &&
+      ServiceFlowRules.validateOptionalNote(_preferredTime.text) == null;
 
   void _next() {
-    if (_step == 1 && !_validateDetails()) return;
+    if (_step == 1) {
+      if (!_formKey.currentState!.validate()) return;
+      // A field scrolled far out of view is not built, so the form cannot
+      // show its message: check the values themselves as well.
+      final problem = _titleError(_title.text) ??
+          _detailsError(_details.text) ??
+          ServiceFlowRules.validateOptionalNote(_preferredTime.text);
+      if (problem != null) {
+        showInfoSnack(context, problem);
+        return;
+      }
+      FocusScope.of(context).unfocus();
+    }
     if (_step < 2) setState(() => _step += 1);
   }
 
-  void _back() {
-    if (_step > 0) setState(() => _step -= 1);
+  /// System back and the on-screen back button: go to the previous step, or
+  /// leave the form after confirming when data was entered.
+  Future<void> _handleBack() async {
+    if (_saving) return;
+    if (_step > 0) {
+      setState(() => _step -= 1);
+      return;
+    }
+    if (_touched) {
+      final discard = await confirmDiscardChanges(context);
+      if (!mounted) return;
+      if (!discard) return;
+    }
+    leaveForm(context);
   }
 
   Future<void> _submit() async {
-    if (!_validateDetails()) return;
+    if (_saving) return;
+    if (!_detailsValid) {
+      // The fields live on the previous step: go back and show the messages.
+      setState(() => _step = 1);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _formKey.currentState?.validate();
+      });
+      return;
+    }
     setState(() => _saving = true);
     try {
-      if (!await _ensureArea()) return;
-      await ServiceRepository(Supabase.instance.client).createServiceRequest(
-        category: _category,
-        serviceType: _serviceType,
-        title: _title.text.trim(),
-        details: _details.text.trim(),
-        estimatedHours: _estimatedHours,
-        preferredTimeNote: _preferredTime.text.trim(),
-        materialsAvailable: _materialsAvailable,
-      );
+      if (!_created) {
+        if (!await _ensureArea()) return;
+        await ServiceRepository(Supabase.instance.client).createServiceRequest(
+          category: _category,
+          serviceType: _serviceType,
+          title: _title.text.trim(),
+          details: _details.text.trim(),
+          estimatedHours: _estimatedHours,
+          preferredTimeNote: _preferredTime.text.trim(),
+          materialsAvailable: _materialsAvailable,
+        );
+        _created = true;
+      }
       if (!mounted) return;
       await showDialog<void>(
         context: context,
+        barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: const Text('تم تسجيل طلب الخدمة'),
           content: const Text(
@@ -98,11 +139,13 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
           ],
         ),
       );
-      if (mounted) Navigator.pop(context);
-    } catch (_) {
+      if (mounted) leaveForm(context);
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر إرسال طلب الخدمة. تحقق من اتصالك وحاول مرة أخرى.')),
+        showErrorSnack(
+          context,
+          error,
+          fallback: 'تعذر إرسال طلب الخدمة. تحقق من اتصالك وحاول مرة أخرى.',
         );
       }
     } finally {
@@ -112,9 +155,26 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('اطلب خدمة')),
-      body: Column(
+    return PopScope<Object?>(
+      canPop: _step == 0 && !_touched && !_saving,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('اطلب خدمة')),
+        body: Form(
+          key: _formKey,
+          onChanged: () {
+            if (!_touched) setState(() => _touched = true);
+          },
+          child: _buildBody(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    return Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
@@ -142,7 +202,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
                   if (_step > 0) ...[
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _saving ? null : _back,
+                        onPressed: _saving ? null : _handleBack,
                         child: const Text('السابق'),
                       ),
                     ),
@@ -166,7 +226,6 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
             ),
           ),
         ],
-      ),
     );
   }
 
@@ -197,6 +256,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () => setState(() {
+                  _touched = true;
                   _category = category.key;
                   _serviceType = category.types.first;
                 }),
@@ -230,7 +290,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
           children: _categoryData.types.map((type) => ChoiceChip(
                 label: Text(type),
                 selected: _serviceType == type,
-                onSelected: (_) => setState(() => _serviceType = type),
+                onSelected: (_) => setState(() {
+                  _touched = true;
+                  _serviceType = type;
+                }),
               )).toList(),
         ),
       ],
@@ -243,22 +306,27 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
       children: [
         const _SectionTitle('صف الخدمة المطلوبة'),
         const SizedBox(height: 10),
-        TextField(
+        TextFormField(
           controller: _title,
+          maxLength: ServiceFlowRules.titleMax,
           decoration: const InputDecoration(
             labelText: 'ماذا تحتاج؟',
             hintText: 'مثال: إصلاح تسريب في المطبخ',
+            counterText: '',
           ),
+          validator: _titleError,
         ),
         const SizedBox(height: 12),
-        TextField(
+        TextFormField(
           controller: _details,
           maxLines: 4,
+          maxLength: ServiceFlowRules.detailsMax,
           decoration: const InputDecoration(
             labelText: 'تفاصيل الحالة',
             hintText: 'اشرح العمل المطلوب فقط دون كتابة معلومات شخصية.',
             helperText: 'هذه التفاصيل لا تظهر للعامة.',
           ),
+          validator: _detailsError,
         ),
         const SizedBox(height: 20),
         const _SectionTitle('كم تتوقع أن تحتاج الخدمة؟'),
@@ -274,18 +342,24 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
             ChoiceChip(
               label: const Text('لا أعرف'),
               selected: _estimatedHours == null,
-              onSelected: (_) => setState(() => _estimatedHours = null),
+              onSelected: (_) => setState(() {
+                _touched = true;
+                _estimatedHours = null;
+              }),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        TextField(
+        TextFormField(
           controller: _preferredTime,
           maxLines: 2,
+          maxLength: ServiceFlowRules.noteMax,
           decoration: const InputDecoration(
             labelText: 'وقت مناسب أو ملاحظات الموعد (اختياري)',
             hintText: 'مثال: بعد العصر أو خلال هذا الأسبوع',
+            counterText: '',
           ),
+          validator: ServiceFlowRules.validateOptionalNote,
         ),
         const SizedBox(height: 14),
         Container(
@@ -296,7 +370,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
           ),
           child: SwitchListTile(
             value: _materialsAvailable,
-            onChanged: (value) => setState(() => _materialsAvailable = value),
+            onChanged: (value) => setState(() {
+              _touched = true;
+              _materialsAvailable = value;
+            }),
             title: const Text('لدي المواد أو القطع المطلوبة', style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: const Text('إن لم تكن متأكدًا اترك الخيار مغلقًا، ويحدد فريق عطاء ذلك لاحقًا.'),
           ),
@@ -337,7 +414,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   Widget _hoursChip(String label, double hours) => ChoiceChip(
         label: Text(label),
         selected: _estimatedHours == hours,
-        onSelected: (_) => setState(() => _estimatedHours = hours),
+        onSelected: (_) => setState(() {
+          _touched = true;
+          _estimatedHours = hours;
+        }),
       );
 }
 
