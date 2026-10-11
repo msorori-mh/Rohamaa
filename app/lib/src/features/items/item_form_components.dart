@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../catalog/item_category_catalog.dart';
+import '../../domain/item_form_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 class ItemClassificationSelector extends StatelessWidget {
@@ -151,7 +152,8 @@ class ItemAttributesEditor extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: DropdownButtonFormField<String>(
-                initialValue: values[attribute.key]?.isEmpty ?? true ? null : values[attribute.key],
+                initialValue: attribute.choices.containsKey(values[attribute.key]) ? values[attribute.key] : null,
+                isExpanded: true,
                 decoration: InputDecoration(labelText: attribute.label),
                 items: attribute.choices.entries
                     .map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value)))
@@ -165,10 +167,13 @@ class ItemAttributesEditor extends StatelessWidget {
             child: TextFormField(
               key: ValueKey('attr-${category.key}-${attribute.key}'),
               initialValue: values[attribute.key] ?? '',
+              maxLength: ItemFormLimits.attributeValue,
               decoration: InputDecoration(
                 labelText: attribute.label,
                 hintText: attribute.hint,
+                counterText: '',
               ),
+              validator: (value) => validateOptionalText(value, max: ItemFormLimits.attributeValue),
               onChanged: (value) => onChanged(attribute.key, value.trim()),
             ),
           );
