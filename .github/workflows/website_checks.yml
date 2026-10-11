@@ -1,27 +1,30 @@
 name: Website checks
 on:
   pull_request:
-    paths: ['site/**', 'tests/site/**', '.github/workflows/website_checks.yml']
-  push:
-    branches: [main]
-    paths: ['site/**', 'tests/site/**', '.github/workflows/website_checks.yml']
+    paths: ['site/**', 'tests/site/**', '.github/workflows/website_checks.yml', '.github/workflows/pages.yml']
   workflow_dispatch:
+  # Reused by pages.yml so a deployment cannot start unless these checks pass.
+  workflow_call:
 permissions:
   contents: read
 jobs:
   website:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: '22'
       - name: Validate static pages
         run: python3 tests/site/check_static.py
       - name: Install browser test tool
         run: |
-          npm install --no-save --package-lock=false playwright@1.62.1
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.62.1
           npx playwright install --with-deps chromium
       - name: Check responsive pages and interactions
         run: |
@@ -35,7 +38,7 @@ jobs:
           node tests/site/browser.cjs
       - name: Save screenshots and results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: website-review
           path: site-results/
