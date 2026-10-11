@@ -77,6 +77,16 @@ class OperationsRepository {
     await _client.from('user_notifications').update({'read_at': DateTime.now().toUtc().toIso8601String()}).isFilter('read_at', null);
   }
 
+  /// Withdraws the person's own donation while it is still cancellable.
+  Future<void> cancelDonation(String donationId) async {
+    await _client.rpc('user_cancel_donation', params: {'p_donation_id': donationId});
+  }
+
+  /// Withdraws the person's own need while it is still cancellable.
+  Future<void> cancelNeed(String needId) async {
+    await _client.rpc('user_cancel_need', params: {'p_need_id': needId});
+  }
+
   Future<List<AdminQueueItem>> adminQueue() async {
     final rows = await _client.rpc('admin_operations_overview', params: {'p_limit': 50});
     return (rows as List).cast<Map<String, dynamic>>().map(AdminQueueItem.fromJson).toList();
