@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../catalog/item_category_catalog.dart';
+import '../../core/app_error.dart';
 import '../../data/need_discovery_repository.dart';
+import '../../domain/item_form_rules.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 class NeedDiscoveryScreen extends StatefulWidget {
@@ -15,25 +17,55 @@ class NeedDiscoveryScreen extends StatefulWidget {
 
 class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
   String? _category;
-  late Future<List<NeedDiscoveryCard>> _future;
+  List<NeedDiscoveryCard>? _cards;
+  Object? _error;
+  int _request = 0;
 
   NeedDiscoveryRepository get _repo => NeedDiscoveryRepository(Supabase.instance.client);
 
   @override
   void initState() {
     super.initState();
-    _reload();
+    _load();
   }
 
-  void _reload() {
-    _future = _repo.cards(category: _category);
+  /// Loads the cards of the selected category. Completes only when the
+  /// request has finished, so pull-to-refresh spins for the real duration.
+  /// A response for a category the person has since left is ignored.
+  Future<void> _load() async {
+    final request = ++_request;
+    try {
+      final cards = await _repo.cards(category: _category);
+      if (!mounted) return;
+      if (request != _request) return;
+      setState(() {
+        _cards = cards;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      if (request != _request) return;
+      if (_cards == null) {
+        setState(() => _error = error);
+      } else {
+        showErrorSnack(context, error);
+      }
+    }
   }
 
   void _selectCategory(String? value) {
+    if (value == _category) return;
     setState(() {
       _category = value;
-      _reload();
+      _cards = null;
+      _error = null;
     });
+    _load();
+  }
+
+  void _retry() {
+    setState(() => _error = null);
+    _load();
   }
 
   void _offerFor(NeedDiscoveryCard card) {
@@ -55,18 +87,54 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
     return 'ينتظر منذ $days يومًا';
   }
 
-  String _structuredDetail(NeedDiscoveryCard card) {
-    if (card.attributes.isEmpty) return '';
-    final category = itemCategoryByKey(card.category);
-    final parts = <String>[];
-    for (final entry in card.attributes.entries) {
-      if (entry.key == 'size_flexible' || entry.value.trim().isEmpty) continue;
-      final spec = category.attributes.where((attribute) => attribute.key == entry.key).firstOrNull;
-      if (spec == null) continue;
-      final value = spec.choices[entry.value] ?? entry.value;
-      parts.add('${spec.label}: $value');
+  Widget _results() {
+    final cards = _cards;
+    final error = _error;
+    if (cards == null && error != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+        child: Column(
+          children: [
+            Icon(
+              isNetworkError(error) ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+              size: 44,
+              color: RuhamaaColors.textMuted,
+            ),
+            const SizedBox(height: 12),
+            Text(friendlyError(error), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _retry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      );
     }
-    return parts.join(' • ');
+    if (cards == null) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (cards.isEmpty) return const _EmptyDiscovery();
+    return Column(
+      children: cards.map((card) {
+        final category = itemCategoryByKey(canonicalItemCategoryKey(card.category));
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _NeedCard(
+            card: card,
+            label: category.label,
+            icon: category.icon,
+            structuredDetail: describeItemAttributes(card.category, card.attributes),
+            waitLabel: _waitLabel(card.waitDays),
+            onOffer: () => _offerFor(card),
+          ),
+        );
+      }).toList(),
+    );
   }
 
   @override
@@ -74,8 +142,9 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('طلبات للمساعدة')),
       body: RefreshIndicator(
-        onRefresh: () async => setState(_reload),
+        onRefresh: _load,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(18, 8, 18, 30),
           children: [
             Container(
@@ -140,44 +209,7 @@ class _NeedDiscoveryScreenState extends State<NeedDiscoveryScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            FutureBuilder<List<NeedDiscoveryCard>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'تعذر تحميل الطلبات. تحقق من اتصالك وحاول مجددًا.',
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-                final cards = snapshot.data ?? const [];
-                if (cards.isEmpty) return const _EmptyDiscovery();
-                return Column(
-                  children: cards.map((card) {
-                    final category = itemCategoryByKey(card.category);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _NeedCard(
-                        card: card,
-                        label: category.label,
-                        icon: category.icon,
-                        structuredDetail: _structuredDetail(card),
-                        waitLabel: _waitLabel(card.waitDays),
-                        onOffer: () => _offerFor(card),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
+            _results(),
           ],
         ),
       ),
@@ -311,12 +343,5 @@ class _EmptyDiscovery extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull {
-    final iterator = this.iterator;
-    return iterator.moveNext() ? iterator.current : null;
   }
 }
