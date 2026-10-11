@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import '../../data/staff_repository.dart';
 import '../admin/staff_widgets.dart';
+import '../auth/account_status_screens.dart';
 import '../auth/change_password_screen.dart';
 import '../reports/reports_screen.dart';
 
@@ -56,7 +57,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (error) {
-      if (mounted) showErrorSnack(context, error);
+      if (mounted && !signedOutDespiteError()) showErrorSnack(context, error);
     } finally {
       if (mounted) setState(() => _signingOut = false);
     }
@@ -176,7 +177,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                 subtitle: const Text(
                   'الأثر، التوصيل، أداء الموصلين والمصروفات ضمن نطاقك.',
                 ),
-                trailing: const Icon(Icons.chevron_left),
+                trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute<void>(

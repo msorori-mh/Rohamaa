@@ -19,6 +19,9 @@ class DeliveryAssignmentScreen extends StatefulWidget {
 }
 
 class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
+  /// Dropdown value for "no vehicle"; sent to the server as null.
+  static const String _noVehicle = '';
+
   List<Map<String, dynamic>> _couriers = const [];
   List<Map<String, dynamic>> _vehicles = const [];
   String? _courierId;
@@ -88,6 +91,12 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
     if (mounted) Navigator.pop(context, true);
   }
 
+  /// The vehicle to send: null when "no vehicle" is selected.
+  String? get _selectedVehicleId {
+    final id = _vehicleId;
+    return id == null || id == _noVehicle ? null : id;
+  }
+
   Future<void> _assign() async {
     final courierId = _courierId;
     if (courierId == null || _saving) return;
@@ -99,7 +108,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
         await repo.reassignDelivery(
           deliveryId: deliveryId,
           courierId: courierId,
-          vehicleId: _vehicleId,
+          vehicleId: _selectedVehicleId,
         );
         if (!mounted) return;
         await _done(
@@ -111,7 +120,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
       final result = await repo.createDelivery(
         matchId: widget.matchId!,
         courierId: courierId,
-        vehicleId: _vehicleId,
+        vehicleId: _selectedVehicleId,
       );
       if (!mounted) return;
       await _done(
@@ -166,7 +175,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _courierId,
-          decoration: const InputDecoration(labelText: 'المندوب'),
+          decoration: const InputDecoration(labelText: 'الموصل'),
           items: _couriers.map((row) {
             final profile = row['profiles'];
             final name =
@@ -174,7 +183,7 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
             return DropdownMenuItem(
               value: row['user_id'] as String,
               child: Text(
-                name == null || name.trim().isEmpty ? 'مندوب' : name,
+                name == null || name.trim().isEmpty ? 'موصل' : name,
               ),
             );
           }).toList(),
@@ -189,14 +198,17 @@ class _DeliveryAssignmentScreenState extends State<DeliveryAssignmentScreen> {
           DropdownButtonFormField<String>(
             initialValue: _vehicleId,
             decoration: const InputDecoration(labelText: 'الدراجة'),
-            items: _vehicles
-                .map(
-                  (row) => DropdownMenuItem(
-                    value: row['id'] as String,
-                    child: Text('${row['code']}'),
-                  ),
-                )
-                .toList(),
+            items: [
+              for (final row in _vehicles)
+                DropdownMenuItem(
+                  value: row['id'] as String,
+                  child: Text('${row['code']}'),
+                ),
+              const DropdownMenuItem(
+                value: _noVehicle,
+                child: Text('بدون مركبة'),
+              ),
+            ],
             onChanged: _saving
                 ? null
                 : (value) => setState(() => _vehicleId = value),

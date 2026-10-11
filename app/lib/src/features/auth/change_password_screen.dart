@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import '../../data/account_repository.dart';
+import '../../data/handoff_repository.dart';
+import '../../domain/staff_labels.dart';
 import 'account_status_screens.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -74,7 +76,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         currentPassword: widget.requiredChange ? null : _current.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تغيير كلمة المرور.')));
+      // The repository drops the local session after a successful change:
+      // the server may already have ended it.
+      final signedOut = signedOutDespiteError();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              signedOut
+                  ? StaffLabels.passwordChangedMessage
+                  : 'تم تغيير كلمة المرور.',
+            ),
+          ),
+        );
+      if (signedOut) {
+        HandoffRepository.clearIssuedPins();
+        context.go('/login');
+        return;
+      }
       if (!widget.requiredChange && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(true);
         return;

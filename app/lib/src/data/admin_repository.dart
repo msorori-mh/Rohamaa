@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../domain/donation_image_rules.dart';
+import '../domain/paging_rules.dart';
 import 'staff_repository.dart' show StaffFunctionException;
 
 class AdminStats {
@@ -153,9 +155,12 @@ class AdminRepository {
     return result as String;
   }
 
-  /// Signed, short-lived URLs of a donation's photos for reviewers.
-  /// A photo whose URL cannot be signed is skipped instead of failing all.
-  Future<List<String>> donationImageUrls(String donationId) async {
+  /// A donation's photos for reviewers: how many exist and a fresh,
+  /// short-lived signed URL for each one that could be signed. A photo whose
+  /// URL cannot be signed is skipped instead of failing all; the caller
+  /// tells "no photos" from "photos that could not be signed" by
+  /// [DonationPhotoSet.total]. Call again to re-sign expired URLs.
+  Future<DonationPhotoSet> donationPhotos(String donationId) async {
     final rows = await _client.rpc(
       'admin_donation_image_paths',
       params: {'p_donation_id': donationId},
@@ -178,7 +183,7 @@ class AdminRepository {
         // One unreadable photo must not hide the others.
       }
     }
-    return urls;
+    return DonationPhotoSet(total: paths.length, urls: urls);
   }
 
   Future<List<Map<String, dynamic>>> acceptedMatchesAwaitingDelivery() async {
@@ -243,8 +248,28 @@ class AdminRepository {
           'force_password_change,created_at',
         )
         .order('created_at', ascending: false)
+        // Tiebreaker: rows created in the same instant keep a stable order,
+        // so a page boundary never repeats or skips a profile.
+        .order('id')
         .range(from, from + limit - 1);
     return (rows as List).cast<Map<String, dynamic>>();
+  }
+
+  /// The first [count] profiles, loaded page by page so that no single
+  /// request asks for more than [usersPageSize] rows. Stops early at the
+  /// last page.
+  Future<List<Map<String, dynamic>>> usersUpTo(int count) async {
+    final all = <Map<String, dynamic>>[];
+    final seen = <Object?>{};
+    final requests = PagingRules.pages(wanted: count, pageSize: usersPageSize);
+    for (final request in requests) {
+      final rows = await users(from: request.from, limit: request.limit);
+      for (final row in rows) {
+        if (seen.add(row['id'])) all.add(row);
+      }
+      if (rows.length < request.limit) break;
+    }
+    return all;
   }
 
   Future<void> setUserRole(String userId, String role) async {
@@ -267,11 +292,17 @@ class AdminRepository {
   }
 
   Future<List<Map<String, dynamic>>> activeCouriers() async {
+    // A suspended profile cannot receive tasks (the server answers
+    // 'courier inactive'), so it is not offered.
     final rows = await _client
         .from('couriers')
-        .select('user_id,active,profiles!inner(full_name)')
-        .eq('active', true);
-    return (rows as List).cast<Map<String, dynamic>>();
+        .select('user_id,active,profiles!inner(full_name,is_suspended)')
+        .eq('active', true)
+        .eq('profiles.is_suspended', false);
+    return (rows as List).cast<Map<String, dynamic>>().where((row) {
+      final profile = row['profiles'];
+      return profile is! Map || profile['is_suspended'] != true;
+    }).toList();
   }
 
   Future<List<Map<String, dynamic>>> activeVehicles() async {
@@ -310,6 +341,18 @@ class AdminRepository {
       'p_delivery_id': deliveryId,
       'p_courier_id': courierId,
       'p_vehicle_id': vehicleId,
+    });
+  }
+
+  /// Stops a delivery that a courier is working on (`admin_pause_delivery`)
+  /// so it can be reassigned. The delivery becomes 'rescheduled'.
+  Future<void> pauseDelivery({
+    required String deliveryId,
+    required String reason,
+  }) async {
+    await _client.rpc('admin_pause_delivery', params: {
+      'p_delivery_id': deliveryId,
+      'p_reason': reason,
     });
   }
 

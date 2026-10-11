@@ -111,6 +111,14 @@ abstract final class StaffLabels {
   static bool canDecideDeletion(String? status) =>
       status == 'pending' || status == 'processing';
 
+  /// A request that is already being processed cannot be rejected any more:
+  /// the personal data is scrubbed. Only the deletion can be retried.
+  static bool canRejectDeletion(String? status) => status == 'pending';
+
+  /// Label of the approve button for a deletion request in [status].
+  static String deletionApproveLabel(String? status) =>
+      status == 'processing' ? 'إعادة محاولة الحذف' : 'حذف الحساب';
+
   /// Courier confirmation on a cash contribution, as seen by the admin.
   static String courierReceiptLabel(Object? received) {
     if (received == true) return 'أكد الموصل استلام المبلغ';
@@ -142,12 +150,45 @@ abstract final class StaffLabels {
     'current_password_required': 'أدخل كلمة المرور الحالية.',
     'current_password_invalid': 'كلمة المرور الحالية غير صحيحة.',
     'password_update_failed': 'لم تتغير كلمة المرور. حاول مجددًا.',
-    'profile_update_failed': 'تغيّرت كلمة المرور لكن لم يُحدَّث الحساب.',
+    'profile_update_failed': passwordChangedMessage,
+    'password_too_long': 'كلمة المرور طويلة جدًا.',
+    'temp_password_expired':
+        'انتهت صلاحية كلمة المرور المؤقتة. اطلب من الإدارة إعادة تعيين كلمة المرور.',
+    'too_many_attempts': 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
+    'verification_failed':
+        'لم نتمكن من التحقق من كلمة المرور الحالية الآن. حاول مرة أخرى بعد قليل.',
+    'invalid_body': 'البيانات المرسلة غير صالحة.',
+    'invalid_user': 'الحساب المطلوب غير موجود.',
+    'not_staff': 'هذا الإجراء متاح لحسابات الموصلين والمشرفين فقط.',
     'request_not_found': 'طلب الحذف غير موجود.',
     'request_not_pending': 'تمت معالجة هذا الطلب مسبقًا.',
     'open_operations': 'للحساب عمليات جارية يجب إغلاقها قبل الحذف.',
     'method_not_allowed': 'الطلب غير مدعوم.',
   };
+
+  /// Shown whenever the password really changed: the server may have ended
+  /// the session, so the person signs in again with the new password.
+  static const passwordChangedMessage =
+      'تم تغيير كلمة المرور. سجّل الدخول بها من جديد.';
+
+  /// `staff-change-password` codes returned after the password was already
+  /// replaced. They are a success for the person: sign in again.
+  static bool passwordChangedDespite(String? code) =>
+      code == 'profile_update_failed';
+
+  /// Roles whose temporary password an admin may reset
+  /// (`admin-reset-staff-password` answers `not_staff` for the others).
+  static bool canResetStaffPassword(String? role) =>
+      role == 'courier' || role == 'supervisor';
+
+  /// Copy for a failed `admin-reset-staff-password` call, or null when the
+  /// shared copy applies. `profile_update_failed` means something else here
+  /// than in the staff member's own password change: the new password is
+  /// set, but the forced-change flag was not saved, so the admin repeats it.
+  static String? resetPasswordErrorLabel(String? code) =>
+      code == 'profile_update_failed'
+          ? 'تغيّرت كلمة المرور لكن لم يكتمل تحديث الحساب. أعد تعيينها مرة أخرى.'
+          : null;
 
   /// Arabic copy for an Edge Function error code, or null when unknown.
   static String? functionErrorLabel(String? code) =>

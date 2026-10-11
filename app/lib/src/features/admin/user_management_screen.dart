@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
+import '../../data/staff_repository.dart';
+import '../../domain/paging_rules.dart';
 import '../../domain/staff_labels.dart';
 import '../../theme/ruhamaa_theme.dart';
 import 'staff_widgets.dart';
@@ -31,13 +33,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   /// Reloads from the first row, keeping as many rows as are already shown
-  /// so the list does not jump back after an action on a later page.
+  /// so the list does not jump back after an action on a later page. The
+  /// rows are fetched page by page, never in one large request.
   Future<void> _fetch() async {
-    final wanted = _users.length > AdminRepository.usersPageSize
-        ? _users.length
-        : AdminRepository.usersPageSize;
+    final wanted = PagingRules.rowsToReload(
+      shown: _users.length,
+      pageSize: AdminRepository.usersPageSize,
+    );
     try {
-      final rows = await _repo.users(from: 0, limit: wanted);
+      final rows = await _repo.usersUpTo(wanted);
       if (!mounted) return;
       setState(() {
         _users = rows;
@@ -156,6 +160,74 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     }
   }
 
+  /// Gives a courier or supervisor a new temporary password. The admin hands
+  /// it over; the staff member must change it at the next sign-in.
+  Future<void> _resetPassword(Map<String, dynamic> user) async {
+    final id = '${user['id']}';
+    if (user['is_primary_admin'] == true || _busyIds.contains(id)) return;
+    final values = await TextFieldsDialog.show(
+      context,
+      title: 'إعادة تعيين كلمة المرور',
+      intro:
+          'اكتب كلمة مرور مؤقتة جديدة لحساب ${_name(user)}. ستتوقف كلمة المرور الحالية عن العمل، وسيُطلب منه تغيير المؤقتة عند أول دخول.',
+      confirmLabel: 'إعادة التعيين',
+      // Every argument is a constant (the validator is a static tear-off).
+      fields: const [
+        DialogField(
+          id: 'password',
+          label: 'كلمة المرور المؤقتة',
+          helper: '8 أحرف على الأقل، وفيها حرف كبير وصغير ورقم ورمز.',
+          maxLength: 64,
+          validator: StaffLabels.staffPasswordError,
+        ),
+      ],
+    );
+    final password = values?['password'];
+    if (password == null || !mounted) return;
+    setState(() => _busyIds.add(id));
+    try {
+      await StaffRepository(Supabase.instance.client)
+          .resetStaffPassword(id, password);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('تمت إعادة تعيين كلمة المرور'),
+          content: Text(
+            'سلّم كلمة المرور المؤقتة إلى ${_name(user)} بطريقة آمنة. '
+            'سيُطلب منه تعيين كلمة مرور خاصة به عند أول دخول.',
+            style: const TextStyle(height: 1.5),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('تم'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) await _fetch();
+    } catch (error) {
+      if (mounted) {
+        final special = error is StaffFunctionException
+            ? StaffLabels.resetPasswordErrorLabel(error.code)
+            : null;
+        if (special != null) {
+          showInfoSnack(context, special);
+        } else {
+          showErrorSnack(
+            context,
+            error,
+            fallback: staffFunctionErrorMessage(error) ??
+                'لم تُعَد تهيئة كلمة المرور. حاول مرة أخرى.',
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _busyIds.remove(id));
+    }
+  }
+
   Future<void> _toggleSuspension(Map<String, dynamic> user) async {
     final id = '${user['id']}';
     if (user['is_primary_admin'] == true || _busyIds.contains(id)) return;
@@ -224,10 +296,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       trailing = PopupMenuButton<String>(
         onSelected: (action) {
           if (action == 'role') _changeRole(user);
+          if (action == 'password') _resetPassword(user);
           if (action == 'suspend') _toggleSuspension(user);
         },
         itemBuilder: (_) => [
           const PopupMenuItem(value: 'role', child: Text('تغيير الدور')),
+          if (StaffLabels.canResetStaffPassword(role))
+            const PopupMenuItem(
+              value: 'password',
+              child: Text('إعادة تعيين كلمة المرور'),
+            ),
           PopupMenuItem(
             value: 'suspend',
             child: Text(suspended ? 'إلغاء التجميد' : 'تجميد الحساب'),

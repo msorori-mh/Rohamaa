@@ -116,3 +116,12 @@ String? validateRequiredText(
   if (text.length > max) return 'النص طويل جدًا (الحد $max حرفًا).';
   return null;
 }
+
+/// Postgres error code for a unique or primary-key violation.
+const String uniqueViolationCode = '23505';
+
+/// True when an insert failed because the row already exists. Forms send a
+/// row id generated once per form instance, so after a lost response a retry
+/// hits the primary key and the first row is read back instead of creating a
+/// duplicate.
+bool isUniqueViolationCode(String? code) => code == uniqueViolationCode;

@@ -9,6 +9,7 @@ import '../../data/delivery_repository.dart';
 import '../../domain/courier_task_rules.dart';
 import '../../domain/delivery_dispatch_rules.dart';
 import '../admin/staff_widgets.dart';
+import '../auth/account_status_screens.dart';
 import '../auth/change_password_screen.dart';
 
 String _clock(DateTime value) {
@@ -97,7 +98,7 @@ class _CourierTasksScreenState extends State<CourierTasksScreen> {
     try {
       await Supabase.instance.client.auth.signOut();
     } catch (error) {
-      if (mounted) showErrorSnack(context, error);
+      if (mounted && !signedOutDespiteError()) showErrorSnack(context, error);
     } finally {
       if (mounted) setState(() => _signingOut = false);
     }

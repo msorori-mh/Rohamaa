@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/app_error.dart';
 import '../../data/service_repository.dart';
@@ -29,6 +30,10 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
   bool _materialsAvailable = false;
   bool _saving = false;
   bool _touched = false;
+
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first row instead of adding one.
+  final String _operationId = const Uuid().v4();
 
   /// Set once the request exists on the server, so that it is never sent twice.
   bool _created = false;
@@ -115,6 +120,7 @@ class _CreateServiceRequestScreenState extends State<CreateServiceRequestScreen>
       if (!_created) {
         if (!await _ensureArea()) return;
         await ServiceRepository(Supabase.instance.client).createServiceRequest(
+          id: _operationId,
           category: _category,
           serviceType: _serviceType,
           title: _title.text.trim(),

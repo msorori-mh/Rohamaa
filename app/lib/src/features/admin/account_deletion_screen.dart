@@ -125,6 +125,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
     final busy = _busyIds.contains(id);
     final requestedAt = DateTime.tryParse('${row['requested_at']}')?.toLocal();
     final canDecide = StaffLabels.canDecideDeletion(status);
+    final canReject = StaffLabels.canRejectDeletion(status);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -164,6 +165,13 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
+            if (status == 'processing') ...const [
+              SizedBox(height: 6),
+              Text(
+                'بدأ تنفيذ الحذف ولم يكتمل. لا يمكن رفض الطلب في هذه المرحلة؛ أعد المحاولة لإكماله.',
+                style: TextStyle(color: RuhamaaColors.textMuted, height: 1.4),
+              ),
+            ],
             if (canDecide) ...[
               const SizedBox(height: 14),
               if (busy)
@@ -171,14 +179,16 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
               else
                 Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        key: Key('reject-deletion-$id'),
-                        onPressed: () => _reject(row),
-                        child: const Text('رفض الطلب'),
+                    if (canReject) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          key: Key('reject-deletion-$id'),
+                          onPressed: () => _reject(row),
+                          child: const Text('رفض الطلب'),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
+                      const SizedBox(width: 10),
+                    ],
                     Expanded(
                       child: FilledButton(
                         key: Key('approve-deletion-$id'),
@@ -186,7 +196,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen> {
                           backgroundColor: RuhamaaColors.rose,
                         ),
                         onPressed: () => _approve(row),
-                        child: const Text('حذف الحساب'),
+                        child: Text(StaffLabels.deletionApproveLabel(status)),
                       ),
                     ),
                   ],

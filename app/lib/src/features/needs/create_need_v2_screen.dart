@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../catalog/item_category_catalog.dart';
 import '../../core/app_error.dart';
@@ -23,6 +24,10 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
   final _title = TextEditingController();
   final _privateDetails = TextEditingController();
   final Map<String, String> _attributes = {};
+
+  /// Row id generated once for this form and sent with the insert, so a
+  /// retry after a lost response finds the first need instead of adding one.
+  final String _operationId = const Uuid().v4();
 
   String _category = 'clothes';
   String? _group;
@@ -158,6 +163,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
         }
         final repo = ItemRepositoryV2(Supabase.instance.client);
         created = await repo.createNeed(
+          id: _operationId,
           category: _category,
           categoryGroup: _group!,
           itemTypeKey: _itemTypeKey!,
@@ -272,7 +278,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
         const SizedBox(height: 26),
         FilledButton.icon(
           onPressed: _nextFromCategory,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_right_rounded),
           label: const Text('التالي: التفاصيل'),
         ),
       ],
@@ -376,7 +382,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
               flex: 2,
               child: FilledButton.icon(
                 onPressed: _nextFromDetails,
-                icon: const Icon(Icons.chevron_left_rounded),
+                icon: const Icon(Icons.chevron_right_rounded),
                 label: const Text('التالي: المراجعة'),
               ),
             ),

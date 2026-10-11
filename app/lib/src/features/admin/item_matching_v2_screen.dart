@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../catalog/item_category_catalog.dart';
 import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
+import '../../domain/donation_image_rules.dart';
 import '../../domain/staff_labels.dart';
 import '../../theme/ruhamaa_theme.dart';
 import '../items/item_form_components.dart';
@@ -103,7 +104,7 @@ class _ItemMatchingV2ScreenState extends State<ItemMatchingV2Screen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 isThreeLine: true,
-                trailing: const Icon(Icons.chevron_left_rounded),
+                trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => _openDonation(donation),
               ),
             );
@@ -128,7 +129,7 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
 
   /// Resolves to null when the photos could not be loaded. Photos are only a
   /// reviewing aid, so a failure here never blocks matching.
-  late Future<List<String>?> _photos;
+  late Future<DonationPhotoSet?> _photos;
   bool _busy = false;
 
   AdminRepository get _repo => AdminRepository(Supabase.instance.client);
@@ -142,9 +143,11 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
     _photos = _loadPhotos();
   }
 
-  Future<List<String>?> _loadPhotos() async {
+  /// Loads the photo list and signs a fresh URL for each photo. Called again
+  /// whenever a photo fails to load, because a signed URL expires.
+  Future<DonationPhotoSet?> _loadPhotos() async {
     try {
-      return await _repo.donationImageUrls(_donationId);
+      return await _repo.donationPhotos(_donationId);
     } catch (_) {
       return null;
     }
@@ -163,6 +166,7 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
   }
 
   void _reloadPhotos() {
+    if (!mounted) return;
     setState(() {
       _photos = _loadPhotos();
     });
@@ -359,10 +363,14 @@ class _CandidateReviewScreenState extends State<_CandidateReviewScreen> {
 class _DonationPhotos extends StatelessWidget {
   const _DonationPhotos({required this.photos, required this.onRetry});
 
-  final Future<List<String>?> photos;
+  final Future<DonationPhotoSet?> photos;
+
+  /// Loads the photos again with freshly signed URLs.
   final VoidCallback onRetry;
 
   static const double _size = 96;
+  static const TextStyle _muted =
+      TextStyle(color: RuhamaaColors.textMuted, fontSize: 12);
 
   void _enlarge(BuildContext context, String url) {
     showDialog<void>(
@@ -382,10 +390,26 @@ class _DonationPhotos extends StatelessWidget {
                         height: 240,
                         child: Center(child: Text('جارٍ تحميل الصورة...')),
                       ),
-                errorBuilder: (context, error, stackTrace) => const SizedBox(
+                // The signed URL may have expired: sign new ones instead of
+                // asking the reviewer to retry the same address.
+                errorBuilder: (context, error, stackTrace) => SizedBox(
                   height: 240,
                   child: Center(
-                    child: Text('لم تُحمَّل الصورة. أغلق ثم حاول مجددًا.'),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('لم تُحمَّل الصورة.'),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(dialogContext);
+                            onRetry();
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('إعادة تحميل الصور'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -415,63 +439,84 @@ class _DonationPhotos extends StatelessWidget {
     );
   }
 
+  Widget _retryRow(String text) {
+    return Row(
+      children: [
+        Expanded(child: Text(text, style: _muted)),
+        TextButton(
+          onPressed: onRetry,
+          child: const Text('إعادة المحاولة'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    const muted = TextStyle(color: RuhamaaColors.textMuted, fontSize: 12);
-    return FutureBuilder<List<String>?>(
+    return FutureBuilder<DonationPhotoSet?>(
       future: photos,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Text('جارٍ تحميل صور التبرع...', style: muted);
+          return const Text('جارٍ تحميل صور التبرع...', style: _muted);
         }
-        final urls = snapshot.data;
-        if (snapshot.hasError || urls == null) {
-          return Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'لم تُحمَّل صور التبرع. يمكنك متابعة المطابقة بدونها.',
-                  style: muted,
-                ),
-              ),
-              TextButton(
-                onPressed: onRetry,
-                child: const Text('إعادة المحاولة'),
-              ),
-            ],
+        final photoSet = snapshot.data;
+        if (snapshot.hasError || photoSet == null) {
+          return _retryRow(
+            'لم تُحمَّل صور التبرع. يمكنك متابعة المطابقة بدونها.',
           );
         }
-        if (urls.isEmpty) {
-          return const Text('لا توجد صور مرفقة بهذا التبرع.', style: muted);
+        if (photoSet.isEmpty) {
+          return const Text('لا توجد صور مرفقة بهذا التبرع.', style: _muted);
         }
-        return SizedBox(
-          height: _size,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: urls.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final url = urls[index];
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  onTap: () => _enlarge(context, url),
-                  child: Image.network(
-                    url,
-                    width: _size,
-                    height: _size,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) =>
-                        progress == null
-                            ? child
-                            : _placeholder(Icons.image_outlined),
-                    errorBuilder: (context, error, stackTrace) =>
-                        _placeholder(Icons.broken_image_outlined),
-                  ),
-                ),
-              );
-            },
-          ),
+        if (photoSet.signingFailed) {
+          return _retryRow(
+            'لهذا التبرع ${photoSet.total} صور، لكن لم نتمكن من تجهيزها للعرض الآن.',
+          );
+        }
+        final urls = photoSet.urls;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: _size,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: urls.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final url = urls[index];
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      onTap: () => _enlarge(context, url),
+                      child: Image.network(
+                        url,
+                        width: _size,
+                        height: _size,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null
+                                ? child
+                                : _placeholder(Icons.image_outlined),
+                        // Tapping a photo that failed signs fresh URLs.
+                        errorBuilder: (context, error, stackTrace) =>
+                            GestureDetector(
+                          onTap: onRetry,
+                          child: _placeholder(Icons.refresh_rounded),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (photoSet.missing > 0) ...[
+              const SizedBox(height: 6),
+              _retryRow(
+                'لم تُجهَّز ${photoSet.missing} من ${photoSet.total} صور للعرض.',
+              ),
+            ],
+          ],
         );
       },
     );

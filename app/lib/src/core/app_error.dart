@@ -11,9 +11,15 @@ const String kGenericErrorMessage = 'تعذر إتمام العملية. حاو�
 const String kOfflineErrorMessage =
     'لا يوجد اتصال بالإنترنت. تحقق من الشبكة ثم حاول مرة أخرى.';
 
-/// Known server-side messages (raised by SQL functions and policies) mapped
-/// to user-facing copy. Keys are matched case-insensitively as substrings.
-const Map<String, String> _serverMessages = <String, String>{
+/// Known server-side messages (raised by SQL functions, policies and Edge
+/// Functions) mapped to user-facing copy.
+///
+/// Keys are lower-case and matched as substrings of the lower-cased server
+/// text. The first matching entry wins, in the order written here, so a more
+/// specific key must come before a generic one that it contains (for example
+/// 'need cannot be cancelled' before 'cannot be cancelled'). Public only so
+/// the unit tests can check every entry.
+const Map<String, String> kServerErrorMessages = <String, String>{
   'account suspended': 'حسابك موقوف مؤقتًا. تواصل مع فريق عطاء.',
   'row-level security': 'لا تملك صلاحية تنفيذ هذا الإجراء.',
   'permission denied': 'لا تملك صلاحية تنفيذ هذا الإجراء.',
@@ -32,10 +38,12 @@ const Map<String, String> _serverMessages = <String, String>{
   'need cannot be cancelled': 'لا يمكن إلغاء الطلب في هذه المرحلة.',
   'donation cannot be cancelled': 'لا يمكن إلغاء التبرع في هذه المرحلة.',
   'cannot be withdrawn': 'لا يمكن السحب في هذه المرحلة.',
+  'donation already has an active': 'لهذا التبرع عرض أو مطابقة جارية بالفعل.',
+  'pledge already answered': 'سُجّلت إجابتك عن هذه المساهمة مسبقًا ولا يمكن تعديلها.',
   'already matched': 'تمت المطابقة مسبقًا.',
   'already exists': 'هذا السجل موجود مسبقًا.',
   'duplicate key': 'هذا السجل موجود مسبقًا.',
-  'deletion request already': 'لديك طلب حذف قيد المعالجة.',
+  'cancellation reason too long': 'سبب الإلغاء أطول من المسموح. اختصره ثم حاول مجددًا.',
   'value too long': 'النص المدخل أطول من المسموح.',
   'violates check constraint': 'إحدى القيم المدخلة غير مقبولة.',
   'invalid login credentials': 'بيانات الدخول غير صحيحة.',
@@ -58,6 +66,9 @@ const Map<String, String> _serverMessages = <String, String>{
   'current_password_required': 'أدخل كلمة المرور الحالية.',
   'should be different': 'اختر كلمة مرور مختلفة عن الحالية.',
   'password_update_failed': 'تعذر تغيير كلمة المرور. اختر كلمة مرور أخرى وحاول مجددًا.',
+  'profile_update_failed': 'تم تغيير كلمة المرور. سجّل الدخول بها من جديد.',
+  'too_many_attempts': 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
+  'verification_failed': 'لم نتمكن من التحقق من كلمة المرور الحالية الآن. حاول مرة أخرى بعد قليل.',
   'account is not active': 'حسابك غير مفعّل حاليًا. تواصل مع فريق عطاء.',
   'staff accounts must be managed':
       'حسابات فريق عطاء تُدار من الإدارة. تواصل مع مدير عطاء.',
@@ -66,26 +77,45 @@ const Map<String, String> _serverMessages = <String, String>{
   'not delivery owner': 'هذه العملية لا تخص حسابك.',
   'not offer owner': 'هذا العرض لا يخص حسابك.',
   'offer unavailable': 'لم يعد هذا العرض متاحًا.',
+  'need unavailable': 'لم يعد هذا الطلب متاحًا للمطابقة.',
+  'service match is not active': 'هذه المطابقة لم تعد نشطة.',
+  'both participants must accept': 'يجب أن يوافق الطرفان قبل تحديد الموعد.',
+  'scheduled time is required': 'حدّد موعد الخدمة أولًا.',
+  'self service matching is not allowed': 'لا يمكن مطابقة خدمة وطلب يعودان للحساب نفسه.',
+  'service offer is not approved': 'هذه الخدمة لم تُعتمد بعد.',
+  'service request is not open': 'طلب الخدمة لم يعد مفتوحًا.',
   'not awaiting response': 'تم الرد على هذا العرض مسبقًا.',
   'not a participant': 'هذه العملية لا تخص حسابك.',
   'cannot be cancelled': 'لا يمكن الإلغاء في هذه المرحلة.',
   'no pending': 'لا يوجد طلب قيد الانتظار يمكن إلغاؤه.',
   'rate limit': 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
   'too many requests': 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
+  'account deletion in progress': 'يجري حذف هذا الحساب، ولا يمكن تعديل حالته الآن.',
   'delivery in progress': 'لدى الحساب عملية توصيل جارية. انتظر اكتمالها أولًا.',
   'delivery_in_progress': 'لدى الحساب عملية توصيل جارية. انتظر اكتمالها أولًا.',
   'failure cannot be reported in this state': 'لا يمكن الإبلاغ عن تعذر في هذه المرحلة.',
+  'invalid party for this phase': 'هذا الطرف لا يناسب مرحلة المهمة الحالية. اختر طرفًا آخر.',
+  'pause reason required': 'اكتب سبب إيقاف المهمة.',
+  'delivery cannot be paused in this state': 'لا يمكن إيقاف المهمة في هذه المرحلة.',
+  'collected item cannot change courier': 'استُلم الشيء فعلًا، ولا يمكن نقل المهمة إلى موصل آخر بهذه الطريقة.',
+  'vehicle inactive': 'المركبة المختارة غير مفعّلة. اختر مركبة أخرى أو بدون مركبة.',
+  'courier reported cash not received': 'أفاد الموصل بأن المبلغ لم يُستلم، فلا يمكن اعتماد المساهمة.',
   'delivery is already closed': 'هذه المهمة مغلقة.',
   'pledge is not awaiting': 'هذه المساهمة لم تعد بانتظار التأكيد.',
   'pledge is not linked': 'هذه المساهمة لا تخص مهمتك.',
   'cancellation reason required': 'اكتب سبب الإلغاء.',
-  'temp_password_expired': 'انتهت صلاحية كلمة المرور المؤقتة. اطلب من الإدارة إنشاء حساب جديد.',
+  'temp_password_expired': 'انتهت صلاحية كلمة المرور المؤقتة. اطلب من الإدارة إعادة تعيين كلمة المرور.',
   'password_too_long': 'كلمة المرور طويلة جدًا.',
-  'session_revoke_failed': 'تغيّرت كلمة المرور لكن تعذر إنهاء الجلسات الأخرى. سجّل الدخول من جديد.',
+  'session_revoke_failed': 'لم يكتمل الطلب. حاول مرة أخرى.',
   'request_not_open': 'هذا الطلب لم يعد مفتوحًا.',
   'request_not_pending': 'هذا الطلب لم يعد قيد الانتظار.',
   'request_not_found': 'تعذر العثور على الطلب.',
+  'request_not_processing': 'هذا الطلب ليس قيد التنفيذ. حدّث القائمة.',
+  'storage_cleanup_failed': 'لم يكتمل حذف صور الحساب. إعادة المحاولة آمنة وتكمل من حيث توقف الحذف.',
   'storage_cleanup': 'تعذر حذف صور الحساب. أعد المحاولة.',
+  'auth_delete_failed': 'لم يكتمل حذف بيانات الدخول. إعادة المحاولة آمنة وتكمل من حيث توقف الحذف.',
+  'prepare_failed': 'لم يبدأ حذف الحساب. إعادة المحاولة آمنة.',
+  'complete_failed': 'نُفّذ الحذف لكن لم يُغلق الطلب. إعادة المحاولة آمنة وتغلقه.',
   'cannot_delete_self': 'لا يمكنك حذف حسابك الإداري من هنا.',
   'staff_account': 'حسابات الفريق لا تُحذف من هذه الشاشة.',
   'courier inactive': 'الموصل غير مفعّل.',
@@ -94,9 +124,12 @@ const Map<String, String> _serverMessages = <String, String>{
   'delivery is not ready for dropoff': 'المهمة ليست جاهزة للتسليم بعد.',
   'valid rejection reason required': 'اختر سبب الاعتذار.',
   'contribution is no longer pending': 'تمت مراجعة هذه المساهمة مسبقًا.',
+  'while a match offer': 'لا يمكن نشر الطلب ما دام له عرض أو تسليم جارٍ.',
+  'need is not eligible': 'هذا الطلب غير مؤهل للنشر الآن.',
   'need not eligible': 'هذا الطلب غير مؤهل للنشر الآن.',
   'maximum number of public need cards': 'بلغ الحساب الحد الأقصى من البطاقات المعروضة.',
   'cannot suspend self': 'لا يمكنك إيقاف حسابك.',
+  'admin cannot remove own admin role': 'لا يمكنك إزالة دور الإدارة عن حسابك.',
   'primary admin role cannot be changed': 'لا يمكن تغيير دور المدير الرئيسي.',
   'creating additional admins is disabled': 'إنشاء مديرين إضافيين غير متاح.',
   'area has assigned staff': 'النطاق مرتبط بأعضاء من الفريق.',
@@ -105,6 +138,7 @@ const Map<String, String> _serverMessages = <String, String>{
   'staff required': 'هذا الإجراء متاح لفريق عطاء فقط.',
   'active warehouse required': 'اختر مستودعًا مفعّلًا.',
   'donation unavailable for intake': 'هذا التبرع غير متاح للاستلام في المستودع.',
+  'donation unavailable': 'لم يعد هذا التبرع متاحًا للمطابقة.',
   'donation already received': 'تم استلام هذا التبرع مسبقًا.',
   'item already inspected': 'تم فحص هذا الشيء مسبقًا.',
   'work order is not queued': 'أمر العمل ليس في قائمة الانتظار.',
@@ -117,6 +151,10 @@ const Map<String, String> _serverMessages = <String, String>{
   'invalid_email': 'البريد الإلكتروني غير صالح.',
   'reserved_email': 'هذا البريد محجوز ولا يمكن استخدامه.',
   'full_name_required': 'اكتب الاسم الكامل.',
+  'full_name_too_long': 'الاسم أطول من المسموح.',
+  'too_many_areas': 'عدد النطاقات المختارة أكبر من المسموح.',
+  'invalid_user': 'الحساب المطلوب غير موجود.',
+  'not_staff': 'هذا الإجراء متاح لحسابات الموصلين والمشرفين فقط.',
   'invalid_role': 'الدور المختار غير صالح.',
   'area_required': 'اختر نطاقًا واحدًا على الأقل.',
   'invalid_area': 'النطاق المختار غير صالح.',
@@ -124,6 +162,7 @@ const Map<String, String> _serverMessages = <String, String>{
   'staff_setup_failed': 'تعذر إكمال إعداد الحساب. لم يُنشأ أي حساب.',
   'rollback_failed': 'تعذر إكمال الإعداد وبقي حساب غير مكتمل. تواصل مع الدعم الفني.',
   'active user required': 'حسابك غير مفعّل حاليًا. تواصل مع فريق عطاء.',
+  'current partner safety terms must be accepted': 'يجب قبول شروط السلامة الحالية أولًا.',
   'partner must be verified': 'لا يمكن إضافة خدمة قبل اعتماد النشاط.',
   'business service offers require': 'لا يمكن إضافة خدمة قبل اعتماد النشاط.',
   'partners may offer': 'هذه الخدمة خارج نطاق نشاطك المعتمد.',
@@ -160,7 +199,7 @@ String? _serverText(Object error) {
 String friendlyError(Object error, {String? fallback}) {
   if (isNetworkError(error)) return kOfflineErrorMessage;
   final text = (_serverText(error) ?? error.toString()).toLowerCase();
-  for (final entry in _serverMessages.entries) {
+  for (final entry in kServerErrorMessages.entries) {
     if (text.contains(entry.key)) return entry.value;
   }
   return fallback ?? kGenericErrorMessage;
