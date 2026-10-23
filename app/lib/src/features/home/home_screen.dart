@@ -3,12 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/main_tab_signal.dart';
+import '../../data/account_repository.dart';
 import '../../data/handoff_repository.dart';
 import '../../data/match_offer_repository.dart';
+import '../../data/operations_repository.dart';
 import '../../data/service_repository.dart';
+import '../../domain/journey_rules.dart';
 import '../../domain/operation_rules.dart';
+import '../../domain/operation_status_presenter.dart';
 import '../../theme/ruhamaa_theme.dart';
-import '../services/service_home_section.dart';
+import '../items/community_form_widgets.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,13 +23,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   _PulseData _pulse = const _PulseData.none();
-  bool _loadingPulse = false;
+
+  /// The donation or request shown in the «في الطريق» card, if any.
+  OperationItem? _journey;
+  String? _fullName;
+  bool _hasUnread = false;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
     MainTabs.active.addListener(_onTabChanged);
-    _loadPulse();
+    _load();
   }
 
   @override
@@ -36,99 +45,394 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// The home tab stays alive while hidden, so refresh when it is shown again.
   void _onTabChanged() {
-    if (MainTabs.active.value == MainTabs.home) _loadPulse();
+    if (MainTabs.active.value == MainTabs.home) _load();
   }
 
-  /// Loads the "what needs you now" card. It is optional information, so a
-  /// failure simply leaves the previous card (or none) in place.
-  Future<void> _loadPulse() async {
-    if (_loadingPulse) return;
-    _loadingPulse = true;
+  /// Runs one optional load. A failure is logged and returns null, so one
+  /// unavailable source never hides the others.
+  Future<T?> _attempt<T>(String label, Future<T> Function() load) async {
+    try {
+      return await load();
+    } catch (error) {
+      debugPrint('Ataa home $label load failed: ${error.runtimeType}');
+      return null;
+    }
+  }
+
+  /// Loads the name, the bell marker, the journey card and the "decision
+  /// waiting" row. Everything here is optional information: a source that
+  /// fails keeps what is already on screen. Never throws, so it is safe as a
+  /// RefreshIndicator callback.
+  Future<void> _load() async {
+    if (_loading) return;
+    _loading = true;
     try {
       final client = Supabase.instance.client;
-      final results = await Future.wait<dynamic>([
-        MatchOfferRepository(client).pendingOffers(),
-        ServiceRepository(client).pendingServiceMatches(),
-        HandoffRepository(client).myHandoffs(),
+      final operations = OperationsRepository(client);
+      final results = await Future.wait<Object?>([
+        _attempt('offers', () => MatchOfferRepository(client).pendingOffers()),
+        _attempt('service matches', () => ServiceRepository(client).pendingServiceMatches()),
+        _attempt('handoffs', () => HandoffRepository(client).myHandoffs()),
+        _attempt('operations', operations.myOperations),
+        _attempt('notifications', operations.myNotifications),
+        _attempt('profile', () => AccountRepository(client).deliveryProfile()),
       ]);
-      final pulse = _PulseData.from(
-        itemOffers: results[0] as List<MatchOffer>,
-        serviceOffers: results[1] as List<ServiceMatchOffer>,
-        handoffs: results[2] as List<UserHandoff>,
-      );
-      if (mounted) setState(() => _pulse = pulse);
-    } catch (error) {
-      debugPrint('Ataa home pulse load failed: ${error.runtimeType}');
+      if (!mounted) return;
+      final itemOffers = results[0] as List<MatchOffer>?;
+      final serviceOffers = results[1] as List<ServiceMatchOffer>?;
+      final handoffs = results[2] as List<UserHandoff>?;
+      final rows = results[3] as List<OperationItem>?;
+      final notifications = results[4] as List<UserNotificationItem>?;
+      final profile = results[5] as DeliveryProfile?;
+      setState(() {
+        if (itemOffers != null && serviceOffers != null && handoffs != null) {
+          _pulse = _PulseData.from(
+            itemOffers: itemOffers,
+            serviceOffers: serviceOffers,
+            handoffs: handoffs,
+          );
+        }
+        if (rows != null) _journey = _pickJourney(rows);
+        if (notifications != null) {
+          _hasUnread = notifications.any((item) => !item.isRead);
+        }
+        if (profile != null) _fullName = profile.fullName;
+      });
     } finally {
-      _loadingPulse = false;
+      _loading = false;
     }
+  }
+
+  /// The donation or request still on its way that changed most recently.
+  static OperationItem? _pickJourney(List<OperationItem> rows) {
+    final open = rows
+        .where((row) => JourneyRules.isInProgress(row.kind, row.status))
+        .toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return open.isEmpty ? null : open.first;
+  }
+
+  void _goTab(String route) {
+    context.go(OperationRules.withRequestId(route, DateTime.now().millisecondsSinceEpoch));
+  }
+
+  void _openServices() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: RuhamaaColors.background,
+      builder: (sheetContext) {
+        void open(String route) {
+          Navigator.pop(sheetContext);
+          context.push(route);
+        }
+
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'وقتي ومهارتي',
+                  style: TextStyle(color: RuhamaaColors.text, fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'قدّم ساعة من وقتك أو مهارتك مجانًا، أو اطلب خدمة تحتاجها.',
+                  style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 14, height: 1.45),
+                ),
+                const SizedBox(height: 14),
+                _SheetOption(
+                  icon: Icons.handyman_outlined,
+                  title: 'قدّم وقتك أو مهارتك',
+                  subtitle: 'خدمة تستطيع تنفيذها مجانًا.',
+                  onTap: () => open('/offer-service'),
+                ),
+                const SizedBox(height: 10),
+                _SheetOption(
+                  icon: Icons.support_agent_rounded,
+                  title: 'اطلب خدمة',
+                  subtitle: 'أخبرنا بالخدمة وسنبحث عن شخص مناسب.',
+                  onTap: () => open('/request-service'),
+                ),
+                const SizedBox(height: 10),
+                _SheetOption(
+                  icon: Icons.storefront_outlined,
+                  title: 'شارك من خلال نشاطك',
+                  subtitle: 'للمحلات والورش والجهات التي تقدم خدمات مجانية.',
+                  onTap: () => open('/partners'),
+                ),
+                const SizedBox(height: 10),
+                _SheetOption(
+                  icon: Icons.event_note_outlined,
+                  title: 'خدماتي',
+                  subtitle: 'تابع ما قدّمته أو طلبته من خدمات.',
+                  onTap: () => open('/my-services'),
+                ),
+                const SizedBox(height: 12),
+                const CommunityNote(
+                  icon: Icons.balance_outlined,
+                  text: 'طلب المساعدة لا يتطلب أن تتبرّع بشيء أو تقدم خدمة.',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final journey = _journey;
+    final pulse = _pulse;
+    final showPulse = pulse.route != null && (pulse.warm || journey == null);
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: RuhamaaColors.pageGradient),
-        child: RefreshIndicator(
-          onRefresh: _loadPulse,
-          child: ListView(
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
+          padding: EdgeInsets.fromLTRB(20, MediaQuery.paddingOf(context).top + 20, 20, 28),
           children: [
-            _HomeHero(onLocation: () => context.push('/onboarding')),
-            Transform.translate(
-              offset: const Offset(0, -38),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            _Header(
+              hasUnread: _hasUnread,
+              onBell: () => _goTab('/handoffs?tab=1'),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              OperationRules.greetingWithName(DateTime.now().hour, _fullName),
+              style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'ماذا تحب أن تفعل اليوم؟',
+              style: TextStyle(
+                color: RuhamaaColors.text,
+                fontSize: 28,
+                height: 38 / 28,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: _BigActionCard(
+                    key: const ValueKey('home-donate'),
+                    icon: Icons.card_giftcard_rounded,
+                    title: 'تبرّع',
+                    subtitle: 'شيء لم تعد تحتاجه',
+                    background: RuhamaaColors.primary,
+                    titleColor: Colors.white,
+                    subtitleColor: const Color(0xFFD9EEE8),
+                    iconColor: Colors.white,
+                    iconBackground: Colors.white.withValues(alpha: .16),
+                    onTap: () => context.push('/donate'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _BigActionCard(
+                    key: const ValueKey('home-need'),
+                    icon: Icons.volunteer_activism_outlined,
+                    title: 'ما أحتاجه',
+                    subtitle: 'اطلب بسرية وكرامة',
+                    background: RuhamaaColors.warmGoldSoft,
+                    titleColor: RuhamaaColors.goldInk,
+                    subtitleColor: const Color(0xFF6B4E1A),
+                    iconColor: RuhamaaColors.goldDeep,
+                    iconBackground: Colors.white.withValues(alpha: .6),
+                    onTap: () => context.push('/need'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _ServicesRow(onTap: _openServices),
+            if (showPulse) ...[
+              const SizedBox(height: 12),
+              _PulseRow(data: pulse, onTap: () => _goTab(pulse.route!)),
+            ],
+            if (journey != null) ...[
+              const SizedBox(height: 22),
+              _JourneyCard(
+                operation: journey,
+                onTap: () => _goTab('/handoffs?tab=0'),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const CommunityNote(
+              icon: Icons.lock_outline_rounded,
+              text: 'لا يعرف المتبرّع ولا المحتاج هوية الآخر.',
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _LinkChip(
+                  icon: Icons.fact_check_outlined,
+                  label: 'طلبات راجعها الفريق',
+                  onTap: () => context.push('/verified-needs'),
+                ),
+                _LinkChip(
+                  icon: Icons.storefront_outlined,
+                  label: 'شركاء عطاء',
+                  onTap: () => context.push('/partners'),
+                ),
+                _LinkChip(
+                  icon: Icons.location_on_outlined,
+                  label: 'عناويني',
+                  onTap: () => context.push('/onboarding'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'عطاء — مأرب • النسخة التجريبية',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Logo, name and the bell (with a dot while notifications are unread).
+class _Header extends StatelessWidget {
+  const _Header({required this.hasUnread, required this.onBell});
+
+  final bool hasUnread;
+  final VoidCallback onBell;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const RuhamaaBrandMark(size: 40),
+        ),
+        const SizedBox(width: 10),
+        const Text(
+          'عطاء',
+          style: TextStyle(color: RuhamaaColors.primaryDark, fontSize: 24, fontWeight: FontWeight.w800),
+        ),
+        const Spacer(),
+        Semantics(
+          button: true,
+          label: hasUnread ? 'التنبيهات، توجد تنبيهات جديدة' : 'التنبيهات',
+          child: Material(
+            color: Colors.white,
+            shape: const CircleBorder(side: BorderSide(color: RuhamaaColors.border)),
+            child: InkWell(
+              key: const ValueKey('home-bell'),
+              customBorder: const CircleBorder(),
+              onTap: onBell,
+              child: SizedBox.square(
+                dimension: 44,
+                child: Stack(
                   children: [
-                    _PrimaryActionCard(
-                      icon: Icons.volunteer_activism_rounded,
-                      title: 'تبرّع بشيء',
-                      subtitle: 'سنستلمه ونوصله لمن يحتاجه.',
-                      foreground: RuhamaaColors.primaryBright,
-                      onTap: () => context.push('/donate'),
+                    const Center(
+                      child: Icon(Icons.notifications_none_rounded, color: RuhamaaColors.text, size: 22),
                     ),
-                    const SizedBox(height: 14),
-                    _PrimaryActionCard(
-                      icon: Icons.front_hand_rounded,
-                      title: 'اطلب ما تحتاجه',
-                      subtitle: 'أخبرنا بما تحتاجه وسنحافظ على خصوصيتك.',
-                      foreground: RuhamaaColors.vividGold,
-                      onTap: () => context.push('/need'),
-                    ),
-                    const SizedBox(height: 16),
-                    _HomeActivityPulse(data: _pulse),
-                    const SizedBox(height: 24),
-                    const _SectionTitle(title: 'وصول سريع', subtitle: 'اختر ما تريد القيام به'),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(child: _QuickActionCard(icon: Icons.fact_check_outlined,title: 'طلبات للمساعدة',subtitle: 'طلبات راجعها فريقنا',accent: RuhamaaColors.primaryBright,tint: const Color(0xFFE8F8F4),onTap:()=>context.push('/verified-needs'))),
-                      const SizedBox(width: 12),
-                      Expanded(child: _QuickActionCard(icon: Icons.local_shipping_outlined,title: 'المتابعة',subtitle: 'تابع تبرعاتك وطلباتك',accent: RuhamaaColors.rose,tint: const Color(0xFFFFEDF3),onTap:()=>context.go('/handoffs'))),
-                    ]),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(child: _QuickActionCard(icon: Icons.mark_email_unread_outlined,title: 'عروض مناسبة',subtitle: 'راجع العروض المتاحة',accent: RuhamaaColors.vividGold,tint: const Color(0xFFFFF6E6),onTap:()=>context.go('/offers'))),
-                      const SizedBox(width: 12),
-                      Expanded(child: _QuickActionCard(icon: Icons.location_on_rounded,title: 'عناويني',subtitle: 'إدارة مواقع التوصيل',accent: RuhamaaColors.blue,tint: const Color(0xFFEAF7FB),onTap:()=>context.push('/onboarding'))),
-                    ]),
-                    const SizedBox(height: 26),
-                    const ServiceHomeSection(),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.all(17),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: .92),borderRadius: BorderRadius.circular(24),boxShadow:[BoxShadow(color:RuhamaaColors.primaryDark.withValues(alpha:.07),blurRadius:22,offset:const Offset(0,8))]),
-                      child: const Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(Icons.shield_rounded,color:RuhamaaColors.primaryBright),SizedBox(width:12),Expanded(child:Text('بياناتك خاصة، ولا نشارك إلا ما يلزم لإتمام الاستلام أو التسليم.',style:TextStyle(color:RuhamaaColors.textMuted,height:1.5,fontWeight:FontWeight.w500)))]),
-                    ),
-                    const SizedBox(height: 26),
-                    const Text('عطاء — مأرب • النسخة التجريبية',textAlign:TextAlign.center,style:TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w500)),
+                    if (hasUnread)
+                      Positioned(
+                        top: 9,
+                        left: 10,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: RuhamaaColors.alert,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One of the two big home actions (196 high, 28 radius).
+class _BigActionCard extends StatelessWidget {
+  const _BigActionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.background,
+    required this.titleColor,
+    required this.subtitleColor,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color background;
+  final Color titleColor;
+  final Color subtitleColor;
+  final Color iconColor;
+  final Color iconBackground;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(28),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(28),
+        onTap: onTap,
+        child: SizedBox(
+          height: 196,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(color: iconBackground, shape: BoxShape.circle),
+                  child: Icon(icon, color: iconColor, size: 28),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(color: titleColor, fontSize: 22, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(color: subtitleColor, fontSize: 15, height: 21 / 15),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -136,91 +440,358 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeHero extends StatelessWidget {
-  const _HomeHero({required this.onLocation});
-  final VoidCallback onLocation;
+/// «وقتي ومهارتي» row.
+class _ServicesRow extends StatelessWidget {
+  const _ServicesRow({required this.onTap});
 
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 310,
-    padding: EdgeInsets.fromLTRB(22, MediaQuery.paddingOf(context).top + 22, 22, 56),
-    decoration: const BoxDecoration(
-      gradient: RuhamaaColors.heroGradient,
-      borderRadius: BorderRadius.vertical(bottom: Radius.elliptical(220, 48)),
-    ),
-    child: Stack(children:[
-      Positioned(left:-40,bottom:-82,child:Container(width:230,height:150,decoration:BoxDecoration(color:Colors.white.withValues(alpha:.07),shape:BoxShape.circle))),
-      Positioned(right:-64,top:92,child:Container(width:210,height:210,decoration:BoxDecoration(color:RuhamaaColors.primaryGlow.withValues(alpha:.16),shape:BoxShape.circle))),
-      Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[
-          Container(width:58,height:58,padding:const EdgeInsets.all(7),decoration:BoxDecoration(color:Colors.white.withValues(alpha:.94),shape:BoxShape.circle,boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:.10),blurRadius:12,offset:const Offset(0,5))]),child:const RuhamaaBrandMark(size:44)),
-          const Spacer(),
-          _HeroButton(icon:Icons.location_on_outlined,tooltip:'بيانات التوصيل',onTap:onLocation),
-          const SizedBox(width:10),
-          const _HeroButton(icon:Icons.notifications_none_rounded,tooltip:'التنبيهات'),
-        ]),
-        const Spacer(),
-        Text('${OperationRules.greetingForHour(DateTime.now().hour)} ✨',style:const TextStyle(color:Color(0xFFDDF6F1),fontSize:16,fontWeight:FontWeight.w500)),
-        const SizedBox(height:4),
-        Text('أهلًا بك في عطاء',style:Theme.of(context).textTheme.headlineMedium?.copyWith(color:Colors.white,fontWeight:FontWeight.w800,height:1.15)),
-        const SizedBox(height:7),
-        const Text('نحفظ النعمة ونصنع الأثر.',style:TextStyle(color:Color(0xFFD8EEEB),fontSize:16,fontWeight:FontWeight.w500)),
-      ]),
-    ]),
-  );
-}
-
-class _HeroButton extends StatelessWidget {
-  const _HeroButton({required this.icon,required this.tooltip,this.onTap});
-  final IconData icon; final String tooltip; final VoidCallback? onTap;
-  @override Widget build(BuildContext context)=>Material(color:Colors.white.withValues(alpha:.11),shape:const CircleBorder(),child:IconButton(tooltip:tooltip,onPressed:onTap??()=>context.go('/handoffs?tab=1&t=${DateTime.now().millisecondsSinceEpoch}'),icon:Icon(icon,color:Colors.white),iconSize:25));
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title,required this.subtitle});
-  final String title; final String subtitle;
-  @override Widget build(BuildContext context)=>Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:Theme.of(context).textTheme.titleLarge?.copyWith(color:RuhamaaColors.primaryDark,fontWeight:FontWeight.w800)),const SizedBox(height:2),Text(subtitle,style:const TextStyle(color:RuhamaaColors.textMuted,fontSize:13,fontWeight:FontWeight.w500))]))]);
-}
-
-class _HomeActivityPulse extends StatelessWidget {
-  const _HomeActivityPulse({required this.data});
-
-  final _PulseData data;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final route = data.route;
-    if (route == null) return const SizedBox.shrink();
-    final accent = data.warm ? RuhamaaColors.warmGold : RuhamaaColors.primary;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(22),
+      side: const BorderSide(color: RuhamaaColors.cardBorder),
+    );
     return Material(
       color: Colors.white,
-      elevation: 6,
-      shadowColor: RuhamaaColors.primaryDark.withValues(alpha: .13),
-      borderRadius: BorderRadius.circular(29),
+      shape: shape,
       child: InkWell(
-        borderRadius: BorderRadius.circular(29),
-        // The request id makes a repeated request for the same tab count.
-        onTap: () => context.go(
-          OperationRules.withRequestId(
-            route,
-            DateTime.now().millisecondsSinceEpoch,
+        key: const ValueKey('home-services'),
+        customBorder: shape,
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              _CircleIcon(
+                icon: Icons.schedule_rounded,
+                background: RuhamaaColors.skyTint,
+                color: RuhamaaColors.sky,
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'وقتي ومهارتي',
+                      style: TextStyle(color: RuhamaaColors.text, fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'قدّم ساعة من وقتك، أو اطلب خدمة',
+                      style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Color(0xFF7B8B8E), size: 20),
+            ],
           ),
         ),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 15, 18, 18),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(29), border: Border(top: BorderSide(color: accent, width: 5))),
-          child: Row(children: [
-            Container(width: 58, height: 58, decoration: BoxDecoration(color: accent, shape: BoxShape.circle, boxShadow: [BoxShadow(color: accent.withValues(alpha: .25), blurRadius: 14, offset: const Offset(0, 6))]), child: Icon(data.icon, color: Colors.white, size: 29)),
-            const SizedBox(width: 13),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('تحديث جديد', style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 2),
-              Text(data.title, style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w800, fontSize: 18)),
-              const SizedBox(height: 3),
-              Text(data.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.35, fontSize: 12, fontWeight: FontWeight.w500)),
-            ])),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), decoration: BoxDecoration(color: accent.withValues(alpha: .11), borderRadius: BorderRadius.circular(20)), child: Row(mainAxisSize: MainAxisSize.min, children: [Text('راجع', style: TextStyle(color: accent, fontWeight: FontWeight.w800)), const SizedBox(width: 4), Icon(Icons.arrow_forward_rounded, color: accent, size: 17)])),
-          ]),
+      ),
+    );
+  }
+}
+
+class _CircleIcon extends StatelessWidget {
+  const _CircleIcon({required this.icon, required this.background, required this.color});
+
+  final IconData icon;
+  final Color background;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      child: Icon(icon, color: color, size: 22),
+    );
+  }
+}
+
+/// A decision waiting for the person (an offer to answer), or a handoff in
+/// progress when there is no journey card.
+class _PulseRow extends StatelessWidget {
+  const _PulseRow({required this.data, required this.onTap});
+
+  final _PulseData data;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final warm = data.warm;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(22),
+      side: warm ? BorderSide.none : const BorderSide(color: RuhamaaColors.cardBorder),
+    );
+    return Material(
+      color: warm ? RuhamaaColors.warmGoldSoft : Colors.white,
+      shape: shape,
+      child: InkWell(
+        key: const ValueKey('home-pulse'),
+        customBorder: shape,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              _CircleIcon(
+                icon: data.icon,
+                background: warm ? Colors.white.withValues(alpha: .6) : RuhamaaColors.softGreen,
+                color: warm ? RuhamaaColors.goldDeep : RuhamaaColors.primary,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: TextStyle(
+                        color: warm ? RuhamaaColors.goldInk : RuhamaaColors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      data.subtitle,
+                      style: TextStyle(
+                        color: warm ? const Color(0xFF6B4E1A) : RuhamaaColors.textMuted,
+                        fontSize: 14,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: warm ? RuhamaaColors.goldDeep : const Color(0xFF7B8B8E),
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// «تبرّعك في الطريق» / «طلبك في الطريق»: the operation, a five-segment
+/// progress bar and the next step.
+class _JourneyCard extends StatelessWidget {
+  const _JourneyCard({required this.operation, required this.onTap});
+
+  final OperationItem operation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final need = operation.kind == 'need';
+    final accent = need ? RuhamaaColors.goldDark : RuhamaaColors.primary;
+    final step = JourneyRules.currentStep(operation.kind, operation.status) ?? 0;
+    final filled = JourneyRules.filledSegments(operation.kind, operation.status);
+    final stepLabel = JourneyRules.stepsFor(operation.kind)[step];
+    final nextStep = OperationStatusPresenter.present(operation.kind, operation.status).nextStep;
+    final cleanNext = nextStep.endsWith('.') ? nextStep.substring(0, nextStep.length - 1) : nextStep;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: const BorderSide(color: RuhamaaColors.cardBorder),
+    );
+    final segments = <Widget>[];
+    for (var index = 0; index < JourneyRules.stepCount; index++) {
+      if (index > 0) segments.add(const SizedBox(width: 6));
+      segments.add(
+        Expanded(
+          child: Container(
+            height: 6,
+            decoration: BoxDecoration(
+              color: index < filled ? accent : RuhamaaColors.border,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                need ? 'طلبك في الطريق' : 'تبرّعك في الطريق',
+                style: const TextStyle(color: RuhamaaColors.text, fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+            TextButton(
+              onPressed: onTap,
+              style: TextButton.styleFrom(foregroundColor: need ? RuhamaaColors.goldDeep : RuhamaaColors.primary),
+              child: const Text('التفاصيل', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Material(
+          color: Colors.white,
+          shape: shape,
+          child: InkWell(
+            key: const ValueKey('home-journey'),
+            customBorder: shape,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: need ? RuhamaaColors.goldTint : RuhamaaColors.softGreen,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          need ? Icons.volunteer_activism_outlined : Icons.card_giftcard_rounded,
+                          color: need ? RuhamaaColors.goldDeep : RuhamaaColors.primary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              operation.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: RuhamaaColors.text, fontSize: 17, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              stepLabel,
+                              style: TextStyle(
+                                color: need ? RuhamaaColors.goldDeep : RuhamaaColors.primary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(children: segments),
+                  const SizedBox(height: 14),
+                  Text(
+                    'الخطوة التالية: $cleanNext',
+                    style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 14, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Small secondary link (reviewed needs, partners, addresses).
+class _LinkChip extends StatelessWidget {
+  const _LinkChip({required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const shape = StadiumBorder(side: BorderSide(color: RuhamaaColors.cardBorder));
+    return Material(
+      color: Colors.white,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: RuhamaaColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(color: RuhamaaColors.text, fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One choice of the «وقتي ومهارتي» sheet.
+class _SheetOption extends StatelessWidget {
+  const _SheetOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: const BorderSide(color: RuhamaaColors.cardBorder),
+    );
+    return Material(
+      color: Colors.white,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              _CircleIcon(icon: icon, background: RuhamaaColors.skyTint, color: RuhamaaColors.sky),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(color: RuhamaaColors.text, fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 13, height: 1.4),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF7B8B8E), size: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -277,7 +848,7 @@ class _PulseData {
     if (activeHandoffs.isNotEmpty) {
       return const _PulseData(
         icon: Icons.local_shipping_rounded,
-        title: 'لديك طلب قيد التنفيذ',
+        title: 'لديك تسليم قيد التنفيذ',
         subtitle: 'تابع حالة الاستلام أو التسليم.',
         route: '/handoffs?tab=2',
       );
@@ -290,124 +861,4 @@ class _PulseData {
   final String subtitle;
   final String? route;
   final bool warm;
-}
-
-class _PrimaryActionCard extends StatelessWidget {
-  const _PrimaryActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.foreground,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color foreground;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      elevation: 7,
-      shadowColor: RuhamaaColors.primaryDark.withValues(alpha: .16),
-      borderRadius: BorderRadius.circular(30),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(30),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 18),
-          child: Row(
-            children: [
-              Container(
-                width: 68,
-                height: 68,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(begin:Alignment.topRight,end:Alignment.bottomLeft,colors:[foreground.withValues(alpha:.76),foreground]),
-                  borderRadius: BorderRadius.circular(23),
-                  boxShadow:[BoxShadow(color:foreground.withValues(alpha:.28),blurRadius:16,offset:const Offset(0,7))],
-                ),
-                child: Icon(icon, size: 34, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: RuhamaaColors.primaryDark,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: RuhamaaColors.textMuted,height:1.45,fontWeight:FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-              Container(width:42,height:42,decoration:BoxDecoration(color:foreground.withValues(alpha:.1),shape:BoxShape.circle),child:Icon(Icons.arrow_forward_ios_rounded,color:foreground,size:19)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.accent,
-    required this.tint,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color accent;
-  final Color tint;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: tint,
-      elevation: 4,
-      shadowColor: RuhamaaColors.primaryDark.withValues(alpha:.10),
-      borderRadius: BorderRadius.circular(27),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(27),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14,18,14,17),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(27),
-            gradient:LinearGradient(begin:Alignment.topRight,end:Alignment.bottomLeft,colors:[Colors.white.withValues(alpha:.86),tint]),
-          ),
-          child: Column(
-            crossAxisAlignment:CrossAxisAlignment.start,
-            children: [
-              Align(alignment:Alignment.centerRight,child:Container(width:54,height:54,decoration:BoxDecoration(color:accent,shape:BoxShape.circle,boxShadow:[BoxShadow(color:accent.withValues(alpha:.28),blurRadius:14,offset:const Offset(0,6))]),child:Icon(icon,color:Colors.white,size:28))),
-              const SizedBox(height: 15),
-              Text(title,style:const TextStyle(color:RuhamaaColors.primaryDark,fontWeight:FontWeight.w800,fontSize:16)),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(color:RuhamaaColors.textMuted,fontSize:12,fontWeight:FontWeight.w500,height:1.35),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
