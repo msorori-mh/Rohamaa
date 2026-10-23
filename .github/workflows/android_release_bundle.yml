@@ -196,7 +196,10 @@ jobs:
           AUTH_REDIRECT_URL: ${{ vars.AUTH_REDIRECT_URL }}
         run: |
           set -euo pipefail
-          flutter build appbundle --release --no-pub \
+          # No --no-pub: the build must regenerate GeneratedPluginRegistrant for
+          # release, which excludes dev-dependency plugins (integration_test).
+          # The registrant left by `flutter test` still lists them and fails javac.
+          flutter build appbundle --release \
             --build-name "$BUILD_NAME" \
             --build-number "$BUILD_NUMBER" \
             --obfuscate \
