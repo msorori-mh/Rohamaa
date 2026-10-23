@@ -258,7 +258,7 @@ class CommunityAddressLine extends StatelessWidget {
     super.key,
     required this.prefix,
     required this.area,
-    required this.loaded,
+    required this.missing,
     required this.onChange,
     this.tone = CommunityTone.give,
   });
@@ -269,15 +269,15 @@ class CommunityAddressLine extends StatelessWidget {
   /// The default address area, when known.
   final String? area;
 
-  /// False while the address is still loading or could not be read.
-  final bool loaded;
+  /// True once it is known that the person has no address yet. While the
+  /// address loads, or when it cannot be read, a generic line is shown.
+  final bool missing;
   final VoidCallback onChange;
   final CommunityTone tone;
 
   @override
   Widget build(BuildContext context) {
     final place = area?.trim() ?? '';
-    final missing = loaded && place.isEmpty;
     final String text;
     if (place.isNotEmpty) {
       text = '$prefix: $place';

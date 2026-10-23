@@ -67,7 +67,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
 
   /// Default address area for the «يُستلم من عنوانك» line.
   String? _area;
-  bool _addressLoaded = false;
+  bool _addressMissing = false;
 
   /// Set as soon as the donation exists on the server. From then on the form
   /// is replaced by the result view, so a second donation cannot be created.
@@ -104,10 +104,11 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
     try {
       final profile = await AccountRepository(Supabase.instance.client).deliveryProfile();
       if (!mounted) return;
-      final area = profile.area?.trim() ?? '';
+      // Only the area name is shown; the private address description stays
+      // on the address screen.
       setState(() {
-        _area = area.isNotEmpty ? area : profile.description?.trim();
-        _addressLoaded = true;
+        _area = profile.area?.trim();
+        _addressMissing = profile.addressId == null;
       });
     } catch (error) {
       debugPrint('Donation address load failed: ${error.runtimeType}');
@@ -436,7 +437,7 @@ class _CreateDonationV2ScreenState extends State<CreateDonationV2Screen> {
                 CommunityAddressLine(
                   prefix: 'يُستلم من عنوانك',
                   area: _area,
-                  loaded: _addressLoaded,
+                  missing: _addressMissing,
                   onChange: _changeAddress,
                 ),
               ],

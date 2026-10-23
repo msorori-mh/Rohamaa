@@ -37,7 +37,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
 
   /// Default address area for the «يُسلَّم إلى عنوانك» line.
   String? _area;
-  bool _addressLoaded = false;
+  bool _addressMissing = false;
 
   /// Set once the need exists on the server. From then on the form is
   /// replaced by the confirmation, so a second need cannot be created.
@@ -63,10 +63,11 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
     try {
       final profile = await AccountRepository(Supabase.instance.client).deliveryProfile();
       if (!mounted) return;
-      final area = profile.area?.trim() ?? '';
+      // Only the area name is shown; the private address description stays
+      // on the address screen.
       setState(() {
-        _area = area.isNotEmpty ? area : profile.description?.trim();
-        _addressLoaded = true;
+        _area = profile.area?.trim();
+        _addressMissing = profile.addressId == null;
       });
     } catch (error) {
       debugPrint('Need address load failed: ${error.runtimeType}');
@@ -225,7 +226,7 @@ class _CreateNeedV2ScreenState extends State<CreateNeedV2Screen> {
                 CommunityAddressLine(
                   prefix: 'يُسلَّم إلى عنوانك',
                   area: _area,
-                  loaded: _addressLoaded,
+                  missing: _addressMissing,
                   onChange: _changeAddress,
                   tone: CommunityTone.need,
                 ),
