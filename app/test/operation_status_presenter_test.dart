@@ -80,6 +80,25 @@ void main() {
       }
     });
 
+    test('a donation is called تبرّع; عطاء stays the team and app name only', () {
+      expect(OperationStatusPresenter.kindLabel('donation'), 'تبرّع');
+      final actionNoun = RegExp('عطائ|عطاؤ|عطاءك|العطاء|عطاءً');
+      for (final entry in _statusesByKind.entries) {
+        for (final status in entry.value) {
+          final copy = OperationStatusPresenter.present(entry.key, status);
+          final reason = '${entry.key}:$status';
+          expect(actionNoun.hasMatch(copy.label), isFalse, reason: reason);
+          expect(actionNoun.hasMatch(copy.nextStep), isFalse, reason: reason);
+        }
+      }
+      for (final kind in ['pickup', 'delivery']) {
+        for (final status in _statusesByKind['delivery']!) {
+          final copy = OperationStatusPresenter.presentHandoff(kind, status);
+          expect(actionNoun.hasMatch(copy.nextStep), isFalse, reason: '$kind:$status');
+        }
+      }
+    });
+
     test('an unknown status shows a neutral label, never the raw key', () {
       final copy = OperationStatusPresenter.present('donation', 'some_future_status');
       expect(copy.label, OperationStatusPresenter.fallbackLabel);
