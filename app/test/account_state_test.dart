@@ -216,5 +216,23 @@ void main() {
       expect(OperationRules.greetingForHour(20), 'مساء الخير');
       expect(OperationRules.greetingForHour(2), 'مساء الخير');
     });
+
+    test('first name is the first word of a real name', () {
+      expect(OperationRules.firstName('محمد أحمد الصالح'), 'محمد');
+      expect(OperationRules.firstName('  سارة  '), 'سارة');
+      expect(OperationRules.firstName('محمد\tعلي'), 'محمد');
+      expect(OperationRules.firstName(''), isNull);
+      expect(OperationRules.firstName('   '), isNull);
+      expect(OperationRules.firstName(null), isNull);
+      expect(OperationRules.firstName('user@example.com'), isNull);
+      expect(OperationRules.firstName('777000001'), isNull);
+    });
+
+    test('home greeting adds the first name when known', () {
+      expect(OperationRules.greetingWithName(20, 'محمد أحمد'), 'مساء الخير، محمد');
+      expect(OperationRules.greetingWithName(9, 'سارة'), 'صباح الخير، سارة');
+      expect(OperationRules.greetingWithName(9, null), 'صباح الخير');
+      expect(OperationRules.greetingWithName(20, ' '), 'مساء الخير');
+    });
   });
 }

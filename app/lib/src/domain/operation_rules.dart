@@ -104,4 +104,23 @@ abstract final class OperationRules {
     if (hour >= 4 && hour < 12) return 'صباح الخير';
     return 'مساء الخير';
   }
+
+  /// The first word of a profile name, or null when there is no usable name
+  /// (empty, or something that is clearly not a name such as an e-mail
+  /// address or a phone number).
+  static String? firstName(String? fullName) {
+    final text = fullName?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final first = text.split(RegExp(r'\s+')).first;
+    if (first.contains('@') || RegExp(r'\d').hasMatch(first)) return null;
+    return first;
+  }
+
+  /// Home greeting, e.g. «مساء الخير، محمد», or the plain greeting when the
+  /// name is unknown.
+  static String greetingWithName(int hour, String? fullName) {
+    final greeting = greetingForHour(hour);
+    final name = firstName(fullName);
+    return name == null ? greeting : '$greeting، $name';
+  }
 }
