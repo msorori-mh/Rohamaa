@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 abstract final class RuhamaaColors {
+  // Warm community palette (approved mockups). Existing names keep working
+  // for every screen; the values moved to the warmer base.
   static const primary = Color(0xFF226B5E);
   static const primaryDark = Color(0xFF174D45);
   static const primaryBright = Color(0xFF0E9C82);
@@ -8,15 +10,52 @@ abstract final class RuhamaaColors {
   static const softGreen = Color(0xFFE8F2EF);
   static const warmGold = Color(0xFFD7A24B);
   static const vividGold = Color(0xFFFFAB16);
-  static const warmGoldSoft = Color(0xFFFFF3DA);
+  static const warmGoldSoft = Color(0xFFF6E3BC);
   static const rose = Color(0xFFF0447B);
   static const blue = Color(0xFF168EB5);
   static const warmSurface = Color(0xFFFFFDF8);
-  static const background = Color(0xFFF1F8F7);
+  static const background = Color(0xFFFBF8F1);
   static const text = Color(0xFF143B42);
-  static const textMuted = Color(0xFF64777B);
-  static const border = Color(0xFFDCEBE8);
+  static const textMuted = Color(0xFF55686C);
+  static const border = Color(0xFFE4DED1);
   static const success = Color(0xFF2F7D67);
+
+  /// Border of white cards on the warm background.
+  static const cardBorder = Color(0xFFE9E3D6);
+
+  /// Border of text fields and unselected choice chips.
+  static const inputBorder = Color(0xFFDCD5C6);
+
+  /// Sand panels (privacy note, photo tile icon).
+  static const sand = Color(0xFFF1ECE0);
+
+  /// Text on the sand privacy panel.
+  static const noteText = Color(0xFF4A3D28);
+
+  /// Body copy on light panels and secondary icons.
+  static const bodyMuted = Color(0xFF4A5B5E);
+  static const iconMuted = Color(0xFF5E6F72);
+
+  /// Pale green circle behind icons, and the selected green tile.
+  static const mint = Color(0xFFEEF5F2);
+  static const mintStrong = Color(0xFFE1EFEA);
+
+  /// The request ("ما أحتاجه") flow: dark gold actions and soft gold tiles.
+  static const goldDark = Color(0xFF8C5B0E);
+  static const goldDeep = Color(0xFF7A5512);
+  static const goldInk = Color(0xFF4A3410);
+  static const goldTint = Color(0xFFFBF1DE);
+  static const goldSelected = Color(0xFFFBEFD6);
+
+  /// Time and skills accent.
+  static const sky = Color(0xFF1F6E8C);
+  static const skyTint = Color(0xFFE6F0F4);
+
+  /// Unread marker on the bell.
+  static const alert = Color(0xFFC0392B);
+
+  /// Ring of a timeline step that has not been reached yet.
+  static const stepIdle = Color(0xFFD6CFBF);
 
   static const heroGradient = LinearGradient(
     begin: Alignment.topRight,
@@ -27,7 +66,7 @@ abstract final class RuhamaaColors {
   static const pageGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFFE8F8F5), Color(0xFFF5FAF9), Color(0xFFF1F8F7)],
+    colors: [Color(0xFFF6F1E6), Color(0xFFFBF8F1), Color(0xFFFBF8F1)],
   );
 }
 
@@ -64,11 +103,12 @@ abstract final class RuhamaaTheme {
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
-        elevation: 5,
-        shadowColor: RuhamaaColors.primaryDark.withValues(alpha: 0.12),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: RuhamaaColors.cardBorder),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -77,8 +117,7 @@ abstract final class RuhamaaTheme {
           backgroundColor: RuhamaaColors.primary,
           foregroundColor: Colors.white,
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          elevation: 2,
-          shadowColor: RuhamaaColors.primary.withValues(alpha: 0.25),
+          elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
       ),
@@ -94,37 +133,37 @@ abstract final class RuhamaaTheme {
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: RuhamaaColors.border),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: RuhamaaColors.inputBorder, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: RuhamaaColors.border),
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: RuhamaaColors.inputBorder, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: RuhamaaColors.primary, width: 1.5),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: RuhamaaColors.warmSurface,
-        elevation: 10,
+        backgroundColor: Colors.white,
+        elevation: 0,
         height: 76,
         indicatorColor: Colors.transparent,
         iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
-          color: states.contains(WidgetState.selected) ? RuhamaaColors.primaryBright : RuhamaaColors.textMuted,
-          size: states.contains(WidgetState.selected) ? 29 : 27,
+          color: states.contains(WidgetState.selected) ? RuhamaaColors.primary : RuhamaaColors.textMuted,
+          size: 26,
         )),
         labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-          color: states.contains(WidgetState.selected) ? RuhamaaColors.primaryBright : RuhamaaColors.textMuted,
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w700,
+          color: states.contains(WidgetState.selected) ? RuhamaaColors.primary : RuhamaaColors.textMuted,
+          fontSize: 13,
+          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
         )),
       ),
       tabBarTheme: const TabBarThemeData(
-        labelColor: RuhamaaColors.primaryBright,
+        labelColor: RuhamaaColors.primary,
         unselectedLabelColor: RuhamaaColors.textMuted,
-        indicatorColor: RuhamaaColors.primaryBright,
+        indicatorColor: RuhamaaColors.primary,
         dividerColor: RuhamaaColors.border,
         labelStyle: TextStyle(fontWeight: FontWeight.w800),
         unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
@@ -140,13 +179,13 @@ abstract final class RuhamaaTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: RuhamaaColors.primaryBright,
+        color: RuhamaaColors.primary,
         linearTrackColor: RuhamaaColors.border,
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: Colors.white,
         selectedColor: RuhamaaColors.softGreen,
-        side: const BorderSide(color: RuhamaaColors.border),
+        side: const BorderSide(color: RuhamaaColors.inputBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       dividerTheme: const DividerThemeData(color: RuhamaaColors.border),

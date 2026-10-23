@@ -122,8 +122,6 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
                 : null;
             return CreateDonationV2Screen(
               prefillCategory: data['category'] as String?,
-              prefillGroup: data['categoryGroup'] as String?,
-              prefillItemTypeKey: data['itemTypeKey'] as String?,
               prefillTitle: data['title'] as String?,
               prefillAttributes: attributes,
               inspiredByDiscoveryCardId: data['discoveryCardId'] as String?,
@@ -212,22 +210,16 @@ class _MainNavigationShellState extends State<_MainNavigationShell> {
     return Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: RuhamaaColors.primaryDark.withValues(alpha: .12),
-              blurRadius: 22,
-              offset: const Offset(0, -7),
-            ),
-          ],
+          border: Border(top: BorderSide(color: Color(0xFFECE6D9))),
         ),
         child: NavigationBar(
           selectedIndex: widget.navigationShell.currentIndex,
           onDestinationSelected: _go,
           destinations: const [
             NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-            NavigationDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: 'العروض'),
+            NavigationDestination(icon: Icon(Icons.inbox_outlined), selectedIcon: Icon(Icons.inbox_rounded), label: 'العروض'),
             NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'المتابعة'),
             NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'حسابي'),
           ],

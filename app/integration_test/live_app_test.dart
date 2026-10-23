@@ -106,6 +106,61 @@ void main() {
     });
   }
 
+  testWidgets('one-screen donation form sends a simplified donation', (tester) async {
+    await login(tester, donorEmail, donorPassword);
+    await route(tester, '/donate');
+    final suffix = DateTime.now().microsecondsSinceEpoch;
+    await tester.tap(find.byKey(const ValueKey('category-electronics')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('donation-description')),
+      'TEST_ONLY UI laptop $suffix\nworks well, with charger',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('donation-submit')));
+    await settle(tester);
+    expect(find.text('جزاك الله خيرًا'), findsOneWidget);
+    final client = Supabase.instance.client;
+    final row = await client
+        .from('donations')
+        .select('item_type,category,category_group,item_type_key,category_version')
+        .eq('user_id', client.auth.currentUser!.id)
+        .eq('item_type', 'TEST_ONLY UI laptop $suffix')
+        .single();
+    expect(row['category'], 'electronics');
+    expect(row['category_version'], 2);
+    expect(row['category_group'], isNull);
+    expect(row['item_type_key'], isNull);
+    await tester.tap(find.byKey(const Key('donation-home')));
+    await settle(tester);
+    expect(find.byWidgetPredicate((w) => w.runtimeType.toString() == 'HomeScreen'), findsOneWidget);
+  });
+
+  testWidgets('one-screen request form sends a simplified need', (tester) async {
+    await login(tester, recipientEmail, recipientPassword);
+    await route(tester, '/need');
+    final suffix = DateTime.now().microsecondsSinceEpoch;
+    await tester.enterText(
+      find.byKey(const Key('need-description')),
+      'TEST_ONLY UI winter clothes $suffix\nfor a boy of 8',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('need-submit')));
+    await settle(tester);
+    expect(find.text('وصل طلبك'), findsOneWidget);
+    final client = Supabase.instance.client;
+    final row = await client
+        .from('needs')
+        .select('item_type,category,category_group,item_type_key,category_version')
+        .eq('user_id', client.auth.currentUser!.id)
+        .eq('item_type', 'TEST_ONLY UI winter clothes $suffix')
+        .single();
+    expect(row['category'], 'clothes');
+    expect(row['category_version'], 2);
+    expect(row['category_group'], isNull);
+    expect(row['item_type_key'], isNull);
+  });
+
   testWidgets('live admin operations center', (tester) async {
     await login(tester, adminEmail, adminPassword);
     expect(find.text('لوحة إدارة عطاء'), findsOneWidget);

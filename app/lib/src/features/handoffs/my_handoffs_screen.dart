@@ -9,6 +9,7 @@ import '../../core/main_tab_signal.dart';
 import '../../data/handoff_repository.dart';
 import '../../data/operations_repository.dart';
 import '../../domain/handoff_pin_rules.dart';
+import '../../domain/journey_rules.dart';
 import '../../domain/operation_rules.dart';
 import '../../domain/operation_status_presenter.dart';
 import '../../theme/ruhamaa_theme.dart';
@@ -77,7 +78,12 @@ class _MyHandoffsScreenState extends State<MyHandoffsScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المتابعة'),
+        centerTitle: false,
+        titleSpacing: 20,
+        title: const Text(
+          'المتابعة',
+          style: TextStyle(color: RuhamaaColors.text, fontSize: 22, fontWeight: FontWeight.w800),
+        ),
         bottom: TabBar(
           controller: _tabs,
           tabs: const [
@@ -236,11 +242,11 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(isDonation ? 'إلغاء التبرع؟' : 'إلغاء الطلب؟'),
+        title: Text(isDonation ? 'إلغاء التبرّع؟' : 'إلغاء الطلب؟'),
         content: Text(
           isDonation
-              ? 'سيُلغى تبرعك «${row.title}» ولن يُعرض على أي طلب. لا يمكن التراجع عن الإلغاء، لكن يمكنك تسجيل تبرع جديد في أي وقت.'
-              : 'سيُلغى طلبك «${row.title}» ولن نبحث له عن تبرع. لا يمكن التراجع عن الإلغاء، لكن يمكنك إرسال طلب جديد في أي وقت.',
+              ? 'سيُلغى تبرّعك «${row.title}» ولن يُعرض على أي طلب. لا يمكن التراجع عن الإلغاء، لكن يمكنك تسجيل تبرّع جديد في أي وقت.'
+              : 'سيُلغى طلبك «${row.title}» ولن نبحث له عن تبرّع. لا يمكن التراجع عن الإلغاء، لكن يمكنك إرسال طلب جديد في أي وقت.',
         ),
         actions: [
           TextButton(
@@ -250,7 +256,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
           FilledButton(
             key: const Key('confirm-cancel-operation'),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(isDonation ? 'إلغاء التبرع' : 'إلغاء الطلب'),
+            child: Text(isDonation ? 'إلغاء التبرّع' : 'إلغاء الطلب'),
           ),
         ],
       ),
@@ -268,7 +274,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isDonation ? 'أُلغي التبرع.' : 'أُلغي الطلب.')),
+        SnackBar(content: Text(isDonation ? 'أُلغي التبرّع.' : 'أُلغي الطلب.')),
       );
     } catch (error) {
       if (mounted) showErrorSnack(context, error);
@@ -284,6 +290,8 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
     final showAction = _showsAction(row);
     final canCancel = OperationRules.canCancel(kind: row.kind, status: row.status);
     final cancelling = _cancellingId == row.id;
+    final step = JourneyRules.currentStep(row.kind, row.status);
+    final gold = copy.attention || row.kind == 'need';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -292,20 +300,35 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: copy.attention ? RuhamaaColors.warmGoldSoft : RuhamaaColors.softGreen,
-                  foregroundColor: copy.attention ? RuhamaaColors.warmGold : RuhamaaColors.primary,
-                  child: Icon(_icon(row.kind)),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: copy.attention
+                        ? RuhamaaColors.warmGoldSoft
+                        : gold
+                            ? RuhamaaColors.goldTint
+                            : RuhamaaColors.softGreen,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    _icon(row.kind),
+                    color: gold ? RuhamaaColors.goldDeep : RuhamaaColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(row.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text(
+                        row.title,
+                        style: const TextStyle(color: RuhamaaColors.text, fontSize: 17, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         '${OperationStatusPresenter.kindLabel(row.kind)} • ${row.code}',
-                        style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12),
+                        style: const TextStyle(color: RuhamaaColors.iconMuted, fontSize: 13),
                       ),
                     ],
                   ),
@@ -313,14 +336,27 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
                 if (copy.attention) const Icon(Icons.priority_high_rounded, color: RuhamaaColors.warmGold),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(copy.label, style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 4),
-            Text(copy.nextStep, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
+            const SizedBox(height: 16),
+            if (step != null)
+              _JourneyTimeline(
+                steps: JourneyRules.stepsFor(row.kind),
+                current: step,
+                complete: JourneyRules.isComplete(row.kind, row.status),
+                note: copy.nextStep,
+              )
+            else ...[
+              Text(
+                copy.label,
+                style: const TextStyle(color: RuhamaaColors.text, fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(copy.nextStep, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
+            ],
             if (showAction) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               FilledButton.icon(
                 onPressed: () => _openAction(row),
+                style: FilledButton.styleFrom(shape: const StadiumBorder()),
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: const Text('أكمل الآن'),
               ),
@@ -331,6 +367,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton.icon(
                   onPressed: _cancellingId != null ? null : () => _cancel(row),
+                  style: TextButton.styleFrom(foregroundColor: RuhamaaColors.textMuted),
                   icon: cancelling
                       ? const SizedBox.square(
                           dimension: 16,
@@ -341,7 +378,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
                     cancelling
                         ? 'جارٍ الإلغاء...'
                         : row.kind == 'donation'
-                            ? 'إلغاء التبرع'
+                            ? 'إلغاء التبرّع'
                             : 'إلغاء الطلب',
                   ),
                 ),
@@ -359,7 +396,7 @@ class _OperationsListState extends _ListState<_OperationsList, OperationItem> {
       empty: const _EmptyState(
         icon: Icons.track_changes_outlined,
         title: 'لا يوجد ما تتابعه الآن',
-        subtitle: 'ستظهر هنا حالة تبرعاتك وطلباتك والخطوة التالية.',
+        subtitle: 'ستظهر هنا حالة تبرّعاتك وطلباتك والخطوة التالية.',
       ),
       builder: (rows) => ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -474,7 +511,7 @@ class _NotificationsListState extends _ListState<_NotificationsList, UserNotific
             }
             final item = rows[index - offset];
             return Card(
-              color: item.isRead ? RuhamaaColors.warmSurface : RuhamaaColors.warmGoldSoft,
+              color: item.isRead ? Colors.white : RuhamaaColors.goldTint,
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 leading: Icon(
@@ -556,35 +593,61 @@ class _HandoffsListState extends _ListState<_HandoffsList, UserHandoff> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: closed ? RuhamaaColors.warmSurface : RuhamaaColors.softGreen,
-                  foregroundColor: closed ? RuhamaaColors.textMuted : RuhamaaColors.primary,
-                  child: const Icon(Icons.local_shipping_outlined),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: closed ? RuhamaaColors.sand : RuhamaaColors.softGreen,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    Icons.local_shipping_outlined,
+                    color: closed ? RuhamaaColors.textMuted : RuhamaaColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(row.itemType, style: const TextStyle(fontWeight: FontWeight.w900)),
                       Text(
-                        pickup ? 'استلام العطاء منك' : 'تسليم العطاء إليك',
-                        style: const TextStyle(color: RuhamaaColors.textMuted),
+                        row.itemType,
+                        style: const TextStyle(color: RuhamaaColors.text, fontSize: 17, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        pickup ? 'استلام التبرّع منك' : 'تسليم ما طلبته إليك',
+                        style: const TextStyle(color: RuhamaaColors.iconMuted, fontSize: 13),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(copy.label, style: const TextStyle(color: RuhamaaColors.primaryDark, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 14),
+            Text(
+              copy.label,
+              style: TextStyle(
+                color: copy.attention ? RuhamaaColors.goldDeep : RuhamaaColors.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
             Text(copy.nextStep, style: const TextStyle(color: RuhamaaColors.textMuted, height: 1.45)),
             const SizedBox(height: 8),
-            Text('رمز العملية: ${row.deliveryCode}', style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12)),
+            Text(
+              'رمز العملية: ${row.deliveryCode}',
+              style: const TextStyle(color: RuhamaaColors.iconMuted, fontSize: 12),
+            ),
             if (canShowPin) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               FilledButton.icon(
                 onPressed: _issuingKey != null ? null : () => _showPin(row),
+                style: FilledButton.styleFrom(
+                  backgroundColor: RuhamaaColors.primaryDark,
+                  shape: const StadiumBorder(),
+                ),
                 icon: issuing
                     ? const SizedBox.square(
                         dimension: 18,
@@ -714,73 +777,276 @@ class _PinDialogState extends State<_PinDialog> {
     final expired = remaining == Duration.zero;
     final pickup = widget.handoff.kind == 'pickup';
     final error = _error;
-    return AlertDialog(
-      title: Text(pickup ? 'رمز الاستلام' : 'رمز التسليم'),
-      content: SingleChildScrollView(
+    final digits = _pin.pin.split('');
+    final boxes = <Widget>[];
+    for (var index = 0; index < digits.length; index++) {
+      if (index > 0) boxes.add(const SizedBox(width: 6));
+      boxes.add(
+        Container(
+          width: 44,
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: .14),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            digits[index],
+            style: TextStyle(
+              color: expired ? Colors.white54 : Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              decoration: expired ? TextDecoration.lineThrough : null,
+              decorationColor: Colors.white54,
+            ),
+          ),
+        ),
+      );
+    }
+    return Dialog(
+      backgroundColor: RuhamaaColors.primaryDark,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'أعطِ هذا الرمز لموصل عطاء فقط عند وصوله إليك.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: SelectableText(
-                _pin.pin,
-                key: const Key('handoff-pin-value'),
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: expired ? RuhamaaColors.textMuted : RuhamaaColors.primaryDark,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 10,
-                      decoration: expired ? TextDecoration.lineThrough : null,
-                    ),
-              ),
-            ),
-            const SizedBox(height: 10),
             Text(
-              HandoffPinRules.countdownLabel(remaining),
-              key: const Key('handoff-pin-countdown'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: expired ? Theme.of(context).colorScheme.error : RuhamaaColors.primaryDark,
-                fontWeight: FontWeight.w800,
-              ),
+              pickup ? 'رمز الاستلام' : 'رمز التسليم',
+              style: const TextStyle(color: RuhamaaColors.warmGoldSoft, fontSize: 13, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             const Text(
-              'الرمز صالح لمدة 10 دقائق ولخمس محاولات، وسيظهر لك الرمز نفسه حتى تنتهي صلاحيته.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: RuhamaaColors.textMuted),
+              'عند وصول الموصل',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              pickup
+                  ? 'أعطه رمز الاستلام. لا تسلّم الشيء قبل أن يُدخل الرمز.'
+                  : 'أعطه رمز التسليم بعد أن تستلم ما طلبته منه.',
+              style: const TextStyle(color: Color(0xFFCFE6DF), fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Semantics(
+                        label: 'الرمز ${digits.join(' ')}',
+                        excludeSemantics: true,
+                        child: Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Row(
+                            key: const Key('handoff-pin-value'),
+                            mainAxisSize: MainAxisSize.min,
+                            children: boxes,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  expired ? 'انتهت\nالصلاحية' : 'صالح\n${HandoffPinRules.clock(remaining)}',
+                  key: const Key('handoff-pin-countdown'),
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    color: expired ? const Color(0xFFFFC9C2) : RuhamaaColors.warmGoldSoft,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              expired
+                  ? HandoffPinRules.countdownLabel(remaining)
+                  : 'الرمز صالح لمدة 10 دقائق ولخمس محاولات، وسيظهر لك الرمز نفسه حتى تنتهي صلاحيته.',
+              style: TextStyle(
+                color: expired ? const Color(0xFFFFC9C2) : const Color(0xFFCFE6DF),
+                fontSize: 12,
+                height: 1.5,
+              ),
             ),
             if (error != null) ...[
               const SizedBox(height: 10),
               Text(
                 error,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: const TextStyle(color: Color(0xFFFFC9C2), fontWeight: FontWeight.w700),
               ),
             ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: _busy ? null : () => _issueNew(expired: expired),
+                    style: TextButton.styleFrom(foregroundColor: RuhamaaColors.warmGoldSoft),
+                    child: Text(
+                      _busy
+                          ? 'جارٍ الإنشاء...'
+                          : expired
+                              ? 'إنشاء رمز جديد'
+                              : 'الرمز لا يعمل؟',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: RuhamaaColors.warmGold,
+                    foregroundColor: RuhamaaColors.goldInk,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text('تم'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _busy ? null : () => _issueNew(expired: expired),
-          child: Text(
-            _busy
-                ? 'جارٍ الإنشاء...'
-                : expired
-                    ? 'إنشاء رمز جديد'
-                    : 'الرمز لا يعمل؟',
+    );
+  }
+}
+
+/// Five steps of a donation or a request: reached steps in green with a
+/// check, the current one in gold with the next step, the rest outlined.
+class _JourneyTimeline extends StatelessWidget {
+  const _JourneyTimeline({
+    required this.steps,
+    required this.current,
+    required this.complete,
+    required this.note,
+  });
+
+  final List<String> steps;
+  final int current;
+
+  /// The last step was reached: every step is shown as done.
+  final bool complete;
+
+  /// Shown under the current step.
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var index = 0; index < steps.length; index++) {
+      final done = complete || index < current;
+      final now = !complete && index == current;
+      final last = index == steps.length - 1;
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Column(
+                  children: [
+                    _StepDot(done: done, now: now),
+                    if (!last)
+                      Expanded(
+                        child: Container(
+                          width: 3,
+                          color: done ? RuhamaaColors.primary : RuhamaaColors.border,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 3, bottom: last ? 0 : 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        steps[index],
+                        style: TextStyle(
+                          color: now
+                              ? RuhamaaColors.goldDeep
+                              : done
+                                  ? RuhamaaColors.text
+                                  : RuhamaaColors.iconMuted,
+                          fontSize: 16,
+                          fontWeight: now
+                              ? FontWeight.w800
+                              : done
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                        ),
+                      ),
+                      if (now) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'الآن · $note',
+                          style: const TextStyle(color: RuhamaaColors.iconMuted, fontSize: 13, height: 1.4),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('تم'),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+    );
+  }
+}
+
+class _StepDot extends StatelessWidget {
+  const _StepDot({required this.done, required this.now});
+
+  final bool done;
+  final bool now;
+
+  @override
+  Widget build(BuildContext context) {
+    if (done) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: const BoxDecoration(color: RuhamaaColors.primary, shape: BoxShape.circle),
+        child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+      );
+    }
+    if (now) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: RuhamaaColors.warmGold,
+          shape: BoxShape.circle,
+          border: Border.all(color: RuhamaaColors.warmGoldSoft, width: 4),
         ),
-      ],
+      );
+    }
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: RuhamaaColors.stepIdle, width: 2),
+      ),
     );
   }
 }
@@ -797,7 +1063,7 @@ class _SummaryBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: needsAttention ? RuhamaaColors.warmGoldSoft : RuhamaaColors.softGreen,
+        color: needsAttention ? RuhamaaColors.goldTint : RuhamaaColors.softGreen,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
