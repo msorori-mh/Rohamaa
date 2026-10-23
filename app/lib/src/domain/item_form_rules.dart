@@ -6,7 +6,50 @@ class ItemFormLimits {
 
   static const int title = 160;
   static const int description = 2000;
-  static const int attributeValue = 120;
+
+  /// Shortest description the giving and requesting forms accept.
+  static const int descriptionMin = 3;
+
+  /// Longest short title derived from a description.
+  static const int derivedTitle = 80;
+}
+
+/// Condition choices of the donation form: stored value -> Arabic label.
+/// The values are the ones the server and the staff screens already know.
+const Map<String, String> donationConditionChoices = <String, String>{
+  'new': 'جديد',
+  'good': 'جيد',
+  'minor_repair': 'يحتاج إصلاحًا',
+};
+
+/// Short title stored as `item_type` for a free-text description: the first
+/// line that has at least [ItemFormLimits.descriptionMin] characters (or the
+/// whole text), with runs of whitespace collapsed, cut to
+/// [ItemFormLimits.derivedTitle] characters. Empty when the text is empty.
+String itemTitleFromDescription(String description) {
+  String clean(String text) => text.trim().replaceAll(RegExp(r'\s+'), ' ');
+  var title = '';
+  for (final line in description.split('\n')) {
+    final candidate = clean(line);
+    if (candidate.length >= ItemFormLimits.descriptionMin) {
+      title = candidate;
+      break;
+    }
+  }
+  if (title.isEmpty) title = clean(description);
+  final runes = title.runes;
+  if (runes.length <= ItemFormLimits.derivedTitle) return title;
+  return String.fromCharCodes(runes.take(ItemFormLimits.derivedTitle)).trim();
+}
+
+/// Inline validator message for the description of a donation or a request,
+/// or null when valid.
+String? validateItemDescription(String? value, {required String emptyMessage}) {
+  return validateRequiredText(
+    value,
+    min: ItemFormLimits.descriptionMin,
+    emptyMessage: emptyMessage,
+  );
 }
 
 /// The V2 catalog key for a stored category, including the legacy names
@@ -56,42 +99,6 @@ String describeItemAttributes(
   Map<String, String> attributes,
 ) {
   return itemAttributeLabels(categoryKey, attributes).join(' • ');
-}
-
-/// Title to show after the person picks another item type.
-///
-/// A title the person typed is kept. A title that is empty, or that was filled
-/// automatically from the previously selected item ([previousAutoTitle]),
-/// follows the new selection.
-String titleAfterItemChange({
-  required String currentTitle,
-  required String? previousAutoTitle,
-  required String newItemLabel,
-}) {
-  final current = currentTitle.trim();
-  if (current.isEmpty) return newItemLabel;
-  if (previousAutoTitle != null && current == previousAutoTitle.trim()) {
-    return newItemLabel;
-  }
-  return currentTitle;
-}
-
-/// True when [title] was written by the person rather than filled from the
-/// selected item ([autoTitle]).
-bool isCustomItemTitle({required String title, required String? autoTitle}) {
-  final current = title.trim();
-  if (current.isEmpty) return false;
-  return autoTitle == null || current != autoTitle.trim();
-}
-
-/// Inline validator message for an item title, or null when valid.
-String? validateItemTitle(String? value, {required String emptyMessage}) {
-  final text = value?.trim() ?? '';
-  if (text.length < 3) return emptyMessage;
-  if (text.length > ItemFormLimits.title) {
-    return 'الاسم طويل جدًا (الحد ${ItemFormLimits.title} حرفًا).';
-  }
-  return null;
 }
 
 /// Inline validator message for optional free text, or null when valid.

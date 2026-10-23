@@ -122,8 +122,6 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
                 : null;
             return CreateDonationV2Screen(
               prefillCategory: data['category'] as String?,
-              prefillGroup: data['categoryGroup'] as String?,
-              prefillItemTypeKey: data['itemTypeKey'] as String?,
               prefillTitle: data['title'] as String?,
               prefillAttributes: attributes,
               inspiredByDiscoveryCardId: data['discoveryCardId'] as String?,

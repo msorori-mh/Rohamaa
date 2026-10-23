@@ -66,51 +66,50 @@ void main() {
     });
   });
 
-  group('item title after changing the selected item', () {
-    test('an empty title takes the new item label', () {
+  group('short title derived from a description', () {
+    test('takes the first line, trimmed and with single spaces', () {
       expect(
-        titleAfterItemChange(currentTitle: '  ', previousAutoTitle: null, newItemLabel: 'قميص'),
-        'قميص',
+        itemTitleFromDescription('  ثوب رجالي   مقاس 52 \nنظيف وبحالة جيدة'),
+        'ثوب رجالي مقاس 52',
       );
     });
 
-    test('an auto-filled title follows the selected item', () {
-      expect(
-        titleAfterItemChange(currentTitle: 'قميص', previousAutoTitle: 'قميص', newItemLabel: 'بنطلون'),
-        'بنطلون',
-      );
+    test('skips leading empty or too short lines', () {
+      expect(itemTitleFromDescription('\n\n  \nحذاء رياضي'), 'حذاء رياضي');
+      expect(itemTitleFromDescription('١\nكتب الصف السادس'), 'كتب الصف السادس');
     });
 
-    test('a title typed by the person is preserved', () {
-      expect(
-        titleAfterItemChange(
-          currentTitle: 'قميص أزرق مقاس كبير',
-          previousAutoTitle: 'قميص',
-          newItemLabel: 'بنطلون',
-        ),
-        'قميص أزرق مقاس كبير',
-      );
-      expect(
-        titleAfterItemChange(currentTitle: 'عنوان من الطلب', previousAutoTitle: null, newItemLabel: 'بنطلون'),
-        'عنوان من الطلب',
-      );
+    test('falls back to the whole text when no line is long enough', () {
+      expect(itemTitleFromDescription('اب\nج'), 'اب ج');
+      expect(itemTitleFromDescription('   '), '');
     });
 
-    test('custom title detection', () {
-      expect(isCustomItemTitle(title: '', autoTitle: 'قميص'), isFalse);
-      expect(isCustomItemTitle(title: 'قميص', autoTitle: 'قميص'), isFalse);
-      expect(isCustomItemTitle(title: 'قميص أزرق', autoTitle: 'قميص'), isTrue);
-      expect(isCustomItemTitle(title: 'قميص', autoTitle: null), isTrue);
+    test('is cut to 80 characters', () {
+      final long = 'ا' * 120;
+      expect(itemTitleFromDescription(long).length, ItemFormLimits.derivedTitle);
+      expect(itemTitleFromDescription('ب' * 80), 'ب' * 80);
+      expect(itemTitleFromDescription('${'ج' * 79} د'), 'ج' * 79);
+    });
+
+    test('never splits a character outside the basic plane', () {
+      final title = itemTitleFromDescription('\u{1F600}' * 100);
+      expect(title.runes.length, ItemFormLimits.derivedTitle);
+      expect(title, '\u{1F600}' * 80);
     });
   });
 
+  test('donation conditions keep the values the server already stores', () {
+    expect(donationConditionChoices.keys, ['new', 'good', 'minor_repair']);
+    expect(donationConditionChoices.values, ['جديد', 'جيد', 'يحتاج إصلاحًا']);
+  });
+
   group('item form validators', () {
-    test('title needs 3 to 160 characters', () {
-      expect(validateItemTitle(null, emptyMessage: 'مطلوب'), 'مطلوب');
-      expect(validateItemTitle(' اب ', emptyMessage: 'مطلوب'), 'مطلوب');
-      expect(validateItemTitle('ثوب', emptyMessage: 'مطلوب'), isNull);
-      expect(validateItemTitle('ا' * 160, emptyMessage: 'مطلوب'), isNull);
-      expect(validateItemTitle('ا' * 161, emptyMessage: 'مطلوب'), isNotNull);
+    test('a description needs 3 to 2000 characters', () {
+      expect(validateItemDescription(null, emptyMessage: 'مطلوب'), 'مطلوب');
+      expect(validateItemDescription(' اب ', emptyMessage: 'مطلوب'), 'مطلوب');
+      expect(validateItemDescription('ثوب', emptyMessage: 'مطلوب'), isNull);
+      expect(validateItemDescription('ا' * 2000, emptyMessage: 'مطلوب'), isNull);
+      expect(validateItemDescription('ا' * 2001, emptyMessage: 'مطلوب'), isNotNull);
     });
 
     test('optional and required text respect the 2000 character limit', () {

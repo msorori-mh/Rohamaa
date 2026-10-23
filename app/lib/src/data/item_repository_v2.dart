@@ -74,21 +74,24 @@ class ItemRepositoryV2 {
   ///
   /// [id] is a UUID generated once per form instance. Sending the same id
   /// again returns the donation the first attempt created.
+  ///
+  /// [title] is the short `item_type`; [description] the full text. The
+  /// community form sends only the main [category]; [categoryGroup],
+  /// [itemTypeKey] and [attributes] are optional and stored as null / `{}`
+  /// when absent (matching then relies on the canonical category and the
+  /// title).
   Future<CreatedOperation> createDonation({
     String? id,
     required String category,
-    required String categoryGroup,
-    required String itemTypeKey,
     required String title,
     required String condition,
-    required Map<String, String> attributes,
     String? description,
+    String? categoryGroup,
+    String? itemTypeKey,
+    Map<String, String> attributes = const {},
     String? addressId,
     String? inspiredByDiscoveryCardId,
   }) async {
-    final cleanAttributes = Map<String, String>.fromEntries(
-      attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
-    );
     final payload = <String, dynamic>{
       if (id != null) 'id': id,
       'user_id': userId,
@@ -96,7 +99,7 @@ class ItemRepositoryV2 {
       'category_version': 2,
       'category_group': categoryGroup,
       'item_type_key': itemTypeKey,
-      'item_attributes': cleanAttributes,
+      'item_attributes': _cleanAttributes(attributes),
       'item_type': title.trim(),
       'condition': condition,
       'description': description == null || description.trim().isEmpty ? null : description.trim(),
@@ -121,21 +124,20 @@ class ItemRepositoryV2 {
   }
 
   /// Creates a need. `public_code` and `status` are set by the server and
-  /// read back from the insert response. [id] works as in [createDonation].
+  /// read back from the insert response. [id], [categoryGroup],
+  /// [itemTypeKey] and [attributes] work as in [createDonation];
+  /// [privateDetails] is the person's full description, kept for the team.
   Future<CreatedOperation> createNeed({
     String? id,
     required String category,
-    required String categoryGroup,
-    required String itemTypeKey,
     required String title,
-    required Map<String, String> attributes,
     required String privateDetails,
-    required bool acceptsUsed,
+    bool acceptsUsed = true,
+    String? categoryGroup,
+    String? itemTypeKey,
+    Map<String, String> attributes = const {},
     String? addressId,
   }) async {
-    final cleanAttributes = Map<String, String>.fromEntries(
-      attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
-    );
     final payload = <String, dynamic>{
       if (id != null) 'id': id,
       'user_id': userId,
@@ -143,7 +145,7 @@ class ItemRepositoryV2 {
       'category_version': 2,
       'category_group': categoryGroup,
       'item_type_key': itemTypeKey,
-      'item_attributes': cleanAttributes,
+      'item_attributes': _cleanAttributes(attributes),
       'item_type': title.trim(),
       'reason': privateDetails.trim(),
       'accepts_used': acceptsUsed,
@@ -164,5 +166,11 @@ class ItemRepositoryV2 {
       if (existing == null) rethrow;
       return existing;
     }
+  }
+
+  static Map<String, String> _cleanAttributes(Map<String, String> attributes) {
+    return Map<String, String>.fromEntries(
+      attributes.entries.where((entry) => entry.value.trim().isNotEmpty),
+    );
   }
 }

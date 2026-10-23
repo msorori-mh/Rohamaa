@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ruhamaa/src/catalog/item_category_catalog.dart';
+import 'package:ruhamaa/src/features/items/community_form_widgets.dart';
 
 void main() {
   test('Category V2 root keys are unique and populated', () {
@@ -33,6 +34,16 @@ void main() {
     expect(legacyCategoryForV2('education'), 'books');
     expect(legacyCategoryForV2('home_furniture'), 'furniture');
     expect(legacyCategoryForV2('tools_trades'), 'other');
+  });
+
+  test('the community grid covers every V2 root key once', () {
+    final gridKeys = communityCategories.map((category) => category.key).toList();
+    final catalogKeys = itemCategoriesV2.map((category) => category.key).toList();
+    expect(gridKeys.toSet(), catalogKeys.toSet());
+    expect(gridKeys.length, catalogKeys.length);
+    final children = communityCategories.firstWhere((category) => category.key == 'children');
+    expect(children.label, 'مستلزمات أطفال');
+    expect(itemCategoryByKey('children').label, 'مستلزمات أطفال');
   });
 
   test('key pilot examples are represented', () {

@@ -29,6 +29,9 @@ abstract final class RuhamaaColors {
   /// Sand panels (privacy note, photo tile icon).
   static const sand = Color(0xFFF1ECE0);
 
+  /// Text on the sand privacy panel.
+  static const noteText = Color(0xFF4A3D28);
+
   /// Body copy on light panels and secondary icons.
   static const bodyMuted = Color(0xFF4A5B5E);
   static const iconMuted = Color(0xFF5E6F72);

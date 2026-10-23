@@ -115,7 +115,7 @@ const itemCategoriesV2 = <ItemCategoryDefinition>[
   ),
   ItemCategoryDefinition(
     key: 'children',
-    label: 'أطفال وأمومة',
+    label: 'مستلزمات أطفال',
     icon: Icons.toys_rounded,
     attributes: [
       ItemAttributeDefinition(key: 'age_range', label: 'العمر المناسب', hint: 'مثال: 0–6 أشهر أو 3–5 سنوات'),
