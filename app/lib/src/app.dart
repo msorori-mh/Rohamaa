@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,18 @@ import 'features/services/my_services_screen.dart';
 import 'features/supervisor/supervisor_home_screen.dart';
 import 'theme/ruhamaa_theme.dart';
 
+/// Routes the browser build may show. Everything else (donations, needs,
+/// offers, partners, community tabs) redirects away on the web.
+const Set<String> _webStaffLocations = <String>{
+  '/',
+  '/login',
+  '/login-callback',
+  '/legal',
+  '/admin',
+  '/supervisor',
+  '/courier',
+};
+
 class RuhamaaApp extends StatefulWidget {
   const RuhamaaApp({super.key, this.showIntro = false});
 
@@ -57,6 +70,10 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
         final isLogin = state.matchedLocation == '/login';
         final isIntro = state.matchedLocation == '/intro';
         final isPublicLegal = state.matchedLocation == '/legal';
+        // Browser build: staff area only. Community screens are unreachable.
+        if (kIsWeb && !_webStaffLocations.contains(state.matchedLocation)) {
+          return loggedIn ? '/' : '/login';
+        }
         if (!loggedIn && !isLogin && !isIntro && !isPublicLegal) return '/login';
         if (loggedIn && isLogin) return '/';
         return null;

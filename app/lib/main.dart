@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,7 +21,9 @@ Future<void> main() async {
     runApp(
       const ProviderScope(
         child: _StartupErrorApp(
-          message: 'نسخة التطبيق الحالية غير مكتملة الإعداد. أعد تثبيت النسخة المعتمدة من عطاء.',
+          message: kIsWeb
+              ? 'إعداد بوابة فريق عطاء غير مكتمل. تواصل مع مسؤول النظام.'
+              : 'نسخة التطبيق الحالية غير مكتملة الإعداد. أعد تثبيت النسخة المعتمدة من عطاء.',
         ),
       ),
     );
@@ -60,7 +63,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: RuhamaaApp(showIntro: !introSeen),
+      child: RuhamaaApp(showIntro: !kIsWeb && !introSeen),
     ),
   );
 }

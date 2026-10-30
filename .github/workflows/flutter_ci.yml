@@ -121,6 +121,19 @@ jobs:
             python3 tools/ci/annotate.py "pubspec.lock" app/pubspec.lock full
           fi
 
+      # Proves the staff portal (https://ruhamaa.com/admin/) compiles for the web
+      # and stays self-contained before anything can be merged. Pages deploys
+      # only from main, so this is the pre-merge guard. A placeholder project
+      # host is used; no real configuration is needed to compile.
+      - name: Build web staff portal (compile check)
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          flutter build web --release --base-href /admin/ --no-web-resources-cdn --no-pub
+          python3 ../tools/web/admin_web.py finalize \
+            --build build/web --site "$RUNNER_TEMP/site-check" \
+            --supabase-url https://example.supabase.co
+
       - name: Build Android debug APK
         timeout-minutes: 20
         run: flutter build apk --debug --no-pub

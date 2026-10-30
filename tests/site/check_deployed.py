@@ -2,10 +2,12 @@
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
-import hashlib,json,time
+import hashlib,json,os,time
 ROOT=Path(__file__).resolve().parents[2]/'site'
 BASE='https://ruhamaa.com'
 paths=['/','/privacy/','/terms/','/delete-account/','/contact/','/login-callback/','/assets/style.css','/assets/site.js','/assets/favicon.svg']
+# The staff portal is built into site/admin only when the repository variables exist.
+if os.environ.get('ADMIN_DEPLOYED')=='true':paths+=['/admin/','/admin/login/','/admin/flutter_bootstrap.js','/admin/main.dart.js']
 
 def get(path):
     req=Request(BASE+path,headers={'Cache-Control':'no-cache','User-Agent':'Ruhamaa-Deployment-Check'})

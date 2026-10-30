@@ -45,3 +45,6 @@ dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Flutter web output copied into the site by the Pages workflow
+site/admin/

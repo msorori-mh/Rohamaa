@@ -1,0 +1,15 @@
+{
+  "name": "بوابة فريق عطاء",
+  "short_name": "عطاء",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#174d45",
+  "description": "بوابة فريق عطاء للإدارة والمشرفين والموصلين.",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

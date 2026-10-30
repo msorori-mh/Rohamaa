@@ -2,7 +2,7 @@
 
 # Website V2 — 14 September 2026
 
-Scope: public Arabic RTL website in `site/`, on the existing GitHub Pages hosting path. This is a public information website, not a Flutter web build or an administrative portal. No backend schema or application changes.
+Scope: public Arabic RTL website in `site/`, on the existing GitHub Pages hosting path. The public pages are a static information website. The only Flutter web build is the staff portal published under `/admin/` (see [ADMIN_WEB.md](ADMIN_WEB.md)); it is not part of `site/` in git and is not a public or community area. No backend schema changes.
 
 ## Implementation
 

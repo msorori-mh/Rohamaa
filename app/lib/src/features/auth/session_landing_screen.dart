@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +10,7 @@ import '../courier/courier_tasks_screen.dart';
 import '../supervisor/supervisor_home_screen.dart';
 import 'account_status_screens.dart';
 import 'change_password_screen.dart';
+import 'web_staff_only_screen.dart';
 
 /// First screen after sign-in. Loads the account state once and sends the
 /// person to the right place: staff screens by role, the forced password
@@ -73,6 +75,11 @@ class _SessionLandingScreenState extends State<SessionLandingScreen> {
       );
     }
     final gate = state.gate;
+    // Browser build: only staff may continue; everyone else is signed out.
+    if (gate == AccountGate.community &&
+        !state.isAllowedOnPlatform(isWeb: kIsWeb)) {
+      return const WebStaffOnlyScreen();
+    }
     return switch (gate) {
       AccountGate.suspended ||
       AccountGate.deletionProcessing ||

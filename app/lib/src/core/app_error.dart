@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'socket_error_stub.dart' if (dart.library.io) 'socket_error_io.dart';
 
 /// Single place that turns low-level failures into Arabic copy a person can
 /// act on. Screens must never show `$e` directly: raw messages expose table,
@@ -179,7 +180,7 @@ const Map<String, String> kServerErrorMessages = <String, String>{
 };
 
 bool isNetworkError(Object error) {
-  if (error is SocketException || error is TimeoutException) return true;
+  if (isSocketException(error) || error is TimeoutException) return true;
   if (error is AuthRetryableFetchException) return true;
   final text = error.toString().toLowerCase();
   return text.contains('socketexception') ||
