@@ -125,18 +125,54 @@ jobs:
       # and stays self-contained before anything can be merged. Pages deploys
       # only from main, so this is the pre-merge guard. A placeholder project
       # host is used; no real configuration is needed to compile.
-      - name: Build web staff portal (compile check)
+      - name: Build web staff portal (compile)
         timeout-minutes: 15
+        shell: bash
         run: |
-          set -euo pipefail
-          flutter build web --release --base-href /admin/ --no-web-resources-cdn --no-pub
-          echo "--- flutter_bootstrap.js lines of interest ---"
-          grep -n -o -E '.{0,120}(gstatic|canvasKitBaseUrl|fontFallbackBaseUrl).{0,120}' build/web/flutter_bootstrap.js || true
-          echo "--- end ---"
-          python3 -m unittest ../tools/web/test_admin_web.py
+          set +e
+          flutter build web --release --base-href /admin/ --no-web-resources-cdn --no-pub > "$RUNNER_TEMP/web-build.log" 2>&1
+          code=$?
+          tail -n 40 "$RUNNER_TEMP/web-build.log"
+          if [ "$code" -ne 0 ]; then
+            echo "::error title=flutter build web failed (exit $code)::$(tail -n 20 "$RUNNER_TEMP/web-build.log" | tr '\n' ' ')"
+            exit "$code"
+          fi
+
+      - name: Show web bootstrap configuration (informational)
+        shell: bash
+        run: |
+          lines="$(grep -n -o -E '.{0,120}(gstatic|canvasKitBaseUrl|fontFallbackBaseUrl).{0,120}' build/web/flutter_bootstrap.js || true)"
+          echo "$lines"
+          echo "::notice title=flutter_bootstrap.js lines of interest::$(printf '%s' "$lines" | head -c 3000 | tr '\n' ' ')"
+          { echo '### flutter_bootstrap.js lines of interest'; echo '```'; echo "$lines"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          ls build/web >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Unit-test the web build helper
+        working-directory: tools/web
+        shell: bash
+        run: |
+          set +e
+          python3 -m unittest -v test_admin_web > "$RUNNER_TEMP/web-unittest.log" 2>&1
+          code=$?
+          tail -n 40 "$RUNNER_TEMP/web-unittest.log"
+          if [ "$code" -ne 0 ]; then
+            echo "::error title=admin_web unit test failed::$(tail -n 20 "$RUNNER_TEMP/web-unittest.log" | tr '\n' ' ')"
+            exit "$code"
+          fi
+
+      - name: Verify web build output and pin CSP
+        shell: bash
+        run: |
+          set +e
           python3 ../tools/web/admin_web.py finalize \
             --build build/web --site "$RUNNER_TEMP/site-check" \
-            --supabase-url https://example.supabase.co
+            --supabase-url https://example.supabase.co > "$RUNNER_TEMP/web-finalize.log" 2>&1
+          code=$?
+          tail -n 40 "$RUNNER_TEMP/web-finalize.log"
+          if [ "$code" -ne 0 ]; then
+            echo "::error title=admin_web finalize failed::$(tail -n 20 "$RUNNER_TEMP/web-finalize.log" | tr '\n' ' ')"
+            exit "$code"
+          fi
 
       - name: Build Android debug APK
         timeout-minutes: 20
