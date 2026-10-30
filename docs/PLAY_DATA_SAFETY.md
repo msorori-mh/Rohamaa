@@ -67,7 +67,7 @@ Do not answer the Play Console's “data shared” question mechanically from th
 
 Account deletion as implemented (this is what the Play "Data deletion" answers and the deletion URL must describe):
 
-1. The user requests deletion in the app (Privacy & Account → Delete account and data) or by email to `privacy@ruhamaa.com` when they cannot sign in. The public page is `https://ruhamaa.com/delete-account/`.
+1. The user requests deletion in the app (Privacy & Account → Delete account and data) or by email to `msorori692022@gmail.com` when they cannot sign in. The public page is `https://ruhamaa.com/delete-account/`.
 2. The request is not automatic: the team reviews it in an admin queue and closes any open pickup, delivery or service operation first. The user sees the request status in the app and can cancel while it is still pending.
 3. On approval, identifying data is removed: name, phone number, addresses and their coordinates, sign-in identity, and donation photos.
 4. Operation records are kept in anonymised form, without personal identifiers, for record integrity and fraud prevention. Declare this retention in the Data Safety form where it asks whether some data is retained after a deletion request.

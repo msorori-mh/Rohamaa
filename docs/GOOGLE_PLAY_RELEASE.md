@@ -26,7 +26,7 @@ The release expects these public URLs:
 
 The repository contains the static site under `site/`. GitHub Pages is configured to deploy production content from `main` after merge.
 
-Before store submission, verify the URLs in a normal unauthenticated browser and verify both mailboxes receive mail: `privacy@ruhamaa.com` (privacy questions and account-deletion requests; this is the address the privacy policy and the deletion page give) and `support@ruhamaa.com` (support). Use `privacy@ruhamaa.com` as the privacy contact in Play Console.
+Before store submission, verify the URLs in a normal unauthenticated browser and verify that the mailbox `msorori692022@gmail.com` receives mail. It is the single contact address on the privacy policy, terms, deletion and contact pages, and the privacy/support contact to use in Play Console. The app still shows `support@ruhamaa.com` in two places (`kSupportEmail` and `main.dart`); change it in the next build if that mailbox is not monitored.
 
 ## 3. Google Auth Platform
 
