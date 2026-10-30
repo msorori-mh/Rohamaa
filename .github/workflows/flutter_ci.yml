@@ -130,6 +130,10 @@ jobs:
         run: |
           set -euo pipefail
           flutter build web --release --base-href /admin/ --no-web-resources-cdn --no-pub
+          echo "--- flutter_bootstrap.js lines of interest ---"
+          grep -n -o -E '.{0,120}(gstatic|canvasKitBaseUrl|fontFallbackBaseUrl).{0,120}' build/web/flutter_bootstrap.js || true
+          echo "--- end ---"
+          python3 -m unittest ../tools/web/test_admin_web.py
           python3 ../tools/web/admin_web.py finalize \
             --build build/web --site "$RUNNER_TEMP/site-check" \
             --supabase-url https://example.supabase.co

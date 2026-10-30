@@ -81,6 +81,50 @@ def check_config() -> int:
     return 0
 
 
+CDN_HOSTS = ("gstatic.com", "unpkg.com", "jsdelivr")
+CONFIG_URL = re.compile(
+    r"""["']?(canvasKitBaseUrl|fontFallbackBaseUrl)["']?\s*[:=]\s*["']([^"']*)["']"""
+)
+BUILD_CONFIG = re.compile(r"_flutter\.buildConfig\s*=\s*(\{.*?\})\s*;", re.S)
+
+
+def _context(text: str, start: int, end: int) -> str:
+    return text[max(0, start - 150):end + 150].replace("\n", " ")
+
+
+def check_bootstrap(text: str) -> list:
+    """Return problems for flutter_bootstrap.js.
+
+    The loader embedded in the file legitimately contains the default CDN
+    strings, so a plain substring search is wrong. Only values *assigned* to
+    canvasKitBaseUrl / fontFallbackBaseUrl, and CDN hosts inside the
+    _flutter.buildConfig block, count.
+    """
+    problems = []
+    for match in CONFIG_URL.finditer(text):
+        name, value = match.group(1), match.group(2)
+        if re.match(r"(?i)^(https?:)?//", value):
+            problems.append(
+                f"flutter_bootstrap.js assigns {name} to an external URL ({value}); "
+                f"use --no-web-resources-cdn. Context: ...{_context(text, match.start(), match.end())}..."
+            )
+    block = BUILD_CONFIG.search(text)
+    if block:
+        for host in CDN_HOSTS:
+            for hit in re.finditer(re.escape(host), block.group(1)):
+                problems.append(
+                    f"_flutter.buildConfig references {host}. Context: "
+                    f"...{_context(block.group(1), hit.start(), hit.end())}..."
+                )
+    if not CONFIG_URL.search(text):
+        print(
+            "::warning title=Admin web build::flutter_bootstrap.js assigns neither "
+            "canvasKitBaseUrl nor fontFallbackBaseUrl; relying on the canvaskit/ "
+            "directory check and the CSP (CDN stays blocked)."
+        )
+    return problems
+
+
 SCRIPT_TAG = re.compile(r"<script\b([^>]*)>(.*?)</script>", re.S | re.I)
 
 
@@ -106,12 +150,7 @@ def verify_build(index_html: str, build: Path) -> None:
     if not bootstrap.is_file():
         problems.append("flutter_bootstrap.js is missing from the build.")
     else:
-        text = bootstrap.read_text(encoding="utf-8", errors="replace")
-        for needle in ("gstatic.com", "unpkg.com", "jsdelivr"):
-            if needle in text:
-                problems.append(
-                    f"flutter_bootstrap.js references {needle}: the build must use --no-web-resources-cdn."
-                )
+        problems.extend(check_bootstrap(bootstrap.read_text(encoding="utf-8", errors="replace")))
     for required in ("main.dart.js", "canvaskit", "assets/FontManifest.json"):
         if not (build / required).exists():
             problems.append(f"{required} is missing from the build (CanvasKit/fonts must be self-hosted).")
