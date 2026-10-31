@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <!-- The Flutter tool fills in the base href at build time (--base-href /admin/). -->
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <!--
+    Strict CSP for the staff portal. No inline script and no CDN: the build uses
+    --no-web-resources-cdn (CanvasKit is served from /admin/canvaskit/) and the
+    Tajawal font is bundled as an asset.
+    'wasm-unsafe-eval' is required by CanvasKit/skwasm. style-src keeps
+    'unsafe-inline' because the Flutter engine injects its own <style> element.
+    The host placeholder in connect-src/img-src is replaced with the Supabase
+    project host by tools/web/admin_web.py finalize; the page cannot reach the
+    backend without that step.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://__SUPABASE_HOST__; font-src 'self' data:; connect-src 'self' https://__SUPABASE_HOST__ wss://__SUPABASE_HOST__; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#174d45">
+  <meta name="description" content="بوابة فريق عطاء للإدارة والمشرفين والموصلين.">
+  <title>بوابة فريق عطاء</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

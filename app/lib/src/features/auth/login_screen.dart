@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import '../../core/auth_callback_error.dart';
+import '../../core/web_staff_notice.dart';
 import '../../theme/ruhamaa_theme.dart';
 
 const _authRedirectUrl = String.fromEnvironment(
@@ -14,7 +16,11 @@ const _authRedirectUrl = String.fromEnvironment(
 );
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.staffOnly = kIsWeb});
+
+  /// Browser build: only the team sign-in is offered (no Google, no
+  /// community wording).
+  final bool staffOnly;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -37,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _showCallbackError(error);
     });
     AuthCallbackError.last.addListener(_onCallbackError);
+    WebStaffNotice.message.addListener(_onWebStaffNotice);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (auth.currentSession != null) {
         _openApp();
@@ -44,6 +51,18 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       // A callback that failed before this screen was built.
       _onCallbackError();
+      _onWebStaffNotice();
+    });
+  }
+
+  void _onWebStaffNotice() {
+    final message = WebStaffNotice.message.value;
+    if (message == null) return;
+    WebStaffNotice.message.value = null;
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _error = message;
     });
   }
 
@@ -73,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     AuthCallbackError.last.removeListener(_onCallbackError);
+    WebStaffNotice.message.removeListener(_onWebStaffNotice);
     _authSubscription.cancel();
     super.dispose();
   }
@@ -144,46 +164,72 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: RuhamaaColors.softGreen,
-                    borderRadius: BorderRadius.circular(24),
+                if (widget.staffOnly) ...[
+                  const Text(
+                    'بوابة فريق عطاء',
+                    key: Key('login-staff-only-heading'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: RuhamaaColors.primaryDark,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.handshake_rounded, color: RuhamaaColors.primary, size: 46),
-                      SizedBox(height: 10),
-                      Text(
-                        'تبرّع أو اطلب المساعدة بخصوصية',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: RuhamaaColors.primaryDark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                  const SizedBox(height: 6),
+                  const Text(
+                    'للإدارة، مشرفي المدن/المناطق، والموصلين.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    key: const Key('login-staff-button'),
+                    onPressed: _loading ? null : _staffLogin,
+                    icon: const Icon(Icons.badge_outlined),
+                    label: const Text('دخول فريق عطاء'),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: RuhamaaColors.softGreen,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Column(
+                      children: [
+                        Icon(Icons.handshake_rounded, color: RuhamaaColors.primary, size: 46),
+                        SizedBox(height: 10),
+                        Text(
+                          'تبرّع أو اطلب المساعدة بخصوصية',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: RuhamaaColors.primaryDark,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        'يراجع عطاء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
-                      ),
-                    ],
+                        SizedBox(height: 6),
+                        Text(
+                          'يراجع عطاء الطلبات وينسّق الاستلام والتسليم دون عرض بياناتك للآخرين.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: RuhamaaColors.textMuted, height: 1.5),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: _loading ? null : _googleSignIn,
-                  icon: const Icon(Icons.login_rounded),
-                  label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _loading ? null : _staffLogin,
-                  icon: const Icon(Icons.badge_outlined),
-                  label: const Text('دخول فريق عطاء'),
-                ),
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _googleSignIn,
+                    icon: const Icon(Icons.login_rounded),
+                    label: Text(_loading ? 'جارٍ تسجيل الدخول...' : 'المتابعة بحساب Google'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _staffLogin,
+                    icon: const Icon(Icons.badge_outlined),
+                    label: const Text('دخول فريق عطاء'),
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 14),
                   Container(
@@ -199,21 +245,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 18),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.lock_outline_rounded, size: 17, color: RuhamaaColors.primary),
-                    SizedBox(width: 7),
-                    Flexible(
-                      child: Text(
-                        'نستخدم بيانات حساب Google لتسجيل الدخول فقط، ولا نصل إلى Gmail أو Drive.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.5),
+                if (!widget.staffOnly) ...[
+                  const SizedBox(height: 18),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.lock_outline_rounded, size: 17, color: RuhamaaColors.primary),
+                      SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          'نستخدم بيانات حساب Google لتسجيل الدخول فقط، ولا نصل إلى Gmail أو Drive.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.5),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.push('/legal'),

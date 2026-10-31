@@ -46,6 +46,9 @@ class AccountState {
 
   bool get isStaff => staffRoles.contains(role);
 
+  /// The browser build is the staff area only; the phone app serves everyone.
+  bool isAllowedOnPlatform({required bool isWeb}) => !isWeb || isStaff;
+
   bool get deletionPending => deletionStatus == 'pending';
   bool get deletionProcessing => deletionStatus == 'processing';
   bool get deletionCompleted => deletionStatus == 'completed';

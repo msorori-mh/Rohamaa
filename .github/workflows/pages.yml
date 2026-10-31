@@ -8,6 +8,8 @@ on:
       - 'site/**'
       - 'tests/site/**'
       - '.github/workflows/pages.yml'
+      - 'app/**'
+      - 'tools/web/**'
       - '.github/workflows/website_checks.yml'
   workflow_dispatch:
 
@@ -32,7 +34,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
       pages: write
@@ -42,6 +44,41 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
+      # Staff portal (Flutter web) under /admin/. It uses repository-level
+      # variables only; this job deliberately does not use the `release`
+      # environment (signing secrets, reviewer approval). Empty variables skip
+      # the portal with a visible warning; invalid ones (for example a
+      # service-role key) fail the deployment. A broken portal is never deployed.
+      - name: Check admin portal configuration
+        id: admin_cfg
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: python3 tools/web/admin_web.py check-config
+      - name: Set up Flutter
+        if: steps.admin_cfg.outputs.enabled == 'true'
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.3
+          cache: false
+      - name: Build admin portal
+        if: steps.admin_cfg.outputs.enabled == 'true'
+        working-directory: app
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          flutter pub get --enforce-lockfile
+          flutter build web --release --base-href /admin/ --no-web-resources-cdn \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+      - name: Add admin portal to the site
+        if: steps.admin_cfg.outputs.enabled == 'true'
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+        run: python3 tools/web/admin_web.py finalize --build app/build/web --site site
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - name: Upload site
@@ -52,6 +89,8 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
       - name: Verify public domain matches this deployment
+        env:
+          ADMIN_DEPLOYED: ${{ steps.admin_cfg.outputs.enabled }}
         run: python3 tests/site/check_deployed.py
       - name: Save public verification evidence
         if: always()
