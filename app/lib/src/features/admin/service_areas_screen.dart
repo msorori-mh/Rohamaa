@@ -189,14 +189,6 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     }
   }
 
-  String _parentName(List<Map<String, dynamic>> rows, String? id) {
-    if (id == null) return 'نطاق رئيسي';
-    for (final row in rows) {
-      if (row['id'] == id) return 'تتبع ${row['name_ar']}';
-    }
-    return 'تتبع نطاقًا آخر';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,28 +212,97 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
         onRefresh: _refresh,
         isEmpty: (rows) => rows.isEmpty,
         emptyText: 'لا توجد نطاقات خدمة.',
-        builder: (context, rows) => ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          itemCount: rows.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, i) {
-            final area = rows[i];
-            final isCity = area['kind'] == 'city';
-            final parent = _parentName(rows, area['parent_id'] as String?);
-            return Card(
-              child: ListTile(
-                leading: Icon(
-                  isCity ? Icons.location_city_outlined : Icons.place_outlined,
+        builder: (context, rows) => _GovernorateList(rows: rows),
+      ),
+    );
+  }
+}
+
+/// Shows each governorate as a collapsible card with its areas inside.
+class _GovernorateList extends StatelessWidget {
+  const _GovernorateList({required this.rows});
+  final List<Map<String, dynamic>> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final governorates = rows.where((area) => area['kind'] == 'city').toList()
+      ..sort((a, b) => '${a['name_ar']}'.compareTo('${b['name_ar']}'));
+    final areas = rows.where((area) => area['kind'] == 'area').toList();
+    final governorateIds = governorates.map((g) => g['id']).toSet();
+
+    List<Map<String, dynamic>> areasOf(String? governorateId) => areas
+        .where((area) => area['parent_id'] == governorateId)
+        .toList()
+      ..sort((a, b) => '${a['code']}'.compareTo('${b['code']}'));
+
+    final orphans = areas
+        .where((area) => !governorateIds.contains(area['parent_id']))
+        .toList()
+      ..sort((a, b) => '${a['code']}'.compareTo('${b['code']}'));
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final governorate in governorates)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _GovernorateCard(
+              name: '${governorate['name_ar']}',
+              code: '${governorate['code']}',
+              areas: areasOf(governorate['id'] as String?),
+            ),
+          ),
+        if (orphans.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _GovernorateCard(
+              name: 'مناطق بدون محافظة',
+              code: '—',
+              areas: orphans,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _GovernorateCard extends StatelessWidget {
+  const _GovernorateCard({required this.name, required this.code, required this.areas});
+  final String name;
+  final String code;
+  final List<Map<String, dynamic>> areas;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: const Icon(Icons.location_city_outlined),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
+        subtitle: Text('$code • ${areas.length} منطقة'),
+        childrenPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
+        children: areas.isEmpty
+            ? [
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'لا توجد مناطق بعد. أضف منطقة من زر الإضافة في الأعلى.',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
                 ),
-                title: Text('${area['name_ar']}'),
-                subtitle: Text(
-                  '${area['code']} • ${isCity ? 'مدينة' : 'منطقة'} • $parent',
-                ),
-              ),
-            );
-          },
-        ),
+              ]
+            : [
+                for (final area in areas)
+                  ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
+                    leading: const Icon(Icons.place_outlined),
+                    title: Text('${area['name_ar']}'),
+                    subtitle: Text('${area['code']}'),
+                  ),
+              ],
       ),
     );
   }
