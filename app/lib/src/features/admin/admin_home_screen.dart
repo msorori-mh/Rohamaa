@@ -35,6 +35,8 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late Future<_AdminHomeData> _future;
   _QueueFilter _filter = _QueueFilter.all;
+  Widget? _panelScreen;
+  String? _panelTitle;
 
   @override
   void initState() {
@@ -112,7 +114,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       _ => null,
     };
     if (screen != null) {
-      await _open(screen);
+      await _show(screen);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('هذه العملية تحتاج تنسيقًا مباشرًا مع المشرف أو الموصل.')),
@@ -144,49 +146,32 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: RuhamaaColors.pageGradient),
-        child: SafeArea(
-          bottom: false,
-          child: FutureBuilder<_AdminHomeData>(
-            future: _future,
-            builder: (context, snapshot) {
-              // Keep showing the loaded data while a refresh is running so the
-              // RefreshIndicator stays mounted and the page does not flash.
-              final waiting = snapshot.connectionState != ConnectionState.done;
-              if (waiting && !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!waiting && snapshot.hasError) {
-                return _AdminLoadError(onRetry: _refresh);
-              }
-              final data = snapshot.data!;
-              final visibleQueue = data.queue.where(_filter.accepts).take(8).toList();
-              return RefreshIndicator(
-                onRefresh: _refresh,
-                child: ListView(
-                  key: const Key('admin-operations-scroll'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _AdminHero(
-                      refreshedAt: data.refreshedAt,
-                      urgentCount: data.queue.where((item) => item.priority >= 80).length,
-                      onRefresh: _refresh,
-                      onPassword: () => _open(
-                        const ChangePasswordScreen(role: 'admin', requiredChange: false),
-                      ),
-                      onSignOut: _signOut,
-                    ),
-                    Transform.translate(
-                      offset: const Offset(0, -30),
-                      child: _ContentFrame(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+  bool _isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
+
+  /// Wide screens show the tool in the side panel; narrow screens open it as a page.
+  Future<void> _show(Widget screen, {String? title}) {
+    if (!_isWide(context)) return _open(screen);
+    setState(() {
+      _panelScreen = screen;
+      _panelTitle = title;
+    });
+    return Future.value();
+  }
+
+  void _openTool(_Tool tool) {
+    _show(tool.screen, title: tool.title);
+  }
+
+  void _showOverview() {
+    setState(() {
+      _panelScreen = null;
+      _panelTitle = null;
+    });
+  }
+
+  List<Widget> _overviewWidgets(_AdminHomeData data) {
+    final visibleQueue = data.queue.where(_filter.accepts).take(8).toList();
+    return [
                             _MetricsPanel(stats: data.stats),
                             const SizedBox(height: 22),
                             _SectionHeading(
@@ -223,49 +208,168 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                                     .map((item) => _PriorityItem(item: item, onTap: () => _openQueue(item)))
                                     .toList(),
                               ),
-                            _ToolGroup(
-                              icon: Icons.inventory_2_outlined,
-                              title: 'الاستلام والتأهيل',
-                              subtitle: 'من وصول العطاء إلى جاهزيته للمطابقة.',
-                              tools: [
-                                _Tool(Icons.warehouse_outlined, 'التأهيل والمخزون', 'استلام، فحص A–D، تنظيف، إصلاح أو تدوير.', RuhamaaColors.primaryBright, () => _open(const RecoveryInventoryScreen())),
-                                _Tool(Icons.fact_check_outlined, 'الاحتياجات الموثوقة', 'مراجعة الطلب وصياغة بطاقة تحفظ الخصوصية.', RuhamaaColors.blue, () => _open(const NeedDiscoveryAdminScreen())),
-                              ],
+    ];
+  }
+
+  List<_ToolGroupData> _adminToolGroups() => [
+        _ToolGroupData(
+          icon: Icons.inventory_2_outlined,
+          title: 'الاستلام والمطابقة',
+          subtitle: 'من استلام التبرع إلى مطابقته مع الاحتياج.',
+          tools: [
+            _Tool(Icons.warehouse_outlined, 'التأهيل والمخزون', 'استلام، فحص A–D، تنظيف، إصلاح أو تدوير.', RuhamaaColors.primaryBright, const RecoveryInventoryScreen()),
+            _Tool(Icons.fact_check_outlined, 'الاحتياجات الموثوقة', 'مراجعة الطلب وصياغة بطاقة تحفظ الخصوصية.', RuhamaaColors.blue, const NeedDiscoveryAdminScreen()),
+            _Tool(Icons.join_inner_rounded, 'مطابقة الأشياء', 'مراجعة الملاءمة وإرسال عرض المطابقة.', RuhamaaColors.vividGold, const ItemMatchingV2Screen()),
+            _Tool(Icons.handyman_outlined, 'الوقت والمهارات', 'مطابقة عروض الأفراد بطلبات الخدمات.', RuhamaaColors.rose, const ServiceMatchingScreen()),
+          ],
+        ),
+        _ToolGroupData(
+          icon: Icons.delivery_dining_outlined,
+          title: 'التوصيل',
+          subtitle: 'إسناد الموصلين ومتابعة المهام حتى التسليم.',
+          tools: [
+            _Tool(Icons.delivery_dining_outlined, 'جاهز للتوصيل', 'إسناد الموصل والدراجة بعد قبول المستفيد.', RuhamaaColors.primary, const AcceptedMatchesScreen()),
+            _Tool(Icons.route_outlined, 'متابعة التوصيل', 'متابعة قبول المهام وإعادة إسناد المتعثر منها.', RuhamaaColors.blue, const DeliveryOperationsScreen()),
+          ],
+        ),
+        _ToolGroupData(
+          icon: Icons.health_and_safety_outlined,
+          title: 'الثقة والرقابة',
+          subtitle: 'معالجة الاستثناءات وحماية الثقة في المنظومة.',
+          tools: [
+            _Tool(Icons.shield_outlined, 'مراجعة المخاطر', 'فحص الإشارات وتوثيق قرار المراجعة.', RuhamaaColors.rose, const RiskManagementScreen()),
+            _Tool(Icons.report_problem_outlined, 'بلاغات الخدمات', 'الخصوصية، عدم الحضور وجودة التنفيذ.', RuhamaaColors.vividGold, const ServiceIncidentManagementScreen()),
+            _Tool(Icons.payments_outlined, 'المساهمات التشغيلية', 'تأكيد المبالغ النقدية المستلمة ميدانيًا.', RuhamaaColors.primaryBright, const ContributionReviewScreen()),
+          ],
+        ),
+        _ToolGroupData(
+          icon: Icons.storefront_outlined,
+          title: 'الشركاء والنطاق',
+          subtitle: 'الجهات المعتمدة ونطاقات الخدمة.',
+          tools: [
+            _Tool(Icons.storefront_outlined, 'شركاء عطاء', 'اعتماد الورش والمحلات ومقدمي الخدمات.', RuhamaaColors.blue, const PartnerManagementScreen()),
+            _Tool(Icons.map_outlined, 'المدن والمناطق', 'نطاقات الخدمة وإسناد المشرفين.', RuhamaaColors.blue, const ServiceAreasScreen()),
+          ],
+        ),
+        _ToolGroupData(
+          icon: Icons.group_outlined,
+          title: 'الفريق والحسابات',
+          subtitle: 'الصلاحيات وإنشاء الحسابات وطلبات الحذف.',
+          tools: [
+            _Tool(Icons.person_add_alt_1_outlined, 'إضافة فريق', 'إنشاء حساب موصل أو مشرف تشغيل.', RuhamaaColors.vividGold, const CreateStaffScreen()),
+            _Tool(Icons.manage_accounts_outlined, 'المستخدمون والأدوار', 'إدارة الصلاحيات وتجميد الحسابات.', RuhamaaColors.rose, const UserManagementScreen()),
+            _Tool(Icons.person_remove_outlined, 'طلبات حذف الحسابات', 'مراجعة طلبات الحذف ثم تنفيذها أو رفضها.', RuhamaaColors.primaryBright, const AccountDeletionScreen()),
+          ],
+        ),
+        _ToolGroupData(
+          icon: Icons.analytics_outlined,
+          title: 'التحليل',
+          subtitle: 'قياس الأثر والخدمات والمصروفات.',
+          tools: [
+            _Tool(Icons.analytics_outlined, 'التقارير الأساسية', 'الأثر، التوصيل، الخدمات والمصروفات.', RuhamaaColors.primary, const ReportsScreen()),
+          ],
+        ),
+      ];
+
+  Widget _wideLayout(_AdminHomeData data) {
+    final panel = _panelScreen;
+    final hero = _AdminHero(
+      refreshedAt: data.refreshedAt,
+      urgentCount: data.queue.where((item) => item.priority >= 80).length,
+      onRefresh: _refresh,
+      onPassword: () => _open(const ChangePasswordScreen(role: 'admin', requiredChange: false)),
+      onSignOut: _signOut,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        hero,
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _AdminSidebar(
+                groups: _adminToolGroups(),
+                overviewSelected: panel == null,
+                activeTitle: _panelTitle,
+                onOverview: _showOverview,
+                onSelect: _openTool,
+              ),
+              Expanded(
+                child: panel == null
+                    ? RefreshIndicator(
+                        onRefresh: _refresh,
+                        child: ListView(
+                          key: const Key('admin-operations-scroll'),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(top: 22, bottom: 24),
+                          children: [
+                            _ContentFrame(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: _overviewWidgets(data),
+                              ),
                             ),
-                            _ToolGroup(
-                              icon: Icons.hub_outlined,
-                              title: 'المطابقة والتنفيذ',
-                              subtitle: 'تحويل الموارد والخدمات المتاحة إلى عمليات مكتملة.',
-                              tools: [
-                                _Tool(Icons.join_inner_rounded, 'مطابقة الأشياء', 'مراجعة الملاءمة وإرسال عرض المطابقة.', RuhamaaColors.vividGold, () => _open(const ItemMatchingV2Screen())),
-                                _Tool(Icons.handyman_outlined, 'الوقت والمهارات', 'مطابقة عروض الأفراد بطلبات الخدمات.', RuhamaaColors.rose, () => _open(const ServiceMatchingScreen())),
-                                _Tool(Icons.delivery_dining_outlined, 'جاهز للتوصيل', 'إسناد الموصل والدراجة بعد قبول المستفيد.', RuhamaaColors.primary, () => _open(const AcceptedMatchesScreen())),
-                                _Tool(Icons.route_outlined, 'متابعة التوصيل', 'متابعة قبول المهام وإعادة إسناد المتعثر منها.', RuhamaaColors.blue, () => _open(const DeliveryOperationsScreen())),
-                              ],
-                            ),
-                            _ToolGroup(
-                              icon: Icons.health_and_safety_outlined,
-                              title: 'السلامة والحوكمة',
-                              subtitle: 'معالجة الاستثناءات وحماية الثقة في المنظومة.',
-                              tools: [
-                                _Tool(Icons.shield_outlined, 'مراجعة المخاطر', 'فحص الإشارات وتوثيق قرار المراجعة.', RuhamaaColors.rose, () => _open(const RiskManagementScreen())),
-                                _Tool(Icons.report_problem_outlined, 'بلاغات الخدمات', 'الخصوصية، عدم الحضور وجودة التنفيذ.', RuhamaaColors.vividGold, () => _open(const ServiceIncidentManagementScreen())),
-                                _Tool(Icons.storefront_outlined, 'شركاء عطاء', 'اعتماد الورش والمحلات ومقدمي الخدمات.', RuhamaaColors.blue, () => _open(const PartnerManagementScreen())),
-                                _Tool(Icons.payments_outlined, 'المساهمات التشغيلية', 'تأكيد المبالغ النقدية المستلمة ميدانيًا.', RuhamaaColors.primaryBright, () => _open(const ContributionReviewScreen())),
-                              ],
-                            ),
-                            _ToolGroup(
-                              icon: Icons.settings_suggest_outlined,
-                              title: 'الإدارة والتحليل',
-                              subtitle: 'تهيئة نطاق التشغيل والفريق وقياس الأثر.',
-                              tools: [
-                                _Tool(Icons.analytics_outlined, 'التقارير الأساسية', 'الأثر، التوصيل، الخدمات والمصروفات.', RuhamaaColors.primary, () => _open(const ReportsScreen())),
-                                _Tool(Icons.map_outlined, 'المدن والمناطق', 'نطاقات الخدمة وإسناد المشرفين.', RuhamaaColors.blue, () => _open(const ServiceAreasScreen())),
-                                _Tool(Icons.person_add_alt_1_outlined, 'إضافة فريق', 'إنشاء حساب موصل أو مشرف تشغيل.', RuhamaaColors.vividGold, () => _open(const CreateStaffScreen())),
-                                _Tool(Icons.manage_accounts_outlined, 'المستخدمون والأدوار', 'إدارة الصلاحيات وتجميد الحسابات.', RuhamaaColors.rose, () => _open(const UserManagementScreen())),
-                                _Tool(Icons.person_remove_outlined, 'طلبات حذف الحسابات', 'مراجعة طلبات الحذف ثم تنفيذها أو رفضها.', RuhamaaColors.primaryBright, () => _open(const AccountDeletionScreen())),
-                              ],
-                            ),
+                          ],
+                        ),
+                      )
+                    : _EmbeddedPanel(
+                        key: ValueKey(_panelTitle ?? panel.runtimeType.toString()),
+                        screen: panel,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: RuhamaaColors.pageGradient),
+        child: SafeArea(
+          bottom: false,
+          child: FutureBuilder<_AdminHomeData>(
+            future: _future,
+            builder: (context, snapshot) {
+              // Keep showing the loaded data while a refresh is running so the
+              // RefreshIndicator stays mounted and the page does not flash.
+              final waiting = snapshot.connectionState != ConnectionState.done;
+              if (waiting && !snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!waiting && snapshot.hasError) {
+                return _AdminLoadError(onRetry: _refresh);
+              }
+              final data = snapshot.data!;
+              if (_isWide(context)) return _wideLayout(data);
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  key: const Key('admin-operations-scroll'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _AdminHero(
+                      refreshedAt: data.refreshedAt,
+                      urgentCount: data.queue.where((item) => item.priority >= 80).length,
+                      onRefresh: _refresh,
+                      onPassword: () => _open(
+                        const ChangePasswordScreen(role: 'admin', requiredChange: false),
+                      ),
+                      onSignOut: _signOut,
+                    ),
+                    Transform.translate(
+                      offset: const Offset(0, -30),
+                      child: _ContentFrame(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ..._overviewWidgets(data),
+                            ..._adminToolGroups().map((group) => _ToolGroup(group: group, onOpen: _openTool)),
                             const SizedBox(height: 28),
                             const Text(
                               'مركز تشغيل عطاء • مأرب',
@@ -631,20 +735,26 @@ class _PriorityItem extends StatelessWidget {
 }
 
 class _Tool {
-  const _Tool(this.icon, this.title, this.subtitle, this.color, this.onTap);
+  const _Tool(this.icon, this.title, this.subtitle, this.color, this.screen);
   final IconData icon;
   final String title;
   final String subtitle;
   final Color color;
-  final VoidCallback onTap;
+  final Widget screen;
 }
 
-class _ToolGroup extends StatelessWidget {
-  const _ToolGroup({required this.icon, required this.title, required this.subtitle, required this.tools});
+class _ToolGroupData {
+  const _ToolGroupData({required this.icon, required this.title, required this.subtitle, required this.tools});
   final IconData icon;
   final String title;
   final String subtitle;
   final List<_Tool> tools;
+}
+
+class _ToolGroup extends StatelessWidget {
+  const _ToolGroup({required this.group, required this.onOpen});
+  final _ToolGroupData group;
+  final ValueChanged<_Tool> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -659,15 +769,15 @@ class _ToolGroup extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(color: RuhamaaColors.softGreen, borderRadius: BorderRadius.circular(14)),
-                child: Icon(icon, color: RuhamaaColors.primary),
+                child: Icon(group.icon, color: RuhamaaColors.primary),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
-                    Text(subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.35)),
+                    Text(group.title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                    Text(group.subtitle, style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, height: 1.35)),
                   ],
                 ),
               ),
@@ -677,7 +787,7 @@ class _ToolGroup extends StatelessWidget {
           _EqualRowGrid(
             minTileWidth: 150,
             maxColumns: 4,
-            children: tools.map((tool) => _ToolTile(tool: tool)).toList(),
+            children: group.tools.map((tool) => _ToolTile(tool: tool, onTap: () => onOpen(tool))).toList(),
           ),
         ],
       ),
@@ -686,8 +796,9 @@ class _ToolGroup extends StatelessWidget {
 }
 
 class _ToolTile extends StatelessWidget {
-  const _ToolTile({required this.tool});
+  const _ToolTile({required this.tool, required this.onTap});
   final _Tool tool;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -698,7 +809,7 @@ class _ToolTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
-        onTap: tool.onTap,
+        onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 154),
           child: Padding(
@@ -724,6 +835,141 @@ class _ToolTile extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminSidebar extends StatelessWidget {
+  const _AdminSidebar({
+    required this.groups,
+    required this.overviewSelected,
+    required this.activeTitle,
+    required this.onOverview,
+    required this.onSelect,
+  });
+
+  final List<_ToolGroupData> groups;
+  final bool overviewSelected;
+  final String? activeTitle;
+  final VoidCallback onOverview;
+  final ValueChanged<_Tool> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 270,
+      margin: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 16),
+      child: Material(
+        color: Colors.white,
+        elevation: 3,
+        shadowColor: RuhamaaColors.primaryDark.withValues(alpha: .09),
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: ListView(
+          padding: const EdgeInsets.all(10),
+          children: [
+            _SidebarItem(
+              icon: Icons.dashboard_outlined,
+              title: 'نظرة عامة',
+              color: RuhamaaColors.primary,
+              selected: overviewSelected,
+              onTap: onOverview,
+            ),
+            for (final group in groups) ...[
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(12, 16, 12, 6),
+                child: Text(
+                  group.title,
+                  style: const TextStyle(color: RuhamaaColors.textMuted, fontSize: 12, fontWeight: FontWeight.w900),
+                ),
+              ),
+              for (final tool in group.tools)
+                _SidebarItem(
+                  icon: tool.icon,
+                  title: tool.title,
+                  color: tool.color,
+                  selected: !overviewSelected && activeTitle == tool.title,
+                  onTap: () => onSelect(tool),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatelessWidget {
+  const _SidebarItem({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: selected ? RuhamaaColors.softGreen : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: RuhamaaColors.primaryDark,
+                      fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows an admin tool inside the dashboard. A nested Navigator gives the tool
+/// its own root route, so its back arrow stays hidden and pushes stay inside the panel.
+class _EmbeddedPanel extends StatelessWidget {
+  const _EmbeddedPanel({super.key, required this.screen});
+  final Widget screen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 16, 16),
+      child: Material(
+        color: Colors.white,
+        elevation: 3,
+        shadowColor: RuhamaaColors.primaryDark.withValues(alpha: .09),
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: Navigator(
+          onGenerateRoute: (_) => MaterialPageRoute(builder: (_) => screen),
         ),
       ),
     );
