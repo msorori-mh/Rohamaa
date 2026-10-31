@@ -285,8 +285,8 @@ class _GovernorateCard extends StatelessWidget {
         childrenPadding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
         children: areas.isEmpty
             ? [
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'لا توجد مناطق بعد. أضف منطقة من زر الإضافة في الأعلى.',
                     style: const TextStyle(color: Colors.black54),
