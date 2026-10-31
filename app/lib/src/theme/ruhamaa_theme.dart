@@ -116,7 +116,7 @@ abstract final class RuhamaaTheme {
           minimumSize: const Size(64, 52),
           backgroundColor: RuhamaaColors.primary,
           foregroundColor: Colors.white,
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(fontFamily: 'Tajawal', fontSize: 16, fontWeight: FontWeight.w700),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
@@ -155,6 +155,7 @@ abstract final class RuhamaaTheme {
           size: 26,
         )),
         labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+          fontFamily: 'Tajawal',
           color: states.contains(WidgetState.selected) ? RuhamaaColors.primary : RuhamaaColors.textMuted,
           fontSize: 13,
           fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
@@ -165,8 +166,8 @@ abstract final class RuhamaaTheme {
         unselectedLabelColor: RuhamaaColors.textMuted,
         indicatorColor: RuhamaaColors.primary,
         dividerColor: RuhamaaColors.border,
-        labelStyle: TextStyle(fontWeight: FontWeight.w800),
-        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w600),
+        labelStyle: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w800),
+        unselectedLabelStyle: TextStyle(fontFamily: 'Tajawal', fontWeight: FontWeight.w600),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
@@ -192,7 +193,7 @@ abstract final class RuhamaaTheme {
       snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: RuhamaaColors.primaryDark,
-        contentTextStyle: TextStyle(color: Colors.white),
+        contentTextStyle: TextStyle(fontFamily: 'Tajawal', color: Colors.white),
       ),
     );
   }

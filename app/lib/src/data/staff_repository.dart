@@ -117,6 +117,17 @@ class StaffRepository {
 
   /// Creates an area under a governorate. The database generates its code
   /// (`GOVERNORATE-NNN`); the client never sends a code.
+  /// Governorates an admin has not activated yet (admin-only read).
+  Future<List<Map<String, dynamic>>> inactiveGovernorates() async {
+    final rows = await _client
+        .from('service_areas')
+        .select('id,code,name_ar')
+        .eq('kind', 'city')
+        .eq('active', false)
+        .order('name_ar');
+    return (rows as List).cast<Map<String, dynamic>>();
+  }
+
   Future<String> createArea({
     required String nameAr,
     required String governorateId,
