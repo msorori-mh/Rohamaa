@@ -115,6 +115,19 @@ class StaffRepository {
         .toList();
   }
 
+  /// Creates an area under a governorate. The database generates its code
+  /// (<GOVERNORATE>-NNN); the client never sends a code.
+  Future<String> createArea({
+    required String nameAr,
+    required String governorateId,
+  }) async {
+    final result = await _client.rpc('admin_create_area', params: {
+      'p_name_ar': nameAr.trim(),
+      'p_parent_id': governorateId,
+    });
+    return result as String;
+  }
+
   Future<String> createServiceArea({
     required String code,
     required String nameAr,

@@ -54,53 +54,40 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     }
     if (!mounted) return;
 
-    var kind = 'area';
-    String? parentId;
+    final governorates = current
+        .where((area) => area['kind'] == 'city' && area['active'] == true)
+        .toList();
+    if (governorates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا توجد محافظات متاحة. تواصل مع المشرف الأعلى.')),
+      );
+      return;
+    }
+
+    String? governorateId;
     final values = await TextFieldsDialog.show(
       context,
-      title: 'إضافة مدينة / منطقة',
+      title: 'إضافة منطقة',
       confirmLabel: 'إضافة',
-      headerBuilder: (context, setDialogState) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'area', label: Text('منطقة')),
-              ButtonSegment(value: 'city', label: Text('مدينة')),
-            ],
-            selected: {kind},
-            onSelectionChanged: (selection) => setDialogState(() {
-              kind = selection.first;
-              if (kind == 'city') parentId = null;
-            }),
-          ),
-          if (kind == 'area') ...[
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              initialValue: parentId,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'تتبع'),
-              items: current
-                  .map(
-                    (area) => DropdownMenuItem(
-                      value: area['id'] as String,
-                      child: Text('${area['name_ar']}'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setDialogState(() => parentId = value),
-              validator: (value) => value == null
-                  ? 'اختر المدينة أو المنطقة التي يتبعها هذا النطاق.'
-                  : null,
-            ),
-          ],
-        ],
+      headerBuilder: (context, setDialogState) => DropdownButtonFormField<String>(
+        initialValue: governorateId,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'المحافظة'),
+        items: governorates
+            .map(
+              (area) => DropdownMenuItem(
+                value: area['id'] as String,
+                child: Text('${area['name_ar']}'),
+              ),
+            )
+            .toList(),
+        onChanged: (value) => setDialogState(() => governorateId = value),
+        validator: (value) => value == null ? 'اختر المحافظة التي تتبعها المنطقة.' : null,
       ),
       fields: [
         DialogField(
           id: 'name',
-          label: 'الاسم بالعربية',
+          label: 'اسم المنطقة بالعربية',
           hint: 'مثال: الروضة',
           maxLength: 60,
           validator: requiredText(
@@ -108,34 +95,24 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
             message: 'أدخل اسمًا من حرفين على الأقل.',
           ),
         ),
-        const DialogField(
-          id: 'code',
-          label: 'الكود',
-          hint: 'مثال: MARIB_RAWDA',
-          maxLength: 30,
-          textCapitalization: TextCapitalization.characters,
-          validator: StaffLabels.areaCodeError,
-        ),
       ],
     );
-    if (values == null || !mounted) return;
+    if (values == null || governorateId == null || !mounted) return;
     setState(() => _creating = true);
     try {
-      await _repo.createServiceArea(
-        code: values['code'] ?? '',
+      await _repo.createArea(
         nameAr: values['name'] ?? '',
-        kind: kind,
-        parentId: kind == 'area' ? parentId : null,
+        governorateId: governorateId!,
       );
       if (!mounted) return;
-      showInfoSnack(context, 'تم إنشاء نطاق الخدمة.');
+      showInfoSnack(context, 'تم إنشاء المنطقة وتوليد كودها تلقائياً.');
       await _refresh();
     } catch (error) {
       if (mounted) {
         showErrorSnack(
           context,
           error,
-          fallback: 'تعذر إنشاء النطاق. تأكد أن الكود غير مستخدم ثم حاول مجددًا.',
+          fallback: 'تعذر إنشاء المنطقة. تحقق من اختيار المحافظة ثم حاول مجددًا.',
         );
       }
     } finally {
