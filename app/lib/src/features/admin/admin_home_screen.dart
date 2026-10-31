@@ -183,8 +183,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                     Transform.translate(
                       offset: const Offset(0, -30),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _ContentFrame(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -217,11 +216,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                             if (visibleQueue.isEmpty)
                               const _AdminEmpty(text: 'لا توجد عمليات معلقة ضمن هذا التصنيف.')
                             else
-                              ...visibleQueue.map(
-                                (item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: _PriorityItem(item: item, onTap: () => _openQueue(item)),
-                                ),
+                              _EqualRowGrid(
+                                minTileWidth: 340,
+                                maxColumns: 2,
+                                children: visibleQueue
+                                    .map((item) => _PriorityItem(item: item, onTap: () => _openQueue(item)))
+                                    .toList(),
                               ),
                             _ToolGroup(
                               icon: Icons.inventory_2_outlined,
@@ -333,72 +333,135 @@ class _AdminHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final minute = refreshedAt.minute.toString().padLeft(2, '0');
     return Container(
-      height: 224,
+      height: 196,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
       decoration: const BoxDecoration(
         gradient: RuhamaaColors.heroGradient,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(42)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: .16), shape: BoxShape.circle),
-                child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('مركز التشغيل', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                    Text('لوحة إدارة عطاء', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: .16), shape: BoxShape.circle),
+                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('مركز التشغيل', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                      Text('لوحة إدارة عطاء', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+                if (Navigator.canPop(context))
+                  IconButton(
+                    tooltip: 'العودة',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  ),
+                PopupMenuButton<String>(
+                  iconColor: Colors.white,
+                  tooltip: 'خيارات الإدارة',
+                  onSelected: (value) {
+                    if (value == 'password') onPassword();
+                    if (value == 'logout') onSignOut();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'password', child: Text('تغيير كلمة المرور')),
+                    PopupMenuItem(value: 'logout', child: Text('تسجيل الخروج')),
                   ],
                 ),
-              ),
-              if (Navigator.canPop(context))
-                IconButton(
-                  tooltip: 'العودة',
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              ],
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    urgentCount == 0 ? 'لا توجد حالات عاجلة الآن' : '$urgentCount حالات تحتاج تدخلك العاجل',
+                    style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                  ),
                 ),
-              PopupMenuButton<String>(
-                iconColor: Colors.white,
-                tooltip: 'خيارات الإدارة',
-                onSelected: (value) {
-                  if (value == 'password') onPassword();
-                  if (value == 'logout') onSignOut();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'password', child: Text('تغيير كلمة المرور')),
-                  PopupMenuItem(value: 'logout', child: Text('تسجيل الخروج')),
-                ],
-              ),
-            ],
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  urgentCount == 0 ? 'لا توجد حالات عاجلة الآن' : '$urgentCount حالات تحتاج تدخلك العاجل',
-                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh_rounded, size: 19),
+                  label: Text('${refreshedAt.hour}:$minute'),
                 ),
-              ),
-              TextButton.icon(
-                style: TextButton.styleFrom(foregroundColor: Colors.white),
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh_rounded, size: 19),
-                label: Text('${refreshedAt.hour}:$minute'),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+            ),
+        ),
       ),
+    );
+  }
+}
+
+/// Centers admin content and caps its width so wide screens do not stretch
+/// the cards edge to edge.
+class _ContentFrame extends StatelessWidget {
+  const _ContentFrame({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: child),
+      ),
+    );
+  }
+}
+
+/// Lays out tiles in equal-width columns (as many as fit, up to [maxColumns])
+/// and makes every tile in a row the same height, so the grid never shows
+/// uneven or staggered cards.
+class _EqualRowGrid extends StatelessWidget {
+  const _EqualRowGrid({required this.children, required this.minTileWidth, this.maxColumns = 3});
+
+  final List<Widget> children;
+  final double minTileWidth;
+  final int maxColumns;
+
+  static const double _gap = 12;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fit = ((constraints.maxWidth + _gap) / (minTileWidth + _gap)).floor();
+        final columns = fit < 1 ? 1 : (fit > maxColumns ? maxColumns : fit);
+        final rows = <Widget>[];
+        for (var start = 0; start < children.length; start += columns) {
+          final rowChildren = <Widget>[];
+          for (var i = 0; i < columns; i++) {
+            if (i > 0) rowChildren.add(const SizedBox(width: _gap));
+            final index = start + i;
+            rowChildren.add(
+              Expanded(child: index < children.length ? children[index] : const SizedBox.shrink()),
+            );
+          }
+          if (rows.isNotEmpty) rows.add(const SizedBox(height: _gap));
+          rows.add(
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: rowChildren),
+            ),
+          );
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+      },
     );
   }
 }
@@ -611,16 +674,10 @@ class _ToolGroup extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth >= 720 ? 3 : 2;
-              final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: tools.map((tool) => SizedBox(width: width, child: _ToolTile(tool: tool))).toList(),
-              );
-            },
+          _EqualRowGrid(
+            minTileWidth: 150,
+            maxColumns: 4,
+            children: tools.map((tool) => _ToolTile(tool: tool)).toList(),
           ),
         ],
       ),
