@@ -54,7 +54,7 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     if (!mounted) return;
 
     final governorates = current
-        .where((area) => area['kind'] == 'city' && area['active'] == true)
+        .where((area) => area['kind'] == 'city')
         .toList();
     if (governorates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
