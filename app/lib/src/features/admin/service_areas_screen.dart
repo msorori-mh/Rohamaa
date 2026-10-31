@@ -54,7 +54,7 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     if (!mounted) return;
 
     final governorates = current
-        .where((area) => area['kind'] == 'city' && area['active'] == true)
+        .where((area) => area['kind'] == 'city')
         .toList();
     if (governorates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,6 +119,76 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
     }
   }
 
+  Future<void> _activateGovernorate() async {
+    if (_creating) return;
+    List<Map<String, dynamic>> inactive;
+    try {
+      inactive = await _repo.inactiveGovernorates();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(context, error, fallback: 'تعذر تحميل المحافظات. حاول مجددًا.');
+      }
+      return;
+    }
+    if (!mounted) return;
+    if (inactive.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('كل المحافظات مفعّلة بالفعل.')),
+      );
+      return;
+    }
+
+    final governorateId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        String? selected;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('تفعيل محافظة'),
+            content: DropdownButtonFormField<String>(
+              initialValue: selected,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المحافظة'),
+              items: inactive
+                  .map(
+                    (area) => DropdownMenuItem(
+                      value: area['id'] as String,
+                      child: Text('${area['name_ar']}'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setDialogState(() => selected = value),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: selected == null ? null : () => Navigator.pop(dialogContext, selected),
+                child: const Text('تفعيل'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (governorateId == null || !mounted) return;
+    setState(() => _creating = true);
+    try {
+      await _repo.setServiceAreaActive(governorateId, true);
+      if (!mounted) return;
+      showInfoSnack(context, 'تم تفعيل المحافظة وأصبحت متاحة للتشغيل.');
+      await _refresh();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnack(context, error, fallback: 'تعذر تفعيل المحافظة. حاول مجددًا.');
+      }
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+
   String _parentName(List<Map<String, dynamic>> rows, String? id) {
     if (id == null) return 'نطاق رئيسي';
     for (final row in rows) {
@@ -134,7 +204,12 @@ class _ServiceAreasScreenState extends State<ServiceAreasScreen> {
         title: const Text('المدن والمناطق'),
         actions: [
           IconButton(
-            tooltip: 'إضافة نطاق',
+            tooltip: 'تفعيل محافظة',
+            onPressed: _creating ? null : _activateGovernorate,
+            icon: const Icon(Icons.toggle_on_outlined),
+          ),
+          IconButton(
+            tooltip: 'إضافة منطقة',
             onPressed: _creating ? null : _create,
             icon: const Icon(Icons.add_location_alt_outlined),
           ),
