@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import '../../data/staff_repository.dart';
-import '../../domain/staff_labels.dart';
 import 'staff_widgets.dart';
 
 class ServiceAreasScreen extends StatefulWidget {
