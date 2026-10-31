@@ -116,7 +116,7 @@ class StaffRepository {
   }
 
   /// Creates an area under a governorate. The database generates its code
-  /// (<GOVERNORATE>-NNN); the client never sends a code.
+  /// (`GOVERNORATE-NNN`); the client never sends a code.
   Future<String> createArea({
     required String nameAr,
     required String governorateId,
