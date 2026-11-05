@@ -24,6 +24,13 @@ class AdminRepository {
   AdminRepository(this._client);
   final SupabaseClient _client;
 
+  /// Aggregate user counts (totals, roles, donors, beneficiaries). Contains no
+  /// individual user data.
+  Future<Map<String, dynamic>> userStatistics() async {
+    final result = await _client.rpc('admin_user_statistics');
+    return Map<String, dynamic>.from(result as Map);
+  }
+
   /// Page size of the user management list.
   static const usersPageSize = 50;
 
