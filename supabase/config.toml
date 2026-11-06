@@ -9,3 +9,7 @@ verify_jwt = true
 
 [functions.admin-reset-staff-password]
 verify_jwt = true
+
+[functions.telegram-notify]
+# Called by database triggers; authenticated with x-notify-secret instead of a user JWT.
+verify_jwt = false
