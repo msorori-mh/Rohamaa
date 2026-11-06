@@ -13,6 +13,7 @@ import 'domain/account_state.dart';
 import 'features/admin/admin_home_screen.dart';
 import 'features/auth/account_status_screens.dart';
 import 'features/auth/change_password_screen.dart';
+import 'features/auth/email_auth_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/session_landing_screen.dart';
 import 'features/courier/courier_tasks_screen.dart';
@@ -38,6 +39,7 @@ import 'theme/ruhamaa_theme.dart';
 const Set<String> _webStaffLocations = <String>{
   '/',
   '/login',
+  '/email-auth',
   '/login-callback',
   '/legal',
   '/admin',
@@ -68,13 +70,14 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
       redirect: (context, state) {
         final loggedIn = Supabase.instance.client.auth.currentSession != null;
         final isLogin = state.matchedLocation == '/login';
+        final isEmailAuth = state.matchedLocation == '/email-auth';
         final isIntro = state.matchedLocation == '/intro';
         final isPublicLegal = state.matchedLocation == '/legal';
         // Browser build: staff area only. Community screens are unreachable.
         if (kIsWeb && !_webStaffLocations.contains(state.matchedLocation)) {
           return loggedIn ? '/' : '/login';
         }
-        if (!loggedIn && !isLogin && !isIntro && !isPublicLegal) return '/login';
+        if (!loggedIn && !isLogin && !isEmailAuth && !isIntro && !isPublicLegal) return '/login';
         if (loggedIn && isLogin) return '/';
         return null;
       },
@@ -82,6 +85,7 @@ class _RuhamaaAppState extends State<RuhamaaApp> {
       routes: [
         GoRoute(path: '/intro', builder: (_, __) => const IntroScreen()),
         GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/email-auth', builder: (_, __) => const EmailAuthScreen(allowRegister: !kIsWeb)),
         // The OAuth deep link (com.ruhamaa.app://login-callback) is consumed
         // by Supabase; the router only needs to land somewhere valid.
         GoRoute(path: '/login-callback', redirect: (_, __) => '/'),

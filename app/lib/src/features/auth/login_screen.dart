@@ -86,6 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _openApp() {
     if (!mounted) return;
+    // While the email screen is open on top, it finishes its own steps
+    // (password, name) before entering the app.
+    if (ModalRoute.of(context)?.isCurrent == false) return;
     context.go('/');
   }
 
@@ -123,15 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _staffLogin() async {
-    await showDialog<void>(
-      context: context,
-      // The dialog owns its busy state; it is closed only by its own buttons
-      // so a sign-in in progress is never interrupted by a stray tap.
-      barrierDismissible: false,
-      builder: (_) => const _StaffLoginDialog(),
-    );
-  }
+  void _emailAuth() => context.push('/email-auth');
 
   @override
   Widget build(BuildContext context) {
@@ -184,9 +179,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
                   FilledButton.icon(
                     key: const Key('login-staff-button'),
-                    onPressed: _loading ? null : _staffLogin,
-                    icon: const Icon(Icons.badge_outlined),
-                    label: const Text('دخول فريق عطاء'),
+                    onPressed: _loading ? null : _emailAuth,
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: const Text('تسجيل الدخول بالبريد الإلكتروني'),
                   ),
                 ] else ...[
                   Container(
@@ -225,9 +220,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: _loading ? null : _staffLogin,
-                    icon: const Icon(Icons.badge_outlined),
-                    label: const Text('دخول فريق عطاء'),
+                    key: const Key('login-email-button'),
+                    onPressed: _loading ? null : _emailAuth,
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: const Text('التسجيل أو الدخول بالبريد الإلكتروني'),
                   ),
                 ],
                 if (_error != null) ...[
@@ -271,125 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _StaffLoginDialog extends StatefulWidget {
-  const _StaffLoginDialog();
-
-  @override
-  State<_StaffLoginDialog> createState() => _StaffLoginDialogState();
-}
-
-class _StaffLoginDialogState extends State<_StaffLoginDialog> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _busy = false;
-  bool _obscure = true;
-  String? _error;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (_busy) return;
-    final email = _email.text.trim();
-    final password = _password.text;
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'أدخل البريد الإلكتروني وكلمة المرور.');
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      // A successful sign-in may already have replaced the login page (and
-      // this dialog with it) through the router redirect.
-      if (!mounted) return;
-      Navigator.of(context).pop();
-    } catch (error) {
-      debugPrint('Staff sign-in failed: ${error.runtimeType}');
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = friendlyError(
-          error,
-          fallback: 'لم يكتمل تسجيل الدخول. تحقق من البيانات ثم حاول مرة أخرى.',
-        );
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: !_busy,
-      child: AlertDialog(
-        title: const Text('دخول فريق عطاء'),
-        content: SizedBox(
-          width: 430,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('للإدارة، مشرفي المدن/المناطق، والموصلين.'),
-                const SizedBox(height: 16),
-                TextField(
-                  key: const Key('staff-login-email'),
-                  controller: _email,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autocorrect: false,
-                  textDirection: TextDirection.ltr,
-                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('staff-login-password'),
-                  controller: _password,
-                  enabled: !_busy,
-                  obscureText: _obscure,
-                  textDirection: TextDirection.ltr,
-                  onSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    labelText: 'كلمة المرور',
-                    suffixIcon: IconButton(
-                      onPressed: _busy ? null : () => setState(() => _obscure = !_obscure),
-                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                    ),
-                  ),
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 10),
-                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.of(context).pop(),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            key: const Key('staff-login-submit'),
-            onPressed: _busy ? null : _submit,
-            child: Text(_busy ? 'جارٍ الدخول...' : 'دخول'),
-          ),
-        ],
       ),
     );
   }
