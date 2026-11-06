@@ -24,6 +24,7 @@ import 'service_areas_screen.dart';
 import 'service_incident_management_screen.dart';
 import 'service_matching_screen.dart';
 import 'user_management_screen.dart';
+import 'user_statistics_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -258,6 +259,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           tools: [
             _Tool(Icons.person_add_alt_1_outlined, 'إضافة فريق', 'إنشاء حساب موصل أو مشرف تشغيل.', RuhamaaColors.vividGold, const CreateStaffScreen()),
             _Tool(Icons.manage_accounts_outlined, 'المستخدمون والأدوار', 'إدارة الصلاحيات وتجميد الحسابات.', RuhamaaColors.rose, const UserManagementScreen()),
+            _Tool(Icons.query_stats_outlined, 'إحصائيات المستخدمين', 'أعداد المستخدمين والمتبرعين والمحتاجين.', RuhamaaColors.blue, const UserStatisticsScreen()),
             _Tool(Icons.person_remove_outlined, 'طلبات حذف الحسابات', 'مراجعة طلبات الحذف ثم تنفيذها أو رفضها.', RuhamaaColors.primaryBright, const AccountDeletionScreen()),
           ],
         ),
