@@ -31,6 +31,22 @@ class AdminRepository {
     return Map<String, dynamic>.from(result as Map);
   }
 
+  /// One page of users in an aggregate statistics segment (admin only).
+  Future<List<Map<String, dynamic>>> userSegment(
+    String segment, {
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    final rows = await _client.rpc('admin_user_segment', params: {
+      'p_segment': segment,
+      'p_limit': limit,
+      'p_offset': offset,
+    });
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
   /// Page size of the user management list.
   static const usersPageSize = 50;
 
