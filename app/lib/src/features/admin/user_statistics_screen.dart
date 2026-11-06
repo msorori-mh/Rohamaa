@@ -4,8 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
 import '../../theme/ruhamaa_theme.dart';
+import 'user_segment_screen.dart';
 
-/// Aggregate user counts. Shows totals only; no individual user is listed.
+/// Aggregate user counts. Each card opens the matching user list.
 class UserStatisticsScreen extends StatefulWidget {
   const UserStatisticsScreen({super.key});
 
@@ -48,6 +49,23 @@ class _UserStatisticsScreenState extends State<UserStatisticsScreen> {
   }
 
   int _int(Object? value) => value is num ? value.toInt() : 0;
+
+  void _open(String title, String segment) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UserSegmentScreen(title: title, segment: segment),
+      ),
+    );
+  }
+
+  _StatTile _tile(String label, Object? value, Color color, String segment) {
+    return _StatTile(
+      label: label,
+      value: _int(value),
+      color: color,
+      onTap: () => _open(label, segment),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,28 +113,34 @@ class _UserStatisticsScreenState extends State<UserStatisticsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _section('عام', [
-            _StatTile(label: 'إجمالي المستخدمين', value: _int(s['total_users']), color: RuhamaaColors.primary),
-            _StatTile(label: 'حسابات مجمّدة', value: _int(s['suspended']), color: RuhamaaColors.rose),
-            _StatTile(label: 'تسجيلات آخر 7 أيام', value: _int(s['new_last_7_days']), color: RuhamaaColors.blue),
-            _StatTile(label: 'تسجيلات آخر 30 يومًا', value: _int(s['new_last_30_days']), color: RuhamaaColors.blue),
-            _StatTile(label: 'نشطون آخر 30 يومًا', value: _int(s['active_last_30_days']), color: RuhamaaColors.primaryBright),
+            _tile('إجمالي المستخدمين', s['total_users'], RuhamaaColors.primary, 'all'),
+            _tile('حسابات مجمّدة', s['suspended'], RuhamaaColors.rose, 'suspended'),
+            _tile('تسجيلات آخر 7 أيام', s['new_last_7_days'], RuhamaaColors.blue, 'new_7_days'),
+            _tile('تسجيلات آخر 30 يومًا', s['new_last_30_days'], RuhamaaColors.blue, 'new_30_days'),
+            _tile('نشطون آخر 30 يومًا', s['active_last_30_days'], RuhamaaColors.primaryBright, 'active_30_days'),
           ]),
           _section('المتبرعون والمحتاجون', [
-            _StatTile(label: 'متبرعون', value: _int(s['donors']), color: RuhamaaColors.primary),
-            _StatTile(label: 'محتاجون (لديهم طلبات)', value: _int(s['beneficiaries']), color: RuhamaaColors.vividGold),
-            _StatTile(label: 'متبرع ومحتاج معًا', value: _int(s['donors_and_beneficiaries']), color: RuhamaaColors.blue),
-            _StatTile(label: 'بدون تبرع أو طلب', value: _int(s['neither']), color: RuhamaaColors.rose),
+            _tile('متبرعون', s['donors'], RuhamaaColors.primary, 'donors'),
+            _tile('محتاجون (لديهم طلبات)', s['beneficiaries'], RuhamaaColors.vividGold, 'beneficiaries'),
+            _tile('متبرع ومحتاج معًا', s['donors_and_beneficiaries'], RuhamaaColors.blue, 'both'),
+            _tile('بدون تبرع أو طلب', s['neither'], RuhamaaColors.rose, 'neither'),
           ]),
           _section('حسب الدور', [
-            _StatTile(label: 'مستخدمون', value: _int(byRole['user']), color: RuhamaaColors.primary),
-            _StatTile(label: 'موصلون', value: _int(byRole['courier']), color: RuhamaaColors.blue),
-            _StatTile(label: 'مشرفون', value: _int(byRole['supervisor']), color: RuhamaaColors.vividGold),
-            _StatTile(label: 'مدراء', value: _int(byRole['admin']), color: RuhamaaColors.rose),
+            _tile('مستخدمون', byRole['user'], RuhamaaColors.primary, 'role_user'),
+            _tile('موصلون', byRole['courier'], RuhamaaColors.blue, 'role_courier'),
+            _tile('مشرفون', byRole['supervisor'], RuhamaaColors.vividGold, 'role_supervisor'),
+            _tile('مدراء', byRole['admin'], RuhamaaColors.rose, 'role_admin'),
+          ]),
+          _section('النشاط (أرقام إجمالية فقط)', [
+            _StatTile(label: 'إجمالي التبرعات', value: _int(s['donations_total']), color: RuhamaaColors.primary),
+            _StatTile(label: 'تبرعات آخر 30 يومًا', value: _int(s['donations_last_30_days']), color: RuhamaaColors.primaryBright),
+            _StatTile(label: 'إجمالي الطلبات', value: _int(s['needs_total']), color: RuhamaaColors.vividGold),
+            _StatTile(label: 'طلبات آخر 30 يومًا', value: _int(s['needs_last_30_days']), color: RuhamaaColors.blue),
           ]),
           const SizedBox(height: 8),
-          Text(
-            'أرقام إجمالية فقط، ولا تعرض بيانات أي مستخدم بعينه.',
-            style: const TextStyle(color: Colors.black54, fontFamily: 'Tajawal'),
+          const Text(
+            'اضغط على أي بطاقة لعرض قائمة المستخدمين فيها.',
+            style: TextStyle(color: Colors.black54, fontFamily: 'Tajawal'),
             textAlign: TextAlign.center,
           ),
         ],
@@ -140,29 +164,37 @@ class _UserStatisticsScreenState extends State<UserStatisticsScreen> {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, required this.color});
+  const _StatTile({required this.label, required this.value, required this.color, this.onTap});
 
   final String label;
   final int value;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('$value', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 14)),
-        ],
+        onTap: onTap,
+        child: Container(
+          width: 160,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$value', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: color)),
+              const SizedBox(height: 4),
+              Text(label, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
       ),
     );
   }
