@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import '../../data/admin_repository.dart';
 import '../../domain/staff_labels.dart';
-import '../../theme/ruhamaa_theme.dart';
 
 /// Paged list of users inside one statistics segment (admin only).
 class UserSegmentScreen extends StatefulWidget {
